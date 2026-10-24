@@ -1,1 +1,2 @@
-window.SAI_REMOTE=true;
+
+window.SAI_REMOTE = false;
