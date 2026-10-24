@@ -1,6 +1,1166 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#075550"><meta name="description" content="سعي بلس — مساحة تجمع احتياجاتك الجامعية وفرصك المجتمعية في مكان واحد."><title>سعي بلس | من جامعتك، إلى مجتمعك</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="admin.css"></head><body>
-<header><a href="#home" class="brand"><img src="assets/brand.jpg" alt=""><span>سعي بلس<small>SA’I PLUS</small></span></a><nav aria-label="القائمة الرئيسية"><a href="#home">الرئيسية</a><a href="#services">خدماتنا</a><a href="#discounts">خصومات سعي</a><a href="#market">السوق المحلي</a><a href="#projects">فرص المشاريع</a></nav><div class="header-actions"><button class="icon-btn" onclick="showFavorites()" aria-label="المفضلة" data-icon="heart"></button><a class="button small" href="#services">ابدأ رحلتك <span>↖</span></a><button id="menu" class="icon-btn" aria-label="فتح القائمة" onclick="document.querySelector('nav').classList.toggle('open')" data-icon="menu"></button></div></header>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#075550">
+  <meta name="description"
+        content="سعي بلس — مساحة تجمع احتياجاتك الجامعية وفرصك المجتمعية في مكان واحد.">
+
+  <title>سعي بلس | من جامعتك، إلى مجتمعك</title>
+
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="admin.css">
+
+  <style>
+    /* تبقى خلفية الموقع الأصلية من style.css */
+
+    #sai-auth {
+      box-sizing: border-box;
+      width: min(440px, calc(100% - 28px));
+      max-height: calc(100dvh - 32px);
+      overflow-y: auto;
+      margin: auto;
+      padding: 28px;
+      border: 1px solid #dce8e2;
+      border-radius: 24px;
+      background: #faf8f2;
+      color: #173c39;
+      font-family: inherit;
+      text-align: right;
+      box-shadow: 0 24px 70px #173c3926;
+    }
+
+    #sai-auth::backdrop {
+      background: rgb(7 55 50 / 30%);
+    }
+
+    #sai-auth * {
+      box-sizing: border-box;
+    }
+
+    #sai-auth [hidden],
+    #sai-logout[hidden] {
+      display: none !important;
+    }
+
+    #sai-auth .auth-close {
+      display: block;
+      width: 36px;
+      height: 36px;
+      margin: 0 0 6px auto;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: #0755500d;
+      color: #075550;
+      font: inherit;
+      font-size: 26px;
+      cursor: pointer;
+    }
+
+    #sai-auth .auth-heading {
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    #sai-auth .auth-logo {
+      width: 68px;
+      height: 68px;
+      margin-bottom: 12px;
+      border-radius: 18px;
+      object-fit: cover;
+    }
+
+    #sai-auth h2 {
+      margin: 0 0 8px;
+      color: #075550;
+      font-size: 25px;
+    }
+
+    #sai-auth .auth-description {
+      margin: 0;
+      color: #62716b;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    #sai-auth form {
+      display: grid;
+      gap: 10px;
+    }
+
+    #sai-auth label {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    #sai-auth input {
+      width: 100%;
+      min-height: 48px;
+      margin: 0 0 6px;
+      padding: 12px 14px;
+      border: 1px solid #cddbd3;
+      border-radius: 12px;
+      background: #fff;
+      color: #173c39;
+      font: inherit;
+    }
+
+    #sai-auth input:focus-visible {
+      outline: 3px solid #b8ddd0;
+      outline-offset: 2px;
+      border-color: #075550;
+    }
+
+    #sai-auth .auth-submit {
+      width: 100%;
+      min-height: 48px;
+      margin-top: 8px;
+      padding: 12px;
+      border: 0;
+      border-radius: 12px;
+      background: #075550;
+      color: #fff;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    #sai-auth .auth-submit:hover {
+      background: #06433f;
+    }
+
+    #sai-auth button:disabled {
+      cursor: wait;
+      opacity: .65;
+    }
+
+    #sai-auth .auth-links {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    #sai-auth .auth-link {
+      padding: 4px 0;
+      border: 0;
+      background: transparent;
+      color: #075550;
+      font: inherit;
+      font-size: 14px;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 4px;
+    }
+
+    #sai-auth .auth-guest {
+      width: 100%;
+      min-height: 46px;
+      margin-top: 24px;
+      padding: 12px;
+      border: 1px solid #cddbd3;
+      border-radius: 12px;
+      background: transparent;
+      color: #075550;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    #sai-auth .auth-message {
+      margin: 16px 0 0;
+      padding: 12px;
+      border: 1px solid #dfd1ad;
+      border-radius: 10px;
+      background: #fff8e8;
+      color: #70521c;
+      font-size: 14px;
+      line-height: 1.8;
+      overflow-wrap: anywhere;
+      white-space: pre-line;
+      user-select: text;
+    }
+
+    #sai-auth .auth-note {
+      margin: 16px 0 0;
+      color: #62716b;
+      font-size: 12px;
+      line-height: 1.8;
+      text-align: center;
+    }
+
+    @media (max-width: 480px) {
+      #sai-auth {
+        padding: 22px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <a href="#home" class="brand">
+    <img src="assets/brand.jpg" alt="">
+    <span>
+      سعي بلس
+      <small>SA’I PLUS</small>
+    </span>
+  </a>
+
+  <nav aria-label="القائمة الرئيسية">
+    <a href="#home">الرئيسية</a>
+    <a href="#services">خدماتنا</a>
+    <a href="#discounts">خصومات سعي</a>
+    <a href="#market">السوق المحلي</a>
+    <a href="#projects">فرص المشاريع</a>
+  </nav>
+
+  <div class="header-actions">
+    <button
+      type="button"
+      class="icon-btn"
+      onclick="showFavorites()"
+      aria-label="المفضلة"
+      data-icon="heart">
+    </button>
+
+    <button
+      type="button"
+      class="button small"
+      id="sai-open-auth"
+      aria-haspopup="dialog"
+      aria-controls="sai-auth">
+      تسجيل الدخول
+    </button>
+
+    <button
+      type="button"
+      class="button small"
+      id="sai-logout"
+      hidden>
+      تسجيل الخروج
+    </button>
+
+    <a class="button small" href="#services">
+      ابدأ رحلتك <span>↖</span>
+    </a>
+
+    <button
+      id="menu"
+      type="button"
+      class="icon-btn"
+      aria-label="فتح القائمة"
+      onclick="document.querySelector('nav').classList.toggle('open')"
+      data-icon="menu">
+    </button>
+  </div>
+</header>
+
 <main id="main"></main>
-<footer><div class="footer-top"><a class="brand" href="#home"><img src="assets/brand.jpg" alt=""><span>سعي بلس<small>SA’I PLUS</small></span></a><p>من جامعتك.. لمجتمعك.<br>خطوة صغيرة منك، وفرص أكبر للجميع.</p><a href="#services">اكتشف ما يناسبك <span>↖</span></a></div><div class="footer-bottom"><span>© <span id="year"></span> سعي بلس. معًا نصنع فرقًا.</span><span>طلاب · مجتمع محلي · مبادرات داعمة</span><div><a href="#admin">إدارة الموقع</a> · <button class="text-btn" onclick="aboutPrivacy()">الخصوصية</button></div></div></footer>
-<dialog id="dialog"><button class="close" aria-label="إغلاق" onclick="this.closest('dialog').close()">×</button><div id="dialog-content"></div></dialog><div id="toast" role="status"></div><script src="remote-config.js"></script><script src="content-data.js"></script><script src="store.js"></script><script src="app.js"></script><script src="admin.js"></script></body></html>
+
+<footer>
+  <div class="footer-top">
+    <a class="brand" href="#home">
+      <img src="assets/brand.jpg" alt="">
+      <span>
+        سعي بلس
+        <small>SA’I PLUS</small>
+      </span>
+    </a>
+
+    <p>
+      من جامعتك.. لمجتمعك.<br>
+      خطوة صغيرة منك، وفرص أكبر للجميع.
+    </p>
+
+    <a href="#services">
+      اكتشف ما يناسبك <span>↖</span>
+    </a>
+  </div>
+
+  <div class="footer-bottom">
+    <span>
+      © <span id="year"></span>
+      سعي بلس. معًا نصنع فرقًا.
+    </span>
+
+    <span>طلاب · مجتمع محلي · مبادرات داعمة</span>
+
+    <div>
+      <a href="#admin">إدارة الموقع</a>
+      ·
+      <button
+        type="button"
+        class="text-btn"
+        onclick="aboutPrivacy()">
+        الخصوصية
+      </button>
+    </div>
+  </div>
+</footer>
+
+<!-- نافذة الموقع الأصلية -->
+<dialog id="dialog">
+  <button
+    type="button"
+    class="close"
+    aria-label="إغلاق"
+    onclick="this.closest('dialog').close()">
+    ×
+  </button>
+
+  <div id="dialog-content"></div>
+</dialog>
+
+<!-- نافذة الحسابات المحلية -->
+<dialog
+  id="sai-auth"
+  aria-labelledby="sai-auth-title"
+  aria-describedby="sai-auth-description">
+
+  <button
+    type="button"
+    class="auth-close"
+    aria-label="إغلاق نافذة الحساب"
+    data-auth-close>
+    ×
+  </button>
+
+  <div class="auth-heading">
+    <img
+      class="auth-logo"
+      src="assets/brand.jpg"
+      alt="سعي بلس">
+
+    <h2 id="sai-auth-title">تسجيل الدخول</h2>
+
+    <p class="auth-description" id="sai-auth-description">
+      سجّل دخولك بحسابك المحلي على هذا المتصفح.
+    </p>
+  </div>
+
+  <!-- تسجيل الدخول -->
+  <section data-auth-panel="login">
+    <form id="sai-login-form">
+      <label for="sai-login-email">
+        البريد الإلكتروني
+      </label>
+
+      <input
+        id="sai-login-email"
+        name="email"
+        type="email"
+        dir="ltr"
+        placeholder="example@email.com"
+        autocomplete="username"
+        maxlength="254"
+        required>
+
+      <label for="sai-login-password">
+        كلمة المرور
+      </label>
+
+      <input
+        id="sai-login-password"
+        name="password"
+        type="password"
+        autocomplete="current-password"
+        required>
+
+      <button type="submit" class="auth-submit">
+        تسجيل الدخول
+      </button>
+    </form>
+
+    <div class="auth-links">
+      <button
+        type="button"
+        class="auth-link"
+        data-auth-go="forgot">
+        نسيت كلمة المرور؟
+      </button>
+
+      <button
+        type="button"
+        class="auth-link"
+        data-auth-go="register">
+        إنشاء حساب
+      </button>
+    </div>
+  </section>
+
+  <!-- إنشاء حساب -->
+  <section data-auth-panel="register" hidden>
+    <form id="sai-register-form">
+      <label for="sai-register-name">
+        الاسم
+      </label>
+
+      <input
+        id="sai-register-name"
+        name="name"
+        type="text"
+        autocomplete="name"
+        maxlength="100"
+        required>
+
+      <label for="sai-register-email">
+        البريد الإلكتروني
+      </label>
+
+      <input
+        id="sai-register-email"
+        name="email"
+        type="email"
+        dir="ltr"
+        placeholder="example@email.com"
+        autocomplete="email"
+        maxlength="254"
+        required>
+
+      <label for="sai-register-password">
+        كلمة المرور — 15 حرفًا على الأقل
+      </label>
+
+      <input
+        id="sai-register-password"
+        name="password"
+        type="password"
+        autocomplete="new-password"
+        minlength="15"
+        required>
+
+      <label for="sai-register-confirm">
+        تأكيد كلمة المرور
+      </label>
+
+      <input
+        id="sai-register-confirm"
+        name="password_confirmation"
+        type="password"
+        autocomplete="new-password"
+        required>
+
+      <button type="submit" class="auth-submit">
+        إنشاء حساب
+      </button>
+    </form>
+
+    <div class="auth-links">
+      <button
+        type="button"
+        class="auth-link"
+        data-auth-go="login">
+        عندك حساب؟ سجّل دخولك
+      </button>
+    </div>
+  </section>
+
+  <!-- استعادة كلمة المرور -->
+  <section data-auth-panel="forgot" hidden>
+    <form id="sai-forgot-form">
+      <label for="sai-forgot-email">
+        البريد الإلكتروني
+      </label>
+
+      <input
+        id="sai-forgot-email"
+        name="email"
+        type="email"
+        dir="ltr"
+        placeholder="example@email.com"
+        autocomplete="email"
+        maxlength="254"
+        required>
+
+      <label for="sai-recovery-code">
+        رمز الاسترداد
+      </label>
+
+      <input
+        id="sai-recovery-code"
+        name="recovery_code"
+        type="text"
+        dir="ltr"
+        autocomplete="off"
+        autocapitalize="none"
+        spellcheck="false"
+        required>
+
+      <label for="sai-reset-password">
+        كلمة المرور الجديدة — 15 حرفًا على الأقل
+      </label>
+
+      <input
+        id="sai-reset-password"
+        name="new_password"
+        type="password"
+        autocomplete="new-password"
+        minlength="15"
+        required>
+
+      <label for="sai-reset-confirm">
+        تأكيد كلمة المرور الجديدة
+      </label>
+
+      <input
+        id="sai-reset-confirm"
+        name="new_password_confirmation"
+        type="password"
+        autocomplete="new-password"
+        required>
+
+      <button type="submit" class="auth-submit">
+        تغيير كلمة المرور
+      </button>
+    </form>
+
+    <div class="auth-links">
+      <button
+        type="button"
+        class="auth-link"
+        data-auth-go="login">
+        العودة لتسجيل الدخول
+      </button>
+    </div>
+  </section>
+
+  <p
+    id="sai-auth-message"
+    class="auth-message"
+    role="status"
+    aria-live="polite"
+    hidden>
+  </p>
+
+  <button
+    type="button"
+    class="auth-guest"
+    data-auth-close>
+    متابعة التصفح بدون حساب
+  </button>
+
+  <p class="auth-note">
+    الحسابات محفوظة على هذا المتصفح فقط.
+    لا يتم إرسال رسائل بريد إلكتروني.
+    استخدم كلمة مرور خاصة بهذه التجربة.
+  </p>
+</dialog>
+
+<div id="toast" role="status"></div>
+
+<!-- ملفات الموقع الأصلية -->
+<script src="remote-config.js"></script>
+<script src="content-data.js"></script>
+<script src="store.js"></script>
+<script src="app.js"></script>
+<script src="admin.js"></script>
+
+<!-- الحسابات المحلية -->
+<script>
+(() => {
+  'use strict';
+
+  const $ = id => document.getElementById(id);
+
+  const authDialog = $('sai-auth');
+  const message = $('sai-auth-message');
+  const accountButton = $('sai-open-auth');
+  const logoutButton = $('sai-logout');
+
+  const ACCOUNT_PREFIX = 'sai-local-account-v1:';
+  const SESSION_KEY = 'sai-local-session-v1';
+  const ITERATIONS = 600000;
+
+  let busy = false;
+
+  const pages = {
+    login: {
+      title: 'تسجيل الدخول',
+      description:
+        'سجّل دخولك بحسابك المحلي على هذا المتصفح.'
+    },
+
+    register: {
+      title: 'إنشاء حساب',
+      description:
+        'انضم لسعي بلس. الحساب محفوظ على هذا المتصفح فقط.'
+    },
+
+    forgot: {
+      title: 'استعادة كلمة المرور',
+      description:
+        'استخدم رمز الاسترداد الذي حصلت عليه عند إنشاء الحساب.'
+    }
+  };
+
+  function normalizeEmail(value) {
+    return value.trim().toLowerCase();
+  }
+
+  function accountKey(email) {
+    return ACCOUNT_PREFIX + encodeURIComponent(email);
+  }
+
+  function readAccount(email) {
+    const raw = localStorage.getItem(accountKey(email));
+
+    if (!raw) return null;
+
+    const account = JSON.parse(raw);
+
+    if (
+      !account ||
+      account.version !== 1 ||
+      account.email !== email ||
+      typeof account.name !== 'string' ||
+      typeof account.salt !== 'string' ||
+      !/^[a-f0-9]{32}$/.test(account.salt) ||
+      typeof account.passwordHash !== 'string' ||
+      !/^[a-f0-9]{64}$/.test(account.passwordHash) ||
+      typeof account.recoveryHash !== 'string' ||
+      !/^[a-f0-9]{64}$/.test(account.recoveryHash)
+    ) {
+      throw new Error('INVALID_LOCAL_ACCOUNT');
+    }
+
+    return account;
+  }
+
+  function saveAccount(account) {
+    localStorage.setItem(
+      accountKey(account.email),
+      JSON.stringify(account)
+    );
+  }
+
+  function showMessage(text) {
+    message.textContent = text;
+    message.hidden = false;
+  }
+
+  function clearMessage() {
+    message.textContent = '';
+    message.hidden = true;
+  }
+
+  function resetForms() {
+    authDialog.querySelectorAll('form').forEach(form => {
+      form.reset();
+    });
+
+    $('sai-register-confirm').setCustomValidity('');
+    $('sai-reset-confirm').setCustomValidity('');
+  }
+
+  function showPage(page, focus = true) {
+    if (busy || !pages[page]) return;
+
+    resetForms();
+    clearMessage();
+
+    authDialog
+      .querySelectorAll('[data-auth-panel]')
+      .forEach(panel => {
+        panel.hidden = panel.dataset.authPanel !== page;
+      });
+
+    $('sai-auth-title').textContent = pages[page].title;
+
+    $('sai-auth-description').textContent =
+      pages[page].description;
+
+    if (focus && authDialog.open) {
+      authDialog.querySelector(
+        '[data-auth-panel="' + page + '"] input'
+      ).focus();
+    }
+  }
+
+  function updateHeader() {
+    try {
+      const email = localStorage.getItem(SESSION_KEY);
+      const account = email ? readAccount(email) : null;
+
+      accountButton.textContent = account
+        ? 'مرحبًا، ' + account.name
+        : 'تسجيل الدخول';
+
+      accountButton.title = account
+        ? 'حساب محلي على هذا المتصفح'
+        : 'تسجيل الدخول';
+
+      logoutButton.hidden = !account;
+
+      if (email && !account) {
+        localStorage.removeItem(SESSION_KEY);
+      }
+    } catch {
+      accountButton.textContent = 'تسجيل الدخول';
+      logoutButton.hidden = true;
+    }
+  }
+
+  function toHex(bytes) {
+    return Array.from(
+      bytes,
+      byte => byte.toString(16).padStart(2, '0')
+    ).join('');
+  }
+
+  function randomHex(byteCount) {
+    return toHex(
+      crypto.getRandomValues(new Uint8Array(byteCount))
+    );
+  }
+
+  function saltBytes(hex) {
+    if (!/^[a-f0-9]{32}$/.test(hex)) {
+      throw new Error('INVALID_SALT');
+    }
+
+    return Uint8Array.from(
+      hex.match(/.{2}/g),
+      pair => parseInt(pair, 16)
+    );
+  }
+
+  // لا نحفظ كلمة المرور نفسها.
+  // نحفظ مشتقًا منها باستخدام PBKDF2 مع salt عشوائي.
+  async function hashPassword(password, salt) {
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(password),
+      'PBKDF2',
+      false,
+      ['deriveBits']
+    );
+
+    const bits = await crypto.subtle.deriveBits(
+      {
+        name: 'PBKDF2',
+        salt: saltBytes(salt),
+        iterations: ITERATIONS,
+        hash: 'SHA-256'
+      },
+      key,
+      256
+    );
+
+    return toHex(new Uint8Array(bits));
+  }
+
+  // رمز الاسترداد عشوائي وطويل؛ نحفظ بصمته فقط.
+  async function hashRecovery(code) {
+    const normalized = code
+      .trim()
+      .replace(/[\s-]/g, '')
+      .toLowerCase();
+
+    const bits = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(normalized)
+    );
+
+    return toHex(new Uint8Array(bits));
+  }
+
+  function bindConfirmation(passwordId, confirmationId) {
+    const password = $(passwordId);
+    const confirmation = $(confirmationId);
+
+    function validate() {
+      confirmation.setCustomValidity(
+        confirmation.value &&
+        confirmation.value !== password.value
+          ? 'كلمتا المرور غير متطابقتين.'
+          : ''
+      );
+    }
+
+    password.addEventListener('input', validate);
+    confirmation.addEventListener('input', validate);
+
+    return validate;
+  }
+
+  const validateRegistration = bindConfirmation(
+    'sai-register-password',
+    'sai-register-confirm'
+  );
+
+  const validateReset = bindConfirmation(
+    'sai-reset-password',
+    'sai-reset-confirm'
+  );
+
+  async function run(form, action) {
+    if (busy) return;
+
+    if (
+      !window.isSecureContext ||
+      !window.crypto?.subtle
+    ) {
+      showMessage(
+        'افتح الموقع عبر HTTPS، مثل رابط GitHub Pages، لتفعيل الحسابات المحلية.'
+      );
+      return;
+    }
+
+    busy = true;
+    clearMessage();
+
+    const submit = form.querySelector('[type="submit"]');
+    const originalText = submit.textContent;
+
+    submit.disabled = true;
+    submit.textContent = 'جارٍ التنفيذ…';
+
+    try {
+      await action();
+    } catch {
+      showMessage(
+        'تعذّرت العملية. تأكد من السماح بحفظ بيانات الموقع وعدم تلف البيانات المحلية.'
+      );
+    } finally {
+      busy = false;
+      submit.disabled = false;
+      submit.textContent = originalText;
+    }
+  }
+
+  // فتح نافذة الحسابات.
+  accountButton.addEventListener('click', () => {
+    if (busy) return;
+
+    showPage('login', false);
+    authDialog.showModal();
+
+    try {
+      const email = localStorage.getItem(SESSION_KEY);
+      const account = email ? readAccount(email) : null;
+
+      if (account) {
+        $('sai-login-email').value = account.email;
+
+        showMessage(
+          'أنت مسجّل الدخول محليًا باسم ' +
+          account.name +
+          '. يمكنك متابعة التصفح أو تسجيل الخروج من أعلى الصفحة.'
+        );
+      }
+    } catch {
+      showMessage(
+        'تعذّر الوصول إلى بيانات الحساب المحلية.'
+      );
+    }
+
+    $('sai-login-email').focus();
+  });
+
+  // التنقل بين نماذج الحساب.
+  authDialog
+    .querySelectorAll('[data-auth-go]')
+    .forEach(button => {
+      button.addEventListener('click', () => {
+        showPage(button.dataset.authGo);
+      });
+    });
+
+  // إغلاق النافذة أو المتابعة كزائر.
+  authDialog
+    .querySelectorAll('[data-auth-close]')
+    .forEach(button => {
+      button.addEventListener('click', () => {
+        if (!busy) authDialog.close();
+      });
+    });
+
+  authDialog.addEventListener('cancel', event => {
+    if (busy) event.preventDefault();
+  });
+
+  authDialog.addEventListener('close', () => {
+    resetForms();
+    clearMessage();
+  });
+
+  // إنشاء حساب جديد.
+  $('sai-register-form').addEventListener(
+    'submit',
+    event => {
+      event.preventDefault();
+
+      const form = event.currentTarget;
+
+      validateRegistration();
+
+      if (!form.reportValidity()) return;
+
+      const name = $('sai-register-name').value.trim();
+      const email = normalizeEmail(
+        $('sai-register-email').value
+      );
+      const secret = $('sai-register-password').value;
+
+      if (!name) {
+        showMessage('أدخل اسمًا صالحًا.');
+        return;
+      }
+
+      if (secret.length < 15) {
+        showMessage(
+          'استخدم كلمة مرور من 15 حرفًا على الأقل.'
+        );
+        return;
+      }
+
+      run(form, async () => {
+        if (readAccount(email)) {
+          showMessage(
+            'يوجد حساب بهذا البريد على هذا المتصفح. انتقل إلى تسجيل الدخول.'
+          );
+          return;
+        }
+
+        const salt = randomHex(16);
+        const recoveryCode = randomHex(20);
+
+        const passwordHash = await hashPassword(
+          secret,
+          salt
+        );
+
+        const recoveryHash = await hashRecovery(
+          recoveryCode
+        );
+
+        // تحقق مجددًا بعد اكتمال الاشتقاق.
+        if (readAccount(email)) {
+          showMessage(
+            'يوجد حساب بهذا البريد على هذا المتصفح.'
+          );
+          return;
+        }
+
+        saveAccount({
+          version: 1,
+          name,
+          email,
+          salt,
+          passwordHash,
+          recoveryHash,
+          createdAt: new Date().toISOString()
+        });
+
+        form.reset();
+
+        showMessage(
+          'تم إنشاء حسابك بنجاح.\n\n' +
+          'احفظ رمز الاسترداد الآن في مكان خاص؛ لن يظهر مجددًا:\n\n' +
+          recoveryCode +
+          '\n\nتحتاج هذا الرمز إذا نسيت كلمة المرور. ' +
+          'يمكنك الآن الانتقال إلى تسجيل الدخول.'
+        );
+      });
+    }
+  );
+
+  // تسجيل الدخول.
+  $('sai-login-form').addEventListener(
+    'submit',
+    event => {
+      event.preventDefault();
+
+      const form = event.currentTarget;
+
+      if (!form.reportValidity()) return;
+
+      const email = normalizeEmail(
+        $('sai-login-email').value
+      );
+
+      const secret = $('sai-login-password').value;
+
+      run(form, async () => {
+        const account = readAccount(email);
+
+        if (!account) {
+          showMessage(
+            'البريد الإلكتروني أو كلمة المرور غير صحيحة.'
+          );
+          return;
+        }
+
+        const candidate = await hashPassword(
+          secret,
+          account.salt
+        );
+
+        if (candidate !== account.passwordHash) {
+          showMessage(
+            'البريد الإلكتروني أو كلمة المرور غير صحيحة.'
+          );
+          return;
+        }
+
+        // تأكد أن كلمة المرور لم تتغير من تبويب آخر.
+        const latest = readAccount(email);
+
+        if (
+          !latest ||
+          latest.passwordHash !== account.passwordHash ||
+          latest.salt !== account.salt
+        ) {
+          showMessage(
+            'تغيّرت بيانات الحساب. حاول تسجيل الدخول مجددًا.'
+          );
+          return;
+        }
+
+        localStorage.setItem(SESSION_KEY, email);
+
+        updateHeader();
+        authDialog.close();
+      });
+    }
+  );
+
+  // إعادة تعيين كلمة المرور برمز الاسترداد.
+  $('sai-forgot-form').addEventListener(
+    'submit',
+    event => {
+      event.preventDefault();
+
+      const form = event.currentTarget;
+
+      validateReset();
+
+      if (!form.reportValidity()) return;
+
+      const email = normalizeEmail(
+        $('sai-forgot-email').value
+      );
+
+      const code = $('sai-recovery-code').value;
+      const secret = $('sai-reset-password').value;
+
+      if (secret.length < 15) {
+        showMessage(
+          'استخدم كلمة مرور من 15 حرفًا على الأقل.'
+        );
+        return;
+      }
+
+      run(form, async () => {
+        const account = readAccount(email);
+        const recoveryHash = await hashRecovery(code);
+
+        if (
+          !account ||
+          recoveryHash !== account.recoveryHash
+        ) {
+          showMessage(
+            'البريد الإلكتروني أو رمز الاسترداد غير صحيح.'
+          );
+          return;
+        }
+
+        const salt = randomHex(16);
+
+        const passwordHash = await hashPassword(
+          secret,
+          salt
+        );
+
+        const newRecoveryCode = randomHex(20);
+
+        const newRecoveryHash = await hashRecovery(
+          newRecoveryCode
+        );
+
+        const latest = readAccount(email);
+
+        if (
+          !latest ||
+          latest.recoveryHash !== account.recoveryHash ||
+          latest.passwordHash !== account.passwordHash ||
+          latest.salt !== account.salt
+        ) {
+          showMessage(
+            'تغيّرت بيانات الحساب. حاول الاسترداد مجددًا.'
+          );
+          return;
+        }
+
+        saveAccount({
+          ...latest,
+          salt,
+          passwordHash,
+          recoveryHash: newRecoveryHash,
+          updatedAt: new Date().toISOString()
+        });
+
+        if (localStorage.getItem(SESSION_KEY) === email) {
+          localStorage.removeItem(SESSION_KEY);
+        }
+
+        updateHeader();
+        form.reset();
+
+        showMessage(
+          'تم تغيير كلمة المرور بنجاح.\n\n' +
+          'أُلغي رمز الاسترداد السابق. احفظ الرمز الجديد الآن:\n\n' +
+          newRecoveryCode +
+          '\n\nيمكنك الآن العودة إلى تسجيل الدخول.'
+        );
+      });
+    }
+  );
+
+  // تسجيل الخروج دون حذف الحساب.
+  logoutButton.addEventListener('click', () => {
+    if (busy) return;
+
+    try {
+      localStorage.removeItem(SESSION_KEY);
+      updateHeader();
+
+      if (authDialog.open) {
+        showPage('login');
+        showMessage('تم تسجيل الخروج.');
+      }
+    } catch {
+      if (!authDialog.open) {
+        showPage('login', false);
+        authDialog.showModal();
+      }
+
+      showMessage(
+        'تعذّر تسجيل الخروج من التخزين المحلي.'
+      );
+    }
+  });
+
+  // مزامنة حالة الحساب بين تبويبات الموقع.
+  window.addEventListener('storage', event => {
+    if (
+      event.key === null ||
+      event.key === SESSION_KEY ||
+      event.key.startsWith(ACCOUNT_PREFIX)
+    ) {
+      updateHeader();
+    }
+  });
+
+  $('year').textContent = new Date().getFullYear();
+
+  updateHeader();
+})();
+</script>
+
+</body>
+</html>
