@@ -17,3 +17,12 @@
     display: inline-block;
   }
 }
+/* إخفاء سعي الذكي من صفحة الإدارة (الآدمن) فقط */
+body.admin .smart-launch,
+body.admin [data-view="search"],
+body.admin [data-view="recommend"],
+body.admin [data-view="assistant"],
+body.admin .smart-page,
+body.admin #smart-home {
+  display: none !important;
+}
