@@ -59,11 +59,7 @@ window.SiteStore = (() => {
         !service.every((x) => typeof x === "string") ||
         !/^[a-z][a-z0-9_-]*$/.test(service[0]) ||
         ids.has(service[0]) ||
-<<<<<<< Updated upstream
-        ["admin", "home", "about", "services"].includes(service[0])
-=======
         ["admin", "home", "about", "services", "smart"].includes(service[0])
->>>>>>> Stashed changes
       ) {
         throw Error("يوجد قسم غير صالح أو مكرر.");
       }
