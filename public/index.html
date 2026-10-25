@@ -1182,6 +1182,40 @@
 })();
 </script>
 
+<style id="saee-admin-hide-smart-style">
+  body.admin #saee-smart,
+  body.admin .saee-smart-section,
+  body.admin #saee-smart-content,
+  body.admin [data-smart-section],
+  body.admin nav a[href="#saee-smart"] {
+    display: none !important;
+    visibility: hidden !important;
+  }
+</style>
+<script>
+(function () {
+    function updateAdminView() {
+        const hash = (window.location.hash || '').toLowerCase();
+        const path = (window.location.pathname || '').toLowerCase();
+        const isAdmin = hash === '#admin' || hash.startsWith('#admin/') || hash.startsWith('#admin?') || path.endsWith('/admin.html');
+        document.body.classList.toggle('admin', isAdmin);
+        const smartSection = document.getElementById('saee-smart');
+        if (smartSection) {
+            smartSection.hidden = isAdmin;
+            smartSection.setAttribute('aria-hidden', String(isAdmin));
+        }
+        document.querySelectorAll('nav a[href="#saee-smart"]').forEach(link => {
+            link.hidden = isAdmin;
+            link.setAttribute('aria-hidden', String(isAdmin));
+        });
+    }
+    updateAdminView();
+    window.addEventListener('hashchange', updateAdminView);
+    window.addEventListener('DOMContentLoaded', updateAdminView);
+    const observer = new MutationObserver(updateAdminView);
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+})();
+</script>
 <script src="smart-engine.js"></script>
 <script src="smart-ui.js"></script>
 <!-- إخفاء قسم سعي الذكي من واجهة الإدارة فقط -->
