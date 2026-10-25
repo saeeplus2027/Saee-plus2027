@@ -9,16 +9,21 @@ body.admin header,body.admin footer{display:none}body.admin{background:#f3f5ef}.
 .admin-password-change:hover,.admin-password-logout:hover{background:#ffffff20}
 .admin-password-error{color:#b42318;font-size:13px;min-height:18px}
 
-/* إخفاء سعي الذكي عندما تكون لوحة الإدارة مفتوحة */
+/* إخفاء قسم سعي الذكي تمامًا أثناء فتح لوحة الإدارة */
+body.admin #saee-smart, body.admin .saee-smart-section { display: none !important; }
+
+
+/* FIX: Hide Saee Smart section while the admin route is active. */
 body.admin #saee-smart,
 body.admin .saee-smart-section,
 body.admin #saee-smart-content,
+body.admin .smart-page,
 body.admin [data-smart-section] {
-    display: none !important;
-    visibility: hidden !important;
-    height: 0 !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-    margin: 0 !important;
-    padding: 0 !important;
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
