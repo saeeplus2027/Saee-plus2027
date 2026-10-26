@@ -27,14 +27,14 @@
 <div class="sp-note">تُحمّل بياناتك من الخادم بعد تسجيل الدخول فقط. سجّل الخروج بعد الانتهاء، خصوصًا على جهاز مشترك. عند تفعيل الخادم تُحذف النسخ القديمة المحلية ولا تُنقل تلقائيًا إلى أي حساب.</div></div>
 <div class="sp-hero-card"><div class="sp-card-top"><span>SKILL PASSPORT</span><span class="sp-chip">ملف تجريبي</span></div><div class="sp-avatar">✦</div><h2 id="heroName">صاحب المهارات</h2><p id="heroHeadline">أضف نبذة تعريفية قصيرة عنك</p><div class="sp-stat-row"><div><b id="statSkills">0</b><small>مهارات</small></div><div><b id="statEvidence">0</b><small>أدلة</small></div><div><b id="statChallenges">0</b><small>محاولات التحدي</small></div></div><div class="sp-progress"><span id="completionBar"></span></div><small id="completionText">اكمل بياناتك لبناء ملفك</small></div>
 </section>
-<section class="sp-panel sp-auth-panel" id="passportAuth" aria-live="polite">
-<div class="sp-section-head"><div><span class="sp-kicker">حسابك وخصوصيتك</span><h2>تسجيل الدخول والحفظ</h2><p>تُخزّن بيانات الجواز على الخادم، وتُربط بالهوية الموثقة للحساب الذي سجّل الدخول. لا تُنقل النسخ القديمة تلقائيًا لتجنب ربط بيانات شخص بحساب شخص آخر.</p></div><span class="sp-number">🔐</span></div>
+<div class="sp-auth-inline" id="passportAuth" aria-live="polite">
+<div class="sp-auth-inline-copy">
 <p id="passportAuthStatus" class="sp-auth-status">جار التحقق من تسجيل الدخول...</p>
-<div id="passportAuthActions" class="sp-actions"><a class="sp-btn" href="/signin-with-chatgpt?return_to=%2Fskill-passport.html">تسجيل الدخول عبر ChatGPT</a></div>
 <p id="passportSaveStatus" class="sp-save-status" role="status">بانتظار التحقق من تسجيل الدخول...</p>
+</div>
+<div id="passportAuthActions" class="sp-auth-inline-actions"><a class="sp-btn" href="/signin-with-chatgpt?return_to=%2Fskill-passport.html">تسجيل الدخول عبر ChatGPT</a></div>
 <div class="sp-actions sp-recovery-actions"><button class="sp-btn sp-btn-light" id="downloadUnsavedBtn" type="button" hidden disabled>تنزيل نسخة إنقاذ</button><button class="sp-btn" id="retrySaveBtn" type="button" hidden disabled>إعادة محاولة الحفظ</button></div>
-<p class="sp-warning">لا يعمل الحفظ الآمن على GitHub Pages الثابتة. يجب فتح الجواز من إصدار Cloudflare الذي يشغّل واجهة API وقاعدة D1. على جهاز مشترك، سجّل الخروج بعد الانتهاء.</p>
-</section>
+</div>
 <div class="sp-layout">
 <aside class="sp-sidebar"><div class="sp-side-title">مساحة المهارات</div><a href="#profile">01 · الملف الشخصي</a><a href="#skills">02 · المهارات والأدلة</a><a href="#projects">03 · المشاريع والإنجازات</a><a href="#challenges">04 · التحديات العملية</a><a href="#analyzer">05 · محلل المهارات الذكي</a><a href="#privacy">06 · الخصوصية والمشاركة</a><div class="sp-side-tip"><b>تذكّر</b><p>المهارة المدخلة ذاتيًا ليست اعتمادًا مهنيًا. الروابط أدلة مرجعية فقط، ونتيجة التحدي الآلي لا تثبت الكفاءة.</p></div></aside>
 <div class="sp-content">
