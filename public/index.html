@@ -625,6 +625,77 @@
     }
   </style>
 
+
+  <style id="saee-mobile-navigation-visibility-fix">
+    /* إظهار جواز المهارات والاستفسارات على الهاتف داخل قائمة ☰ */
+    @media (max-width: 700px) {
+      body > header {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: 12px !important;
+        overflow: visible !important;
+      }
+      body > header > .brand { order: 1 !important; }
+      body > header > .header-actions {
+        order: 2 !important;
+        flex: 1 0 100% !important;
+        width: 100% !important;
+      }
+      body > header > nav {
+        order: 3 !important;
+        display: none !important;
+        position: static !important;
+        inset: auto !important;
+        flex: 1 0 100% !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 10px !important;
+        box-sizing: border-box !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        justify-content: flex-start !important;
+        gap: 4px !important;
+        background: #faf8f2 !important;
+        border: 1px solid #dce8e2 !important;
+        border-radius: 14px !important;
+        overflow: visible !important;
+      }
+      body > header > nav.open {
+        display: flex !important;
+      }
+      body > header > nav > a,
+      body > header > nav > a[href="skill-passport.html"],
+      body > header > nav .saee-inquiries-nav > #saee-inquiries-toggle {
+        display: flex !important;
+        width: 100% !important;
+        min-height: 44px !important;
+        box-sizing: border-box !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        padding: 10px 12px !important;
+        white-space: normal !important;
+        text-align: right !important;
+        font-size: 14px !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
+      body > header > nav .saee-inquiries-nav {
+        display: block !important;
+        width: 100% !important;
+      }
+      body > header > nav .saee-inquiries-menu {
+        position: static !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-top: 4px !important;
+        box-sizing: border-box !important;
+      }
+    }
+  </style>
+
 </head>
 
 <body>
@@ -1761,6 +1832,78 @@
   menu.querySelectorAll('[data-inquiry]').forEach(button => button.addEventListener('click', () => { menu.hidden = true; toggle.setAttribute('aria-expanded', 'false'); showDialog(button.dataset.inquiry); }));
   dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
   document.addEventListener('click', event => { if (!event.target.closest('.saee-inquiries-nav')) { menu.hidden = true; toggle.setAttribute('aria-expanded', 'false'); } });
+})();
+</script>
+
+
+<script id="saee-project-account-gate">
+(() => {
+  'use strict';
+  const SESSION_KEY = 'sai-local-session-v1';
+  const ACCOUNT_PREFIX = 'sai-local-account-v1:';
+  const AUTH_DIALOG_ID = 'sai-auth';
+
+  function hasAccountSession() {
+    try {
+      const email = localStorage.getItem(SESSION_KEY);
+      if (!email) return false;
+      const raw = localStorage.getItem(ACCOUNT_PREFIX + encodeURIComponent(email));
+      if (!raw) return false;
+      const account = JSON.parse(raw);
+      return Boolean(account && account.version === 1 && account.email === email);
+    } catch (_) { return false; }
+  }
+
+  function isAddProjectAction(el) {
+    if (!(el instanceof Element)) return false;
+    const target = el.closest('button, input[type="submit"], input[type="button"], a, [role="button"]');
+    if (!target) return false;
+    const text = [target.innerText, target.value, target.getAttribute('aria-label'), target.title, target.dataset?.action]
+      .filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+    return /إضافة\s*مشروع|اضافة\s*مشروع|أضف\s*مشروع|اضف\s*مشروع|إضافة\s*فرصة|اضافة\s*فرصة/.test(text);
+  }
+
+  function requestLogin() {
+    const dialog = document.getElementById(AUTH_DIALOG_ID);
+    const message = document.getElementById('sai-auth-message');
+    if (!dialog) {
+      alert('لإضافة مشروع، لازم تنشئ حسابًا أو تسجّل الدخول أولًا.');
+      return;
+    }
+    dialog.querySelectorAll('[data-auth-panel]').forEach(panel => {
+      panel.hidden = panel.dataset.authPanel !== 'login';
+    });
+    const title = document.getElementById('sai-auth-title');
+    const description = document.getElementById('sai-auth-description');
+    if (title) title.textContent = 'تسجيل الدخول مطلوب';
+    if (description) description.textContent = 'لإضافة مشروع، أنشئ حسابًا أو سجّل الدخول أولًا.';
+    if (message) {
+      message.textContent = 'حتى تتمكن من إضافة مشروع، سجّل الدخول أو أنشئ حسابًا جديدًا. بعد تسجيل الدخول ارجع واضغط «إضافة مشروع» مرة ثانية.';
+      message.hidden = false;
+    }
+    if (!dialog.open && typeof dialog.showModal === 'function') dialog.showModal();
+    const email = document.getElementById('sai-login-email');
+    if (email) setTimeout(() => email.focus(), 50);
+  }
+
+  document.addEventListener('click', event => {
+    if (!isAddProjectAction(event.target) || hasAccountSession()) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    requestLogin();
+  }, true);
+
+  document.addEventListener('submit', event => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || hasAccountSession()) return;
+    const text = (form.innerText || '') + ' ' + (form.getAttribute('aria-label') || '') + ' ' + (form.id || '');
+    if (!/إضافة\s*مشروع|اضافة\s*مشروع|أضف\s*مشروع|اضف\s*مشروع|إضافة\s*فرصة|اضافة\s*فرصة|project.*(add|new)|(add|new).*project/i.test(text)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    requestLogin();
+  }, true);
 })();
 </script>
 
