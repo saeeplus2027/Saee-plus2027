@@ -335,6 +335,28 @@
     @media (max-width: 480px) {
       #sai-auth {
         padding: 22px;
+
+        /* توحيد حجم زر ابدأ رحلتك مع بقية أزرار الهيدر */
+header .header-actions > a.button.small[href="#services"] {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-wrap: nowrap !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  height: 60px !important;
+  min-height: 60px !important;
+  padding: 11px 19px !important;
+  gap: 12px !important;
+  line-height: 1.2 !important;
+  box-sizing: border-box !important;
+}
+
+header .header-actions > a.button.small[href="#services"] span {
+  display: inline-block !important;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+}
       }
     }
   </style>
