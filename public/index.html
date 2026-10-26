@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
- <style id="saee-navigation-fix">
+<style id="saee-navigation-fix">
+
+/* تنسيق القائمة على الكمبيوتر */
 @media (min-width: 701px) and (max-width: 1600px) {
   body > header {
     display: grid !important;
@@ -48,10 +50,35 @@
   }
 }
 
-/* إخفاء رابط سعي الذكي من شريط التنقل فقط */
+/* إخفاء رابط سعي الذكي فقط */
 body > header > nav a[href="#saee-smart"] {
   display: none !important;
 }
+
+/* إظهار جواز المهارات في قائمة الهاتف */
+@media (max-width: 700px) {
+  body > header > nav.open {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 9999 !important;
+  }
+
+  body > header > nav.open a[href="skill-passport.html"] {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 100% !important;
+    white-space: nowrap !important;
+  }
+
+  body > header > nav.open a[href="#saee-smart"] {
+    display: none !important;
+  }
+}
+
 </style>
 <head>
   <meta charset="UTF-8">
