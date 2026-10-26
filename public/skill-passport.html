@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#075550"><title>Saee Skill Passport | سعي بلس</title>
+<link rel="stylesheet" href="style.css"><link rel="stylesheet" href="skill-passport.css">
+</head>
+<body class="passport-body">
+<header class="passport-header">
+<a class="brand" href="index.html"><img src="assets/brand.jpg" alt=""><span>سعي بلس<small>SA’I PLUS</small></span></a>
+<nav aria-label="القائمة الرئيسية"><a href="index.html">الرئيسية</a><a class="active" href="skill-passport.html">جواز المهارات</a></nav>
+<a class="button small" href="#profile">ابدأ ملفك ↖</a>
+</header>
+<main class="sp-wrap">
+<section class="sp-hero">
+<div><span class="sp-eyebrow">SAEE SKILL PASSPORT · ملفك، إنجازك، دليلك</span>
+<h1>مهاراتك تستحق<br><em>دليلًا يثبتها.</em></h1>
+<p>حوّل مهاراتك ومشاريعك وشهاداتك إلى ملف إنجازات واضح قابل للمشاركة. أضف الأدلة، جرّب تحديًا عمليًا، واكتشف المهارات التي يمكنك تطويرها.</p>
+<div class="sp-actions"><a class="sp-btn" href="#profile">أنشئ جوازك <span>↖</span></a><button class="sp-btn sp-btn-light" id="shareBtn">معاينة صفحة المشاركة</button></div>
+<div class="sp-note">نسخة تجريبية: تحفظ البيانات في هذا المتصفح فقط، وليست حسابًا سحابيًا.</div></div>
+<div class="sp-hero-card"><div class="sp-card-top"><span>SKILL PASSPORT</span><span class="sp-chip">ملف تجريبي</span></div><div class="sp-avatar">✦</div><h2 id="heroName">صاحب المهارات</h2><p id="heroHeadline">أضف نبذة تعريفية قصيرة عنك</p><div class="sp-stat-row"><div><b id="statSkills">0</b><small>مهارات</small></div><div><b id="statEvidence">0</b><small>أدلة</small></div><div><b id="statChallenges">0</b><small>تحديات مكتملة</small></div></div><div class="sp-progress"><span id="completionBar"></span></div><small id="completionText">اكمل بياناتك لبناء ملفك</small></div>
+</section>
+<div class="sp-layout">
+<aside class="sp-sidebar"><div class="sp-side-title">مساحة المهارات</div><a href="#profile">01 · الملف الشخصي</a><a href="#skills">02 · المهارات والأدلة</a><a href="#projects">03 · المشاريع والإنجازات</a><a href="#challenges">04 · التحديات العملية</a><a href="#analyzer">05 · محلل المهارات الذكي</a><a href="#privacy">06 · الخصوصية والمشاركة</a><div class="sp-side-tip"><b>تذكّر</b><p>إضافة مهارة لا تعني اعتمادها. سنوضح دائمًا هل هي مدخلة ذاتيًا أو مدعومة بدليل أو اجتازت تقييمًا.</p></div></aside>
+<div class="sp-content">
+<section class="sp-panel" id="profile"><div class="sp-section-head"><div><span class="sp-kicker">خطوتك الأولى</span><h2>ملفي الشخصي</h2><p>عرّف عن نفسك وحدد المعلومات التي تريد إظهارها.</p></div><span class="sp-number">01</span></div>
+<form id="profileForm" class="sp-form"><label>الاسم المعروض<input id="name" maxlength="80" placeholder="مثال: عبد الرحمن فريجات" required></label><label>المجال أو المسمى المهني<input id="headline" maxlength="100" placeholder="مثال: طالب أمن سيبراني"></label><label class="sp-wide">نبذة مختصرة<textarea id="bio" maxlength="500" rows="3" placeholder="ما الذي تعمل عليه؟ وما نوع الفرص التي تبحث عنها؟"></textarea></label><label>الموقع (اختياري)<input id="location" maxlength="100" placeholder="مثال: الأردن"></label><label>رابط LinkedIn أو موقعك<input id="profileLink" type="url" maxlength="300" placeholder="https://..."></label><button class="sp-btn" type="submit">حفظ الملف الشخصي</button></form>
+</section>
+<section class="sp-panel" id="skills"><div class="sp-section-head"><div><span class="sp-kicker">قدرات مدعومة بالأدلة</span><h2>المهارات والأدلة</h2><p>أضف المهارات واربط كل مهارة بدليل يمكن مراجعته.</p></div><span class="sp-number">02</span></div>
+<form id="skillForm" class="sp-form"><label>اسم المهارة<input id="skillName" maxlength="80" placeholder="مثال: تحليل ثغرات الويب" required></label><label>المجال<select id="skillCategory"><option>تقنية</option><option>شخصية</option><option>تصميم</option><option>تسويق</option><option>إدارة</option><option>أخرى</option></select></label><label>مستواك حسب تقديرك<select id="skillLevel"><option>مبتدئ</option><option>متوسط</option><option>متقدم</option><option>خبير</option></select></label><label>نوع الدليل<select id="evidenceType"><option value="github">مشروع GitHub</option><option value="portfolio">نموذج أعمال</option><option value="certificate">شهادة أو دورة</option><option value="file">ملف أو تقرير</option><option value="challenge">نتيجة تحدٍ</option><option value="other">رابط آخر</option></select></label><label class="sp-wide">رابط الدليل (اختياري)<input id="evidenceUrl" type="url" maxlength="500" placeholder="https://github.com/username/project"></label><label class="sp-wide">وصف الدليل<input id="evidenceDesc" maxlength="220" placeholder="ما الذي يوضحه هذا الدليل؟"></label><button class="sp-btn" type="submit">إضافة المهارة والدليل +</button></form>
+<div id="skillsList" class="sp-list"></div><div class="sp-legend"><span class="tag-self">مدخلة ذاتيًا</span><span class="tag-evidence">مدعومة بدليل</span><span class="tag-verified">اجتازت تقييمًا</span><small>لا يظهر وسم «اجتازت تقييمًا» إلا بعد إكمال تحدٍ محدد بنجاح.</small></div>
+</section>
+<section class="sp-panel" id="projects"><div class="sp-section-head"><div><span class="sp-kicker">اعرض ما أنجزته</span><h2>المشاريع والإنجازات</h2><p>أضف مشاريعك وخبراتك وشهاداتك مع روابط أو وصف واضح.</p></div><span class="sp-number">03</span></div>
+<form id="projectForm" class="sp-form"><label>عنوان المشروع أو الإنجاز<input id="projectTitle" maxlength="100" required placeholder="مثال: Web Security Scanner"></label><label>نوع الإنجاز<select id="projectType"><option>مشروع</option><option>شهادة أو دورة</option><option>خبرة عملية</option><option>تطوع</option><option>إنجاز آخر</option></select></label><label class="sp-wide">الوصف<textarea id="projectDesc" maxlength="500" rows="3" required placeholder="اشرح دورك وما أنجزته والنتيجة."></textarea></label><label class="sp-wide">رابط المشروع أو الشهادة<input id="projectUrl" type="url" maxlength="500" placeholder="https://..."></label><button class="sp-btn" type="submit">إضافة إنجاز +</button></form><div id="projectsList" class="sp-list"></div>
+</section>
+<section class="sp-panel" id="challenges"><div class="sp-section-head"><div><span class="sp-kicker">أثبت التطبيق العملي</span><h2>التحديات العملية</h2><p>ابدأ بتحدٍ قصير، أرسل إجابتك، واحصل على نتيجة وفق قواعد معلنة.</p></div><span class="sp-number">04</span></div>
+<div class="sp-challenge"><div class="sp-challenge-icon">⌘</div><div class="sp-challenge-main"><span class="sp-chip">تقييم آلي بالقواعد</span><h3>تحدي أساسيات أمن الويب</h3><p>اذكر ثلاث خطوات عملية لتقليل مخاطر حقن SQL في تطبيق ويب.</p><small>معايير التقييم: ذكر الاستعلامات المعلّمة، والتحقق من المدخلات، وتقليل صلاحيات قاعدة البيانات. نقطة لكل معيار.</small></div></div>
+<form id="challengeForm" class="sp-form sp-challenge-form"><label class="sp-wide">إجابتك<textarea id="challengeAnswer" rows="4" maxlength="1500" required placeholder="اكتب خطواتك واشرحها باختصار..."></textarea></label><button class="sp-btn" type="submit">تقييم الإجابة</button></form><div id="challengeResult" class="sp-result" hidden></div><div id="challengeHistory" class="sp-list"></div>
+</section>
+<section class="sp-panel" id="analyzer"><div class="sp-section-head"><div><span class="sp-kicker">مساعدة ذكية قابلة للمراجعة</span><h2>محلل المهارات</h2><p>استخرج اقتراحات أولية من وصف مشروعك. هذه النسخة تستخدم قواعد محلية، وليست اتصالًا بنموذج لغوي خارجي.</p></div><span class="sp-number">05</span></div>
+<form id="analyzerForm" class="sp-form"><label class="sp-wide">وصف المشروع أو الإنجاز<textarea id="analyzerText" rows="4" maxlength="3000" placeholder="صف ما بنيته، الأدوات المستخدمة، دورك والنتيجة..." required></textarea></label><button class="sp-btn" type="submit">تحليل واقتراح مهارات ✦</button></form><div id="analysisResult" class="sp-analysis" hidden></div><div class="sp-ai-foot">يمكن ربط LLM API لاحقًا عبر خادم آمن وإرجاع Structured Outputs. لا تضع مفتاح API داخل ملفات المتصفح.</div>
+</section>
+<section class="sp-panel" id="privacy"><div class="sp-section-head"><div><span class="sp-kicker">أنت تتحكم بملفك</span><h2>الخصوصية والمشاركة</h2><p>اختر ما تريد إظهاره في معاينة صفحة الإنجازات.</p></div><span class="sp-number">06</span></div>
+<label class="sp-switch-row"><span><b>إتاحة صفحة المشاركة</b><small>تظهر بياناتك المختارة في معاينة عامة على هذا الجهاز فقط.</small></span><input type="checkbox" id="publicToggle"></label>
+<label class="sp-switch-row"><span><b>إظهار المشاريع والإنجازات</b><small>يمكن إخفاء قائمة المشاريع من المعاينة.</small></span><input type="checkbox" id="showProjects" checked></label>
+<label class="sp-switch-row"><span><b>إظهار روابط الأدلة</b><small>تأكد أن الروابط لا تحتوي معلومات خاصة.</small></span><input type="checkbox" id="showEvidence" checked></label>
+<div class="sp-actions"><button class="sp-btn" id="shareBtn2" type="button">معاينة صفحة المشاركة</button><button class="sp-btn sp-btn-light" id="exportBtn" type="button">تصدير نسخة JSON</button><button class="sp-btn sp-danger" id="resetBtn" type="button">مسح بيانات التجربة</button></div>
+<p class="sp-warning">تنبيه: هذا النموذج التجريبي يخزن البيانات في localStorage ولا يوفر مصادقة مستخدمين أو تخزينًا آمنًا للملفات أو مشاركة عامة عبر الإنترنت. لا تدخل بيانات حساسة. يلزم ربطه بخادم وقاعدة بيانات وصلاحيات قبل الإنتاج.</p>
+</section>
+</div></div>
+<footer class="sp-footer"><a href="index.html">سعي بلس</a> · Saee Skill Passport <span>نسخة تجريبية</span></footer>
+</main>
+<dialog id="publicDialog" class="sp-dialog"><button class="sp-close" id="closeDialog" aria-label="إغلاق">×</button><div id="publicPreview"></div></dialog>
+<script src="skill-passport.js"></script>
+</body></html>
