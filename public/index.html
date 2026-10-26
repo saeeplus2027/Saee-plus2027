@@ -1,5 +1,103 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+<style id="saee-navigation-fix">
+
+/* تنسيق القائمة على الكمبيوتر */
+@media (min-width: 701px) and (max-width: 1600px) {
+  body > header {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    grid-template-areas:
+      "brand actions"
+      "nav nav" !important;
+    align-items: center !important;
+    height: auto !important;
+    min-height: 0 !important;
+    gap: 16px !important;
+    padding-top: 16px !important;
+    padding-bottom: 16px !important;
+    overflow: visible !important;
+  }
+
+  body > header > .brand {
+    grid-area: brand !important;
+  }
+
+  body > header > .header-actions {
+    grid-area: actions !important;
+    margin: 0 !important;
+  }
+
+  body > header > nav {
+    grid-area: nav !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    gap: 14px 22px !important;
+    overflow: visible !important;
+    visibility: visible !important;
+  }
+
+  body > header > nav a {
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+    visibility: visible !important;
+    font-size: 12px !important;
+  }
+}
+
+/* إخفاء رابط سعي الذكي فقط */
+body > header > nav a[href="#saee-smart"] {
+  display: none !important;
+}
+
+/* إظهار جواز المهارات في قائمة الهاتف */
+@media (max-width: 700px) {
+  body > header > nav.open {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 9999 !important;
+  }
+
+  body > header > nav.open a[href="skill-passport.html"] {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 100% !important;
+    white-space: nowrap !important;
+  }
+
+  body > header > nav.open a[href="#saee-smart"] {
+    display: none !important;
+  }
+}
+
+/* إخفاء أزرار الحساب والرحلة من صفحة الإدارة فقط */
+body.admin header .header-actions #sai-open-auth,
+body.admin header .header-actions #sai-logout,
+body.admin header .header-actions > a.button.small {
+  display: none !important;
+}
+
+/* إخفاء القائمة العلوية بالكامل من صفحة الإدارة فقط */
+body.admin > header > nav {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* التأكد من عدم ظهور روابط القائمة في صفحة الإدارة */
+body.admin > header > nav a {
+  display: none !important;
+}
+
+</style>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -338,6 +436,115 @@
       }
     }
   </style>
+
+  <style id="nav-fit-fix">
+    /* Keep every navigation item visible on medium-width screens */
+    @media (min-width: 701px) and (max-width: 1200px) {
+      body > header {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) auto !important;
+        grid-template-areas:
+          "brand actions"
+          "nav nav" !important;
+        align-items: center !important;
+        height: auto !important;
+        min-height: 0 !important;
+        gap: 16px !important;
+        padding-top: 16px !important;
+        padding-bottom: 16px !important;
+        overflow: visible !important;
+      }
+
+      body > header > .brand {
+        grid-area: brand !important;
+        min-width: 0 !important;
+      }
+
+      body > header > .header-actions {
+        grid-area: actions !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        justify-self: end !important;
+      }
+
+      body > header > nav {
+        grid-area: nav !important;
+        order: initial !important;
+        display: flex !important;
+        flex-basis: auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 12px 22px !important;
+        overflow: visible !important;
+        white-space: normal !important;
+      }
+
+      body > header > nav a {
+        flex: 0 0 auto !important;
+        white-space: nowrap !important;
+        font-size: 12px !important;
+      }
+    }
+  </style>
+
+
+  <style id="saee-skill-passport-nav-fix">
+    /* Keep every navigation link visible on laptop and tablet widths. */
+    @media screen and (min-width: 701px) and (max-width: 1300px) {
+      body > header {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) auto !important;
+        grid-template-areas: "brand actions" "nav nav" !important;
+        align-items: center !important;
+        justify-content: initial !important;
+        height: auto !important;
+        min-height: 104px !important;
+        max-width: 100% !important;
+        gap: 14px 24px !important;
+        padding: 16px 5% !important;
+        box-sizing: border-box !important;
+      }
+      body > header > .brand { grid-area: brand !important; }
+      body > header > .header-actions {
+        grid-area: actions !important;
+        margin: 0 !important;
+        min-width: 0 !important;
+      }
+      body > header > nav {
+        grid-area: nav !important;
+        order: initial !important;
+        flex-basis: auto !important;
+        display: flex !important;
+        position: static !important;
+        inset: auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 10px 0 !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        gap: 12px 22px !important;
+        overflow: visible !important;
+        visibility: visible !important;
+      }
+      body > header > nav a {
+        display: inline-flex !important;
+        flex: 0 0 auto !important;
+        white-space: nowrap !important;
+        font-size: 12px !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
+    }
+  </style>
+
 </head>
 
 <body>
@@ -354,11 +561,11 @@
   <nav aria-label="القائمة الرئيسية">
     <a href="#home">الرئيسية</a>
     <a href="#services">خدماتنا</a>
+    <a href="skill-passport.html">جواز المهارات</a>
     <a href="#discounts">خصومات سعي</a>
     <a href="#market">السوق المحلي</a>
     <a href="#projects">فرص المشاريع</a>
     <a href="#saee-smart">سعي الذكي</a>
-    <a href="skill-passport.html">جواز المهارات</a>
   </nav>
 
   <div class="header-actions">
