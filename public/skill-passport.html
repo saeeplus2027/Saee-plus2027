@@ -46,7 +46,7 @@
 <form id="analyzerForm" class="sp-form"><label class="sp-wide">وصف المشروع أو الإنجاز<textarea id="analyzerText" rows="4" maxlength="3000" placeholder="صف ما بنيته، الأدوات المستخدمة، دورك والنتيجة..." required></textarea></label><button class="sp-btn" type="submit">تحليل واقتراح مهارات ✦</button></form><div id="analysisResult" class="sp-analysis" hidden></div><div class="sp-ai-foot">يمكن ربط LLM API لاحقًا عبر خادم آمن وإرجاع Structured Outputs. لا تضع مفتاح API داخل ملفات المتصفح.</div>
 </section>
 <section class="sp-panel" id="privacy"><div class="sp-section-head"><div><span class="sp-kicker">أنت تتحكم بملفك</span><h2>الخصوصية والمشاركة</h2><p>اختر ما تريد إظهاره في معاينة صفحة الإنجازات.</p></div><span class="sp-number">06</span></div>
-<label class="sp-switch-row"><span><b>إتاحة صفحة المشاركة</b><small>تظهر بياناتك المختارة في معاينة عامة على هذا الجهاز فقط.</small></span><input type="checkbox" id="publicToggle"></label>
+<label class="sp-switch-row"><span><b>إتاحة صفحة المشاركة</b><small>تظهر بياناتك المختارة في معاينة عامة على هذا الجهاز فقط.</small></span><input type="checkbox" id="publicToggle" checked></label>
 <label class="sp-switch-row"><span><b>إظهار المشاريع والإنجازات</b><small>يمكن إخفاء قائمة المشاريع من المعاينة.</small></span><input type="checkbox" id="showProjects" checked></label>
 <label class="sp-switch-row"><span><b>إظهار روابط الأدلة</b><small>تأكد أن الروابط لا تحتوي معلومات خاصة.</small></span><input type="checkbox" id="showEvidence" checked></label>
 <div class="sp-actions"><button class="sp-btn" id="shareBtn2" type="button">معاينة صفحة المشاركة</button><button class="sp-btn sp-btn-light" id="exportBtn" type="button">تصدير نسخة JSON</button><button class="sp-btn sp-danger" id="resetBtn" type="button">مسح بيانات التجربة</button></div>
@@ -57,4 +57,27 @@
 </main>
 <dialog id="publicDialog" class="sp-dialog"><button class="sp-close" id="closeDialog" aria-label="إغلاق">×</button><div id="publicPreview"></div></dialog>
 <script src="skill-passport.js"></script>
+<script>
+/* فعّل خيار المشاركة مرة واحدة افتراضيًا، مع حفظ الاختيار عبر آلية الصفحة الحالية. */
+(function () {
+  const preferenceKey = 'saee-passport-sharing-default-applied-v1';
+  function enableSharingOnce() {
+    const toggle = document.getElementById('publicToggle');
+    if (!toggle) return;
+    try {
+      if (localStorage.getItem(preferenceKey) === '1') return;
+      toggle.checked = true;
+      toggle.dispatchEvent(new Event('change', { bubbles: true }));
+      localStorage.setItem(preferenceKey, '1');
+    } catch (error) {
+      toggle.checked = true;
+    }
+  }
+  if (document.readyState === 'complete') {
+    enableSharingOnce();
+  } else {
+    window.addEventListener('load', enableSharingOnce, { once: true });
+  }
+})();
+</script>
 </body></html>
