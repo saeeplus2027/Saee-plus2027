@@ -458,59 +458,58 @@
   </style>
 
 
-  <style id="saee-restore-skill-passport">
-    /* Restore the Skill Passport link on the public site. */
-    body:not(.admin) > header > nav a[href="skill-passport.html"] {
-      display: inline-flex !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-      flex: 0 0 auto !important;
-      white-space: nowrap !important;
-      position: relative !important;
-      z-index: 5 !important;
+  <style id="saee-inquiries-styles">
+    .saee-inquiries-nav { position: relative; display: inline-flex; align-items: center; }
+    .saee-inquiries-nav > #saee-inquiries-toggle {
+      border: 0; background: transparent; color: inherit; font: inherit;
+      font-weight: inherit; cursor: pointer; padding: 8px 10px; white-space: nowrap;
     }
-
-    /* On phones, show it when the menu is opened. */
+    .saee-inquiries-nav > #saee-inquiries-toggle:hover,
+    .saee-inquiries-nav > #saee-inquiries-toggle:focus-visible { color: #075550; }
+    .saee-inquiries-menu {
+      position: absolute; z-index: 10000; top: calc(100% + 10px); inset-inline-start: 0;
+      width: min(300px, 85vw); padding: 8px; background: #faf8f2; color: #173c39;
+      border: 1px solid #dce8e2; border-radius: 14px; box-shadow: 0 18px 45px #173c3926;
+    }
+    .saee-inquiries-menu[hidden] { display: none !important; }
+    .saee-inquiries-menu button {
+      display: block; width: 100%; padding: 11px 12px; border: 0; border-radius: 9px;
+      background: transparent; color: inherit; text-align: right; font: inherit;
+      font-size: 14px; line-height: 1.6; cursor: pointer;
+    }
+    .saee-inquiries-menu button:hover, .saee-inquiries-menu button:focus-visible {
+      background: #eaf2ed; color: #075550;
+    }
+    #saee-inquiry-dialog {
+      box-sizing: border-box; width: min(470px, calc(100% - 28px));
+      max-height: min(80dvh, 680px); overflow-y: auto; margin: auto; padding: 24px;
+      border: 1px solid #dce8e2; border-radius: 20px; background: #faf8f2;
+      color: #173c39; font-family: inherit; text-align: right; box-shadow: 0 24px 70px #173c3926;
+    }
+    #saee-inquiry-dialog::backdrop { background: rgb(7 55 50 / 42%); }
+    #saee-inquiry-dialog .saee-inquiry-close {
+      display: block; margin-inline-start: auto; width: 36px; height: 36px; border: 0;
+      border-radius: 50%; background: #eaf2ed; color: #075550; font: inherit;
+      font-size: 24px; cursor: pointer;
+    }
+    #saee-inquiry-dialog h2 { margin: 8px 0 10px; color: #075550; font-size: 22px; }
+    #saee-inquiry-dialog p { line-height: 1.8; }
+    #saee-inquiry-dialog .saee-inquiry-contact {
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      margin: 10px 0; padding: 13px; border: 1px solid #dce8e2; border-radius: 12px;
+      background: #fff;
+    }
+    #saee-inquiry-dialog .saee-inquiry-contact a {
+      color: #075550; direction: ltr; unicode-bidi: embed; font-weight: 700;
+      text-decoration: none; white-space: nowrap;
+    }
+    #saee-inquiry-dialog .saee-inquiry-note { color: #62716b; font-size: 13px; }
     @media (max-width: 700px) {
-      body:not(.admin) > header > nav.open a[href="skill-passport.html"] {
-        display: flex !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        width: 100% !important;
-        white-space: nowrap !important;
-      }
-    }
-  </style>
-
-
-  <style id="saee-start-journey-button-fix">
-    /* Keep "ابدأ رحلتك" on one line and match the header button height. */
-    body > header > .header-actions > a.button.small[href="#services"] {
-      display: inline-flex !important;
-      flex-direction: row !important;
-      align-items: center !important;
-      justify-content: center !important;
-      flex: 0 0 auto !important;
-      width: max-content !important;
-      min-width: max-content !important;
-      max-width: none !important;
-      height: 60px !important;
-      min-height: 60px !important;
-      max-height: 60px !important;
-      padding: 11px 19px !important;
-      gap: 12px !important;
-      box-sizing: border-box !important;
-      white-space: nowrap !important;
-      word-break: keep-all !important;
-      overflow-wrap: normal !important;
-      line-height: 1.2 !important;
-    }
-
-    body > header > .header-actions > a.button.small[href="#services"] span {
-      display: inline-block !important;
-      flex: 0 0 auto !important;
-      white-space: nowrap !important;
-      line-height: 1 !important;
+      .saee-inquiries-nav { display: block; width: 100%; }
+      .saee-inquiries-nav > #saee-inquiries-toggle { width: 100%; text-align: right; }
+      .saee-inquiries-menu { position: static; width: 100%; margin-top: 4px; box-shadow: none; }
+      #saee-inquiry-dialog { padding: 18px; }
+      #saee-inquiry-dialog .saee-inquiry-contact { align-items: flex-start; flex-direction: column; }
     }
   </style>
 
@@ -534,6 +533,16 @@
     <a href="#discounts">خصومات سعي</a>
     <a href="#market">السوق المحلي</a>
     <a href="#projects">فرص المشاريع</a>
+    <div class="saee-inquiries-nav">
+      <button type="button" id="saee-inquiries-toggle" aria-expanded="false" aria-controls="saee-inquiries-menu">استفسارات</button>
+      <div id="saee-inquiries-menu" class="saee-inquiries-menu" hidden>
+        <button type="button" data-inquiry="loans">استفسار قروض ومنح ومكارم وأسئلة جامعية</button>
+        <button type="button" data-inquiry="opportunities">استفسار عن الفرص</button>
+        <button type="button" data-inquiry="talents">استفسار عن المواهب</button>
+        <button type="button" data-inquiry="expert">استفسار عن أسئلة خبير</button>
+        <button type="button" data-inquiry="projects">استفسار عن المشاريع</button>
+      </div>
+    </div>
   </nav>
 
   <div class="header-actions">
@@ -1407,30 +1416,33 @@
   "use strict";
 
   const bauCampusPlaces = [
-    { name: "كلية السلط التقنية – جامعة البلقاء التطبيقية، السلط", category: "الكليات والعمادات", query: "Al-Salt Technical College, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية الذكاء الاصطناعي – جامعة البلقاء التطبيقية، السلط", category: "الكليات والعمادات", query: "Faculty of Artificial Intelligence, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية الهندسة – المباني 2 و3", category: "الكليات والعمادات", query: "Faculty of Engineering Buildings 2 and 3, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية الأمير عبدالله بن غازي للاتصالات وتكنولوجيا المعلومات", category: "الكليات والعمادات", query: "Prince Abdullah Bin Ghazi Faculty for Information and Communication Technology, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية العلوم", category: "الكليات والعمادات", query: "Faculty of Science, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية التمريض", category: "الكليات والعمادات", query: "Faculty of Nursing, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية الأعمال", category: "الكليات والعمادات", query: "Faculty of Business, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية الحقوق والدراسات العليا وعمادة البحث العلمي", category: "الكليات والعمادات", query: "Faculty of Law Graduate Studies Scientific Research Deanship, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية السلط للعلوم الإنسانية", category: "الكليات والعمادات", query: "Al-Salt College for Human Sciences, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية التكنولوجيا الزراعية", category: "الكليات والعمادات", query: "Faculty of Agricultural Technology, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "عمادة شؤون الطلبة", category: "الكليات والعمادات", query: "Deanship of Student Affairs, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "رئاسة الجامعة", category: "الإدارة والخدمات", query: "Presidency Unit, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "وحدة التعاون والعلاقات الدولية", category: "الإدارة والخدمات", query: "Cooperation and International Relations Unit, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "وحدة الامتحانات", category: "الإدارة والخدمات", query: "Examination Unit, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "المكاتب الإدارية", category: "الإدارة والخدمات", query: "Administration Offices, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "وحدة القبول والتسجيل", category: "الإدارة والخدمات", query: "Admission and Registration Unit, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "المكتبة", category: "المرافق الجامعية", query: "Library, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "مركز الحاسوب", category: "المرافق الجامعية", query: "Computer Centre, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "مباني المحاضرات", category: "المرافق الجامعية", query: "Lecture Premises, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "مركز الابتكار والإبداع وريادة الأعمال", category: "المرافق الجامعية", query: "Innovation Creativity and Entrepreneurship Centre, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "مطعم الجامعة", category: "المرافق الجامعية", query: "University Restaurant, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "الملعب الرياضي", category: "المرافق الرياضية", query: "Stadium, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "ملعب الخماسي", category: "المرافق الرياضية", query: "Futsal Court, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "بوابات الجامعة", category: "المداخل والبوابات", query: "University Gates, Al-Balqa Applied University Main Campus, As-Salt, Jordan" }
+    { name: "كلية السلط التقنية", category: "الكليات والعمادات", query: "Al-Salt Technical College, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية الهندسة – مبنى 2", category: "الكليات والعمادات", query: "Engineering Building 2, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية الهندسة – مبنى 3", category: "الكليات والعمادات", query: "Engineering Building 3, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية تكنولوجيا المعلومات والاتصالات", category: "الكليات والعمادات", query: "Information and Communication Technology, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية العلوم", category: "الكليات والعمادات", query: "Faculty of Science, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية التمريض", category: "الكليات والعمادات", query: "Faculty of Nursing, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية الأعمال", category: "الكليات والعمادات", query: "Faculty of Business, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية الحقوق والدراسات العليا والبحث العلمي", category: "الكليات والعمادات", query: "Faculty of Law Graduate Studies Deanship of Scientific Research, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية السلط للعلوم الإنسانية", category: "الكليات والعمادات", query: "Al-Salt College for Human Sciences, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية التكنولوجيا الزراعية", category: "الكليات والعمادات", query: "Faculty of Agricultural Technology, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "عمادة شؤون الطلبة", category: "الكليات والعمادات", query: "Deanship of Student Affairs, Al-Balqa Applied University, As-Salt, Jordan" },
+
+    { name: "رئاسة الجامعة", category: "الإدارة والخدمات", query: "Presidency Unit, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "وحدة التعاون والعلاقات الدولية", category: "الإدارة والخدمات", query: "Cooperation and International Relations Unit, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "وحدة الامتحانات", category: "الإدارة والخدمات", query: "Examination Unit, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "المكاتب الإدارية", category: "الإدارة والخدمات", query: "Administration Offices, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "وحدة القبول والتسجيل", category: "الإدارة والخدمات", query: "Admission and Registration Unit, Al-Balqa Applied University, As-Salt, Jordan" },
+
+    { name: "المكتبة", category: "المرافق الجامعية", query: "Library, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "مركز الحاسوب", category: "المرافق الجامعية", query: "Computer Centre, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "قاعات المحاضرات", category: "المرافق الجامعية", query: "Lecture Premises, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "مركز الابتكار والإبداع وريادة الأعمال", category: "المرافق الجامعية", query: "Innovation Creativity and Entrepreneurship Centre, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "مطعم الجامعة", category: "المرافق الجامعية", query: "University Restaurant, Al-Balqa Applied University, As-Salt, Jordan" },
+
+    { name: "الملعب الرياضي", category: "المرافق الرياضية", query: "Stadium, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "ملعب الخماسي", category: "المرافق الرياضية", query: "Futsal, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "بوابات الجامعة", category: "المداخل والبوابات", query: "University Gates, Al-Balqa Applied University, As-Salt, Jordan" }
   ];
 
   const campusCenter = "32.02448,35.71693";
@@ -1470,10 +1482,9 @@
       <div class="container bau-campus-page">
         ${header}
         <div class="demo-note">
-          تم التحقق من أسماء الكليات والمرافق بالرجوع إلى
-          <a href="https://www.bau.edu.jo/bauar/Units/SIR/media/BAU_Map.pdf" target="_blank" rel="noopener noreferrer">مخطط الحرم الرئيسي الرسمي لجامعة البلقاء التطبيقية في السلط</a>، وإلى
-          <a href="https://bau.edu.jo/bauar/Colleges/AI/Home.aspx" target="_blank" rel="noopener noreferrer">الصفحة الرسمية لكلية الذكاء الاصطناعي</a>.
-          كلية السلط التقنية تتبع جامعة البلقاء التطبيقية وتقع ضمن حرمها في السلط، وليست تابعة لجامعة عمان العربية. أُضيفت كلية الذكاء الاصطناعي أيضًا. المخطط الرسمي لا يوفّر إحداثيات GPS منفصلة لكل مبنى؛ لذلك تبحث روابط Google Maps باسم المبنى مع اسم الجامعة والحرم في السلط. راجع اسم النتيجة الظاهرة قبل بدء التنقّل.
+          أسماء الكليات والمرافق مستندة إلى
+          <a href="https://www.bau.edu.jo/bauar/Units/SIR/media/BAU_Map.pdf" target="_blank" rel="noopener noreferrer">مخطط الحرم الجامعي الرسمي (PDF)</a>.
+          بعض المباني قد تظهر في Google Maps كنتيجة بحث باسمها وليس كدبوس مستقل؛ تأكد من اسم النتيجة قبل بدء التنقّل.
         </div>
 
         <div class="toolbar">
@@ -1597,5 +1608,108 @@
 })();
 
 </script>
+
+<dialog id="saee-inquiry-dialog" aria-labelledby="saee-inquiry-title">
+  <button type="button" class="saee-inquiry-close" aria-label="إغلاق" id="saee-inquiry-close">×</button>
+  <div id="saee-inquiry-content" aria-live="polite"></div>
+</dialog>
+
+<script id="saee-inquiries-script">
+(() => {
+  const toggle = document.getElementById('saee-inquiries-toggle');
+  const menu = document.getElementById('saee-inquiries-menu');
+  const dialog = document.getElementById('saee-inquiry-dialog');
+  const content = document.getElementById('saee-inquiry-content');
+  const close = document.getElementById('saee-inquiry-close');
+  if (!toggle || !menu || !dialog || !content) return;
+
+  const topics = {
+    loans: {
+      title: 'استفسار قروض ومنح ومكارم والأسئلة الجامعية',
+      contacts: [
+        ['عبد الرحمن', '0798245512'],
+        ['تقى', '0790730665']
+      ]
+    },
+    opportunities: {
+      title: 'استفسار عن الفرص',
+      contacts: [['سلمى', '0782153883']]
+    },
+    talents: {
+      title: 'استفسار عن المواهب',
+      contacts: [['لجين', '0770368592']]
+    },
+    expert: {
+      title: 'استفسار عن أسئلة خبير',
+      contacts: [
+        ['تقى', '0790730665'],
+        ['حمزة', '0788872569']
+      ]
+    },
+    projects: {
+      title: 'استفسار عن المشاريع',
+      contacts: [['لين', '0771059050']]
+    }
+  };
+
+  function isOpenHours() {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Amman', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+    }).formatToParts(new Date());
+    const hour = Number(parts.find(part => part.type === 'hour')?.value ?? 0);
+    return hour >= 9 && hour < 17;
+  }
+
+  function showDialog(topicKey) {
+    const topic = topics[topicKey];
+    if (!topic) return;
+    if (!isOpenHours()) {
+      content.innerHTML = `
+        <h2 id="saee-inquiry-title">الاستفسارات مغلقة حاليًا</h2>
+        <p>يمكنك الضغط على خيارات الاستفسارات والتواصل من الساعة <strong>9:00 صباحًا حتى 5:00 مساءً</strong> بتوقيت الأردن.</p>
+        <p class="saee-inquiry-note">الوقت الحالي خارج ساعات الاستفسارات. يرجى المحاولة خلال أوقات الدوام.</p>`;
+    } else {
+      const contacts = topic.contacts.map(([name, phone]) => `
+        <div class="saee-inquiry-contact">
+          <strong>${name}</strong>
+          <a href="tel:${phone}" aria-label="الاتصال بـ ${name} على ${phone}">${phone}</a>
+        </div>`).join('');
+      content.innerHTML = `
+        <h2 id="saee-inquiry-title">${topic.title}</h2>
+        <p>للاستفسار، تواصل مع الأشخاص التاليين:</p>
+        ${contacts}
+        <p class="saee-inquiry-note">التواصل متاح من 9:00 صباحًا حتى 5:00 مساءً بتوقيت الأردن.</p>`;
+    }
+    if (typeof dialog.showModal === 'function') dialog.showModal();
+    else alert(content.innerText);
+  }
+
+  toggle.addEventListener('click', () => {
+    const open = menu.hidden;
+    menu.hidden = !open;
+    toggle.setAttribute('aria-expanded', String(open));
+  });
+
+  menu.querySelectorAll('[data-inquiry]').forEach(button => {
+    button.addEventListener('click', () => {
+      menu.hidden = true;
+      toggle.setAttribute('aria-expanded', 'false');
+      showDialog(button.dataset.inquiry);
+    });
+  });
+
+  close?.addEventListener('click', () => dialog.close());
+  dialog.addEventListener('click', event => {
+    if (event.target === dialog) dialog.close();
+  });
+  document.addEventListener('click', event => {
+    if (!event.target.closest('.saee-inquiries-nav')) {
+      menu.hidden = true;
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+  });
+})();
+</script>
+
 </body>
 </html>
