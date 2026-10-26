@@ -477,6 +477,154 @@
     @media (max-width: 700px) { .saee-inquiries-nav { display: block; width: 100%; } .saee-inquiries-nav > #saee-inquiries-toggle { width: 100%; text-align: right; } .saee-inquiries-menu { position: static; width: 100%; margin-top: 4px; box-shadow: none; } #saee-inquiry-dialog { padding: 18px; } #saee-inquiry-dialog .saee-inquiry-contact { align-items: flex-start; flex-direction: column; } }
   </style>
 
+
+  <style id="saee-header-button-size-fix">
+    /* ضبط توزيع القائمة وأحجام الأزرار في الهيدر */
+    @media (min-width: 1201px) {
+      body > header {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 18px !important;
+        height: auto !important;
+        min-height: 88px !important;
+        padding: 14px 28px !important;
+        box-sizing: border-box !important;
+        overflow: visible !important;
+      }
+      body > header > .brand { flex: 0 0 auto !important; }
+      body > header > nav {
+        position: static !important;
+        display: flex !important;
+        flex: 1 1 auto !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex-wrap: nowrap !important;
+        gap: clamp(8px, 1.15vw, 18px) !important;
+        width: auto !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+      }
+      body > header > nav > a,
+      body > header > nav .saee-inquiries-nav > #saee-inquiries-toggle {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-height: 42px !important;
+        padding: 8px 5px !important;
+        font-size: 14px !important;
+        line-height: 1.35 !important;
+        white-space: nowrap !important;
+        text-align: center !important;
+      }
+      body > header > .header-actions {
+        display: flex !important;
+        flex: 0 0 auto !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        gap: 10px !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+      }
+      body > header > .header-actions .button.small {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-sizing: border-box !important;
+        min-height: 48px !important;
+        height: 48px !important;
+        padding: 0 16px !important;
+        margin: 0 !important;
+        font-size: 14px !important;
+        line-height: 1.2 !important;
+        white-space: nowrap !important;
+        flex: 0 0 auto !important;
+      }
+      body > header > .header-actions > a.button.small { min-width: 132px !important; }
+      body > header > .header-actions #sai-open-auth { max-width: 190px !important; }
+      body > header > .header-actions > .icon-btn {
+        flex: 0 0 42px !important;
+        width: 42px !important;
+        height: 42px !important;
+        min-width: 42px !important;
+        padding: 0 !important;
+      }
+      body > header > .header-actions #menu { display: none !important; }
+    }
+    @media (min-width: 701px) and (max-width: 1200px) {
+      body > header > .header-actions .button.small {
+        min-height: 44px !important; height: 44px !important;
+        padding: 0 13px !important; font-size: 13px !important;
+        white-space: nowrap !important;
+      }
+      body > header > .header-actions > a.button.small { min-width: 120px !important; }
+      body > header > nav > a,
+      body > header > nav .saee-inquiries-nav > #saee-inquiries-toggle {
+        min-height: 38px !important; padding: 7px 5px !important;
+        font-size: 13px !important; line-height: 1.35 !important;
+      }
+    }
+    @media (max-width: 700px) {
+      body > header > .header-actions .button.small {
+        min-height: 42px !important; height: 42px !important;
+        padding: 0 12px !important; font-size: 12px !important;
+        white-space: nowrap !important;
+      }
+      body > header > .header-actions > a.button.small { display: none !important; }
+    }
+  </style>
+
+
+  <style id="saee-show-skills-passport-final-fix">
+    /* Keep the skills passport visible by giving the navigation its own row. */
+    @media (min-width: 701px) {
+      body > header {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        height: auto !important;
+        min-height: 0 !important;
+        gap: 12px 20px !important;
+        padding-top: 14px !important;
+        padding-bottom: 14px !important;
+        overflow: visible !important;
+      }
+      body > header > .brand { order: 1 !important; flex: 0 0 auto !important; }
+      body > header > .header-actions { order: 2 !important; margin-inline-start: auto !important; flex: 0 0 auto !important; }
+      body > header > nav {
+        order: 3 !important;
+        display: flex !important;
+        flex: 1 0 100% !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 10px 22px !important;
+        overflow: visible !important;
+        visibility: visible !important;
+      }
+      body > header > nav a,
+      body > header > nav .saee-inquiries-nav {
+        display: inline-flex !important;
+        flex: 0 0 auto !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        white-space: nowrap !important;
+      }
+      body > header > nav a[href="skill-passport.html"] {
+        display: inline-flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        order: 3 !important;
+      }
+    }
+  </style>
+
 </head>
 
 <body>
