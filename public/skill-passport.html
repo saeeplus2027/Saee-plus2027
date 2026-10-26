@@ -22,10 +22,18 @@
 <section class="sp-hero">
 <div><span class="sp-eyebrow">SAEE SKILL PASSPORT · ملفك، إنجازك، دليلك</span>
 <h1>مهاراتك تستحق<br><em>دليلًا يثبتها.</em></h1>
-<p>نظّم مهاراتك ومشاريعك وأدلتك في ملف إنجازات محلي. يمكنك معاينة شكله وتصدير نسخة احتياطية؛ النشر العام ورفع الملفات والحسابات السحابية غير متاحة في هذه النسخة.</p>
+<p>نظّم مهاراتك ومشاريعك وأدلتك في ملف مرتبط بحسابك. يتطلب استخدام الجواز تسجيل الدخول؛ لا تُحفظ البيانات على هذا الجهاز.</p>
 <div class="sp-actions"><a class="sp-btn" href="#profile">أنشئ جوازك <span>↖</span></a><button class="sp-btn sp-btn-light" id="shareBtn">معاينة صفحة المشاركة</button></div>
-<div class="sp-note">نسخة تجريبية محلية: تحفظ البيانات على هذا المتصفح فقط. لا تستخدمها على جهاز مشترك لإدخال معلومات حساسة.</div></div>
+<div class="sp-note">تُحمّل بياناتك من الخادم بعد تسجيل الدخول فقط. سجّل الخروج بعد الانتهاء، خصوصًا على جهاز مشترك. عند تفعيل الخادم تُحذف النسخ القديمة المحلية ولا تُنقل تلقائيًا إلى أي حساب.</div></div>
 <div class="sp-hero-card"><div class="sp-card-top"><span>SKILL PASSPORT</span><span class="sp-chip">ملف تجريبي</span></div><div class="sp-avatar">✦</div><h2 id="heroName">صاحب المهارات</h2><p id="heroHeadline">أضف نبذة تعريفية قصيرة عنك</p><div class="sp-stat-row"><div><b id="statSkills">0</b><small>مهارات</small></div><div><b id="statEvidence">0</b><small>أدلة</small></div><div><b id="statChallenges">0</b><small>محاولات التحدي</small></div></div><div class="sp-progress"><span id="completionBar"></span></div><small id="completionText">اكمل بياناتك لبناء ملفك</small></div>
+</section>
+<section class="sp-panel sp-auth-panel" id="passportAuth" aria-live="polite">
+<div class="sp-section-head"><div><span class="sp-kicker">حسابك وخصوصيتك</span><h2>تسجيل الدخول والحفظ</h2><p>تُخزّن بيانات الجواز على الخادم، وتُربط بالهوية الموثقة للحساب الذي سجّل الدخول. لا تُنقل النسخ القديمة تلقائيًا لتجنب ربط بيانات شخص بحساب شخص آخر.</p></div><span class="sp-number">🔐</span></div>
+<p id="passportAuthStatus" class="sp-auth-status">جار التحقق من تسجيل الدخول...</p>
+<div id="passportAuthActions" class="sp-actions"><a class="sp-btn" href="/signin-with-chatgpt?return_to=%2Fskill-passport.html">تسجيل الدخول عبر ChatGPT</a></div>
+<p id="passportSaveStatus" class="sp-save-status" role="status">بانتظار التحقق من تسجيل الدخول...</p>
+<div class="sp-actions sp-recovery-actions"><button class="sp-btn sp-btn-light" id="downloadUnsavedBtn" type="button" hidden disabled>تنزيل نسخة إنقاذ</button><button class="sp-btn" id="retrySaveBtn" type="button" hidden disabled>إعادة محاولة الحفظ</button></div>
+<p class="sp-warning">لا يعمل الحفظ الآمن على GitHub Pages الثابتة. يجب فتح الجواز من إصدار Cloudflare الذي يشغّل واجهة API وقاعدة D1. على جهاز مشترك، سجّل الخروج بعد الانتهاء.</p>
 </section>
 <div class="sp-layout">
 <aside class="sp-sidebar"><div class="sp-side-title">مساحة المهارات</div><a href="#profile">01 · الملف الشخصي</a><a href="#skills">02 · المهارات والأدلة</a><a href="#projects">03 · المشاريع والإنجازات</a><a href="#challenges">04 · التحديات العملية</a><a href="#analyzer">05 · محلل المهارات الذكي</a><a href="#privacy">06 · الخصوصية والمشاركة</a><div class="sp-side-tip"><b>تذكّر</b><p>المهارة المدخلة ذاتيًا ليست اعتمادًا مهنيًا. الروابط أدلة مرجعية فقط، ونتيجة التحدي الآلي لا تثبت الكفاءة.</p></div></aside>
@@ -52,9 +60,9 @@
 <label class="sp-switch-row"><span><b>إظهار المشاريع والإنجازات</b><small>عند الإيقاف، لن تظهر المشاريع في المعاينة المحلية.</small></span><input type="checkbox" id="showProjects" checked></label>
 <label class="sp-switch-row"><span><b>إظهار روابط الأدلة</b><small>عند الإيقاف، تُخفى روابط الأدلة وأوصافها من المعاينة المحلية.</small></span><input type="checkbox" id="showEvidence" checked></label>
 <div class="sp-actions"><button class="sp-btn" id="shareBtn2" type="button">معاينة صفحة المشاركة</button><button class="sp-btn sp-btn-light" id="exportBtn" type="button">تصدير نسخة JSON</button><button class="sp-btn sp-danger" id="deletePassportBtn" type="button">حذف الجواز بالكامل</button></div>
-<p class="sp-warning" id="publicShareUnavailable">المعاينة تُظهر البيانات على هذا الجهاز فقط. لا يوجد تسجيل دخول أو فصل بيانات بين المستخدمين أو رابط مشاركة عام. لا تدخل كلمات مرور أو أرقام هوية أو معلومات حساسة.</p>
-<p class="sp-delete-note">حذف الجواز يزيل الاسم والمهارات والمشاريع ونتائج التحديات المحفوظة في هذا المتصفح فقط. لا يحذف صفحة الموقع من GitHub، ولا يمكن التراجع عن الحذف.</p>
-<p class="sp-warning">تنبيه: هذا النموذج التجريبي يخزن البيانات في localStorage ولا يوفر مصادقة مستخدمين أو تخزينًا آمنًا للملفات أو مشاركة عامة عبر الإنترنت. لا تدخل بيانات حساسة. يلزم ربطه بخادم وقاعدة بيانات وصلاحيات قبل الإنتاج.</p>
+<p class="sp-warning" id="publicShareUnavailable">المعاينة تظهر داخل الصفحة الحالية فقط ولا تنشئ رابطًا عامًا. سجّل الخروج من حسابك بعد الانتهاء، ولا تدخل بيانات حساسة لا يحتاجها الجواز.</p>
+<p class="sp-delete-note">حذف الجواز يزيل سجل الحساب الحالي من قاعدة البيانات ولا يحذف صفحة الموقع نفسها. لا يمكن التراجع عن الحذف.</p>
+<p class="sp-warning">تنبيه: بيانات الجواز تُحمّل من الخادم بعد تسجيل الدخول ولا تُحفظ في localStorage. يلزم استخدام نسخة Cloudflare مع تفعيل API وقاعدة D1؛ نسخة GitHub Pages وحدها لا توفر هذه الخدمات.</p>
 </section>
 </div></div>
 <footer class="sp-footer"><a href="index.html">سعي بلس</a> · Saee Skill Passport <span>نسخة تجريبية</span></footer>

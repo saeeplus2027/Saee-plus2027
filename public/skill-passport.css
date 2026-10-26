@@ -20,3 +20,15 @@ html{scroll-behavior:smooth;scroll-padding-top:18px}
 .sp-switch-row input:disabled{opacity:.45;cursor:not-allowed}
 .sp-switch-row:has(input:disabled){opacity:.85}
 .sp-warning{overflow-wrap:anywhere}
+
+/* Account-backed passport status and explicit server save feedback. */
+.sp-auth-panel{margin:18px 0;border-color:#cbded4;background:#fff}
+.sp-auth-status{margin:8px 0 12px;line-height:1.8;overflow-wrap:anywhere}
+.sp-save-status{padding:10px 12px;margin:12px 0 0;border-radius:10px;background:#eef5f0;color:#24554a;font-size:13px;overflow-wrap:anywhere}
+.sp-save-status.is-error{background:#fff0f0;color:#8d2029;border:1px solid #f0c7c9}
+.sp-auth-panel [disabled]{opacity:.55;cursor:not-allowed}
+
+/* Recovery controls appear only while a server save is unconfirmed. */
+.sp-recovery-actions{margin-top:10px;align-items:center;flex-wrap:wrap}
+.sp-recovery-actions [hidden]{display:none!important}
+.sp-recovery-actions button:disabled{opacity:.55;cursor:not-allowed}

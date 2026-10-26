@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const STORAGE_KEY = 'saee-skill-passport-demo-v1';
+  const API_ENDPOINT = '/api/skill-passport';
   const $ = (id) => document.getElementById(id);
   const cleanText = (value) => String(value ?? '').trim();
   const truncate = (value, max) => cleanText(value).slice(0, max);
@@ -86,55 +86,234 @@
     };
   }
 
-  function loadState() {
-    let raw;
-    try {
-      raw = localStorage.getItem(STORAGE_KEY);
-    } catch (error) {
-      console.warn('Saee Skill Passport: browser storage could not be read.', error);
-      return freshState();
-    }
-    if (!raw) return freshState();
+  // Sensitive passport state stays in memory only; the server remains the source of truth.
+  let state = freshState();
+  let currentUser = null;
+  let authEpoch = 0;
+  let serverVersion = 0;
+  let localRevision = 0;
+  let savedRevision = 0;
+  let savePromise = null;
+  let saveBlocked = false;
+  let lastSaveErrorStatus = 0;
+  let authMessage = 'جار التحقق من تسجيل الدخول...';
 
-    let parsed;
-    try {
-      parsed = JSON.parse(raw);
-    } catch (error) {
-      console.warn('Saee Skill Passport: stored JSON was invalid; using an empty passport.', error);
-      return freshState();
-    }
-
-    const normalized = normalizeState(parsed);
-    try {
-      const normalizedJson = JSON.stringify(normalized);
-      if (normalizedJson !== JSON.stringify(parsed)) localStorage.setItem(STORAGE_KEY, normalizedJson);
-    } catch (error) {
-      // Keep the usable in-memory version even if the browser refuses to rewrite legacy data.
-      console.warn('Saee Skill Passport: could not persist normalized legacy data.', error);
-    }
-    return normalized;
+  function hasUnsavedChanges() {
+    return localRevision !== savedRevision || saveBlocked;
   }
 
-  let state = loadState();
+  function clearLegacyLocalPassport() {
+    // Old versions stored the passport on-device. Never import it automatically: it may belong to another person.
+    try {
+      localStorage.removeItem('saee-skill-passport-demo-v1');
+      localStorage.removeItem('saee-skill-passport-demo-v1-share-preview-enabled-v2');
+    } catch (error) {
+      console.warn('Saee Skill Passport: could not clear legacy browser data.', error);
+    }
+  }
 
   const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   })[character]);
 
-  // Save a normalized copy first. If localStorage fails, keep the prior state unchanged.
+  function setSaveStatus(message, isError = false) {
+    const status = $('passportSaveStatus');
+    status.textContent = message;
+    status.classList.toggle('is-error', isError);
+  }
+
+  function updateAuthPanel() {
+    const status = $('passportAuthStatus');
+    const actions = $('passportAuthActions');
+    if (currentUser) {
+      status.textContent = `تم تسجيل الدخول باسم ${currentUser.displayName || currentUser.email}. بيانات الجواز محفوظة في حسابك على الخادم، وليست في تخزين المتصفح.`;
+      actions.innerHTML = '<a class="sp-btn sp-btn-light" href="/signout-with-chatgpt?return_to=%2Fskill-passport.html">تسجيل الخروج</a>';
+    } else {
+      status.textContent = authMessage;
+      actions.innerHTML = '<a class="sp-btn" href="/signin-with-chatgpt?return_to=%2Fskill-passport.html">تسجيل الدخول عبر ChatGPT</a>';
+    }
+  }
+
+  function updateRecoveryControls() {
+    const pending = hasUnsavedChanges();
+    const backup = $('downloadUnsavedBtn');
+    const retry = $('retrySaveBtn');
+    backup.hidden = !pending;
+    backup.disabled = !currentUser || localRevision === savedRevision;
+    const retryAllowed = saveBlocked && Boolean(currentUser) && ![400, 401, 403, 409, 413, 415, 428].includes(lastSaveErrorStatus);
+    retry.hidden = !retryAllowed;
+    retry.disabled = !retryAllowed;
+  }
+
+  function setEditorEnabled(enabled) {
+    ['profileForm', 'skillForm', 'projectForm', 'challengeForm', 'analyzerForm'].forEach((id) => {
+      const form = $(id);
+      form.querySelectorAll('input, textarea, select, button').forEach((control) => { control.disabled = !enabled; });
+    });
+    ['skillsList', 'projectsList', 'analysisResult'].forEach((id) => {
+      $(id).querySelectorAll('button').forEach((control) => { control.disabled = !enabled; });
+    });
+    ['showProjects', 'showEvidence', 'deletePassportBtn'].forEach((id) => { $(id).disabled = !enabled; });
+    $('exportBtn').disabled = !enabled && !hasUnsavedChanges();
+    $('publicToggle').checked = false;
+    $('publicToggle').disabled = true;
+    updateRecoveryControls();
+  }
+
+  function resetPrivateState() {
+    authEpoch += 1;
+    currentUser = null;
+    serverVersion = 0;
+    localRevision = 0;
+    savedRevision = 0;
+    saveBlocked = false;
+    lastSaveErrorStatus = 0;
+    state = freshState();
+    // The preview is a separate DOM subtree; clear it as well as the state to prevent BFCache leakage.
+    $('publicPreview').innerHTML = '';
+    const dialog = $('publicDialog');
+    if (typeof dialog.close === 'function' && dialog.open) dialog.close();
+    else dialog.removeAttribute('open');
+    render();
+    updateAuthPanel();
+    setEditorEnabled(false);
+  }
+
+  async function loadServerPassport() {
+    const loadEpoch = ++authEpoch;
+    setEditorEnabled(false);
+    authMessage = 'جار التحقق من حسابك وتحميل جواز المهارات...';
+    updateAuthPanel();
+    try {
+      const response = await fetch(API_ENDPOINT, {
+        method: 'GET', credentials: 'same-origin', cache: 'no-store',
+        headers: { Accept: 'application/json' }
+      });
+      if (loadEpoch !== authEpoch) return;
+      const result = await response.json().catch(() => ({}));
+      if (loadEpoch !== authEpoch) return;
+      const isApiJson = (response.headers.get('content-type') || '').toLowerCase().includes('application/json');
+      // Do not destroy the only legacy copy during 404/503 or another failed API deployment.
+      // A real 401 proves the route is active; a valid 200 proves the new account API is active.
+      if (isApiJson && (response.status === 401 || (response.ok && result.user && Number.isInteger(Number(result.version))))) {
+        clearLegacyLocalPassport();
+      }
+      if (response.status === 401) {
+        resetPrivateState();
+        authMessage = 'سجّل الدخول بحسابك حتى يتم تحميل جوازك وحفظه بشكل منفصل عن المستخدمين الآخرين.';
+        updateAuthPanel();
+        setSaveStatus('لم تُحمّل بيانات شخصية ولم تُحفظ في هذا المتصفح.', false);
+        return;
+      }
+      if (!response.ok) throw new Error(result.error || `تعذر تحميل الجواز (HTTP ${response.status}).`);
+      if (!result.user || !Number.isInteger(Number(result.version)) || Number(result.version) < 0) throw new Error('استجابة الخادم غير مكتملة.');
+      currentUser = { displayName: String(result.user.displayName || ''), email: String(result.user.email || '') };
+      serverVersion = Number(result.version);
+      state = normalizeState(result.state);
+      localRevision = 0;
+      savedRevision = 0;
+      saveBlocked = false;
+      lastSaveErrorStatus = 0;
+      render();
+      updateAuthPanel();
+      setEditorEnabled(true);
+      setSaveStatus(result.updatedAt ? `تم تحميل آخر نسخة محفوظة في ${new Date(result.updatedAt).toLocaleString()}.` : 'تم فتح جوازك؛ ستُحفظ أول إضافة على الخادم.', false);
+    } catch (error) {
+      if (loadEpoch !== authEpoch) return;
+      resetPrivateState();
+      authMessage = 'تعذر الاتصال بخادم جواز المهارات. لم يتم استخدام تخزين محلي بديل؛ لا تتابع من نسخة GitHub Pages الثابتة.';
+      updateAuthPanel();
+      setEditorEnabled(false);
+      setSaveStatus(error instanceof Error ? error.message : 'خدمة الجواز غير متاحة.', true);
+    }
+  }
+
+  function handleSaveFailure(error) {
+    const status = Number(error?.status) || 0;
+    lastSaveErrorStatus = status;
+    saveBlocked = true;
+    if (status === 401) {
+      // Never leave one person's data visible after the server rejects their expired identity.
+      authMessage = 'انتهت جلسة الدخول. أعد تسجيل الدخول لتحميل النسخة المحفوظة على الخادم.';
+      resetPrivateState();
+      setSaveStatus('انتهت الجلسة. مُسحت البيانات من الشاشة لحماية الخصوصية؛ لم يتم حفظ آخر تعديل.', true);
+      return;
+    }
+    const message = error instanceof Error ? error.message : 'تعذر تأكيد الحفظ على الخادم.';
+    setSaveStatus(`${message} بقيت التعديلات غير المؤكدة في ذاكرة الصفحة مؤقتًا. نزّل نسخة إنقاذ قبل إعادة التحميل.`, true);
+    setEditorEnabled(false);
+    updateRecoveryControls();
+    alert('لم يتم تأكيد حفظ التعديلات. لم يتم حفظها محليًا. استخدم «تنزيل نسخة إنقاذ» قبل إعادة تحميل الصفحة.');
+  }
+
+  function flushServerSave() {
+    if (savePromise) return savePromise;
+    if (!currentUser || saveBlocked || localRevision === savedRevision) return Promise.resolve();
+
+    const requestEpoch = authEpoch;
+    savePromise = (async () => {
+      while (currentUser && !saveBlocked && localRevision !== savedRevision && requestEpoch === authEpoch) {
+        const revisionToSave = localRevision;
+        const snapshot = JSON.parse(JSON.stringify(normalizeState(state)));
+        setSaveStatus('جار حفظ التعديلات في حسابك على الخادم...', false);
+        const response = await fetch(API_ENDPOINT, {
+          method: 'PUT', credentials: 'same-origin', cache: 'no-store',
+          headers: { 'Content-Type': 'application/json', 'If-Match': `"${serverVersion}"` },
+          body: JSON.stringify({ state: snapshot })
+        });
+        if (requestEpoch !== authEpoch) return;
+        const result = await response.json().catch(() => ({}));
+        if (requestEpoch !== authEpoch) return;
+        if (!response.ok) {
+          const error = new Error(result.error || `فشل الحفظ (HTTP ${response.status}).`);
+          error.status = response.status;
+          throw error;
+        }
+        const returnedVersion = Number(result.version);
+        if (!Number.isInteger(returnedVersion) || returnedVersion <= serverVersion) {
+          throw new Error('استجابة الحفظ غير مكتملة؛ لم نعتبر التعديل محفوظًا. صدّر نسخة إنقاذ وتحقق من الخادم.');
+        }
+        serverVersion = returnedVersion;
+        savedRevision = revisionToSave;
+        if (localRevision === savedRevision) {
+          saveBlocked = false;
+          lastSaveErrorStatus = 0;
+          setSaveStatus(`تم الحفظ على الخادم في ${new Date(result.updatedAt || Date.now()).toLocaleTimeString()}.`, false);
+        }
+      }
+    })().catch((error) => {
+      handleSaveFailure(error);
+    }).finally(() => {
+      savePromise = null;
+      updateRecoveryControls();
+      if (currentUser && !saveBlocked && localRevision !== savedRevision) void flushServerSave();
+    });
+    return savePromise;
+  }
+
   function commit(mutator, options = {}) {
+    if (!currentUser) {
+      alert('سجّل الدخول أولًا. لن نحفظ بيانات الجواز في تخزين المتصفح.');
+      return false;
+    }
+    if (saveBlocked) {
+      alert('الحفظ متوقف بعد خطأ سابق. نزّل نسخة إنقاذ أو أعد محاولة الحفظ قبل أي تعديل آخر.');
+      return false;
+    }
     try {
       const next = normalizeState(state);
       mutator(next);
       const normalized = normalizeState(next);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
       state = normalized;
+      localRevision += 1;
       renderSummary();
       if (options.render) render();
+      updateRecoveryControls();
+      void flushServerSave();
       return true;
     } catch (error) {
-      console.error('Saee Skill Passport: save failed.', error);
-      alert('تعذر حفظ التعديل في المتصفح. لم يتم اعتماد التغيير؛ تحقق من مساحة التخزين ثم حاول مرة أخرى.');
+      console.error('Saee Skill Passport: validation failed.', error);
+      alert('تعذر تجهيز التعديل للحفظ. لم يتم تأكيد الحفظ على الخادم.');
       return false;
     }
   }
@@ -224,7 +403,7 @@
       profileLink
     };
     if (!profile.name) return alert('الاسم المعروض مطلوب.');
-    if (commit((next) => { next.profile = profile; })) alert('تم حفظ الملف في هذا المتصفح.');
+    if (commit((next) => { next.profile = profile; })) setSaveStatus('تم إرسال الملف الشخصي للحفظ؛ راقب حالة الحفظ أعلاه.', false);
   });
 
   $('skillForm').addEventListener('submit', (event) => {
@@ -460,15 +639,15 @@
     else renderPrivacy();
   });
 
-  $('exportBtn').addEventListener('click', () => {
-    if (!confirm('سيحتوي ملف JSON على بيانات الجواز كاملة، بما فيها الحقول التي أخفيتها من المعاينة. احفظه في مكان خاص ولا تشاركه قبل مراجعته. هل تريد التصدير؟')) return;
+  function downloadJsonSnapshot(filename, warning) {
+    if (!confirm(warning)) return;
     let objectUrl = '';
     try {
       const blob = new Blob([JSON.stringify(normalizeState(state), null, 2)], { type: 'application/json' });
       objectUrl = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = objectUrl;
-      anchor.download = 'saee-skill-passport.json';
+      anchor.download = filename;
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
@@ -478,28 +657,91 @@
     } finally {
       if (objectUrl) setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
     }
+  }
+
+  $('exportBtn').addEventListener('click', () => {
+    downloadJsonSnapshot('saee-skill-passport.json', 'سيحتوي ملف JSON على بيانات الجواز كاملة، بما فيها الحقول التي أخفيتها من المعاينة. احفظه في مكان خاص ولا تشاركه قبل مراجعته. هل تريد التصدير؟');
   });
 
-  $('deletePassportBtn').addEventListener('click', () => {
-    if (!confirm('هل تريد حذف جواز المهارات بالكامل من هذا المتصفح؟ سيتم حذف الملف الشخصي والمهارات والمشاريع ونتائج التحديات وإعدادات الجواز.')) return;
-    if (!confirm('تأكيد أخير: لا يمكن التراجع عن حذف البيانات المحفوظة في هذا المتصفح. هل تريد المتابعة؟')) return;
+  $('downloadUnsavedBtn').addEventListener('click', () => {
+    if (!currentUser || localRevision === savedRevision) return alert('لا توجد تعديلات غير محفوظة تحتاج إلى نسخة إنقاذ.');
+    downloadJsonSnapshot('saee-skill-passport-recovery.json', 'هذه نسخة إنقاذ من بيانات الجواز التي لم يؤكد الخادم حفظها. قد تتضمن معلومات خاصة. احفظها في مكان موثوق واحذفها من التنزيلات عند الانتهاء. هل تريد تنزيلها؟');
+  });
+
+  $('retrySaveBtn').addEventListener('click', async () => {
+    if (!currentUser || !saveBlocked) return;
+    if ([400, 401, 403, 409, 413, 415, 428].includes(lastSaveErrorStatus)) {
+      alert('لا يمكن إعادة المحاولة بأمان بعد هذا النوع من الأخطاء. نزّل نسخة إنقاذ، ثم حمّل نسخة الخادم من جديد.');
+      return;
+    }
+    saveBlocked = false;
+    lastSaveErrorStatus = 0;
+    setEditorEnabled(true);
+    updateRecoveryControls();
+    await flushServerSave();
+  });
+
+  $('deletePassportBtn').addEventListener('click', async () => {
+    if (!currentUser) return alert('سجّل الدخول قبل حذف الجواز.');
+    if (!confirm('سيتم حذف جواز المهارات المحفوظ في حسابك على الخادم، وليس من هذا المتصفح فقط. هل تريد المتابعة؟')) return;
+    if (!confirm('تأكيد أخير: لا يمكن التراجع عن الحذف. هل تريد حذف بيانات هذا الحساب فقط؟')) return;
     try {
-      localStorage.removeItem(STORAGE_KEY);
+      await (savePromise || Promise.resolve());
+      if (hasUnsavedChanges() || saveBlocked) {
+        alert('لديك تعديلات لم يؤكد الخادم حفظها. نزّل نسخة إنقاذ أو أعد محاولة الحفظ قبل حذف الجواز.');
+        return;
+      }
+      const response = await fetch(API_ENDPOINT, {
+        method: 'DELETE', credentials: 'same-origin', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' }, body: '{}'
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'تعذر حذف الجواز من الخادم.');
       state = freshState();
+      serverVersion = 0;
+      saveBlocked = false;
       render();
-      $('profileForm').reset();
-      $('skillForm').reset();
-      $('projectForm').reset();
-      $('challengeForm').reset();
-      $('analyzerForm').reset();
+      ['profileForm', 'skillForm', 'projectForm', 'challengeForm', 'analyzerForm'].forEach((id) => $(id).reset());
       $('challengeResult').hidden = true;
       $('analysisResult').hidden = true;
-      alert('تم حذف بيانات جواز المهارات من هذا المتصفح. بقيت صفحة الجواز نفسها ضمن الموقع.');
+      setSaveStatus('تم حذف جواز هذا الحساب من قاعدة البيانات.', false);
+      alert('تم حذف بيانات جواز هذا الحساب من الخادم. لم يتم حذف صفحة الموقع نفسها.');
     } catch (error) {
-      console.error('Saee Skill Passport: delete failed.', error);
-      alert('تعذر حذف بيانات الجواز. تحقق من إعدادات التخزين في المتصفح ثم حاول مرة أخرى.');
+      console.error('Saee Skill Passport: server delete failed.', error);
+      setSaveStatus(error instanceof Error ? error.message : 'تعذر حذف الجواز.', true);
+      alert('لم يتم تأكيد الحذف من الخادم. لم نعرض نجاحًا غير مؤكد.');
     }
   });
 
+  window.addEventListener('beforeunload', (event) => {
+    if (currentUser && hasUnsavedChanges()) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
+  });
+
+  window.addEventListener('pagehide', () => {
+    // Invalidate in-flight callbacks and remove the previous identity from the live document/BFCache.
+    authEpoch += 1;
+    state = freshState();
+    currentUser = null;
+    serverVersion = 0;
+    localRevision = 0;
+    savedRevision = 0;
+    saveBlocked = false;
+    lastSaveErrorStatus = 0;
+    authMessage = 'أُخفيت الصفحة. جارٍ إعادة التحقق من تسجيل الدخول عند العودة.';
+    render();
+    updateAuthPanel();
+    setEditorEnabled(false);
+  });
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) loadServerPassport();
+  });
+
+  setEditorEnabled(false);
   render();
+  updateAuthPanel();
+  setSaveStatus('بانتظار التحقق من تسجيل الدخول...', false);
+  loadServerPassport();
 })();

@@ -1,0 +1,23 @@
+ملفات مصدر/إعدادات موجودة في مستودع المشروع ويجب تركها كما هي عند دمج الحزمة؛ ليست نسخًا معدّلة في هذه الحزمة:
+
+.github/workflows/nextjs.yml
+.openai/hosting.json
+README.md
+app/chatgpt-auth.ts
+app/api/content/route.ts
+app/api/media/[key]/route.ts
+app/globals.css
+app/layout.tsx
+app/page.tsx
+db/index.ts
+drizzle.config.ts
+lib/cms.ts
+lib/content-validation.js
+lib/default-content.json
+package.json
+pnpm-lock.yaml
+vite.config.ts
+worker/index.ts
+scripts/...
+
+لا تحذف هذه الملفات أو تستبدلها بملفات تجريبية. ملف workflow الجديد المضمّن هو skill-passport-tests.yml، وهو إضافة وليس بديلًا عن nextjs.yml.
