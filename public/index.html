@@ -460,57 +460,21 @@
 
   <style id="saee-inquiries-styles">
     .saee-inquiries-nav { position: relative; display: inline-flex; align-items: center; }
-    .saee-inquiries-nav > #saee-inquiries-toggle {
-      border: 0; background: transparent; color: inherit; font: inherit;
-      font-weight: inherit; cursor: pointer; padding: 8px 10px; white-space: nowrap;
-    }
-    .saee-inquiries-nav > #saee-inquiries-toggle:hover,
-    .saee-inquiries-nav > #saee-inquiries-toggle:focus-visible { color: #075550; }
-    .saee-inquiries-menu {
-      position: absolute; z-index: 10000; top: calc(100% + 10px); inset-inline-start: 0;
-      width: min(300px, 85vw); padding: 8px; background: #faf8f2; color: #173c39;
-      border: 1px solid #dce8e2; border-radius: 14px; box-shadow: 0 18px 45px #173c3926;
-    }
+    .saee-inquiries-nav > #saee-inquiries-toggle { border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; padding: 8px 10px; white-space: nowrap; }
+    .saee-inquiries-nav > #saee-inquiries-toggle:hover, .saee-inquiries-nav > #saee-inquiries-toggle:focus-visible { color: #075550; }
+    .saee-inquiries-menu { position: absolute; z-index: 10000; top: calc(100% + 10px); inset-inline-start: 0; width: min(320px, 85vw); padding: 8px; background: #faf8f2; color: #173c39; border: 1px solid #dce8e2; border-radius: 14px; box-shadow: 0 18px 45px #173c3926; }
     .saee-inquiries-menu[hidden] { display: none !important; }
-    .saee-inquiries-menu button {
-      display: block; width: 100%; padding: 11px 12px; border: 0; border-radius: 9px;
-      background: transparent; color: inherit; text-align: right; font: inherit;
-      font-size: 14px; line-height: 1.6; cursor: pointer;
-    }
-    .saee-inquiries-menu button:hover, .saee-inquiries-menu button:focus-visible {
-      background: #eaf2ed; color: #075550;
-    }
-    #saee-inquiry-dialog {
-      box-sizing: border-box; width: min(470px, calc(100% - 28px));
-      max-height: min(80dvh, 680px); overflow-y: auto; margin: auto; padding: 24px;
-      border: 1px solid #dce8e2; border-radius: 20px; background: #faf8f2;
-      color: #173c39; font-family: inherit; text-align: right; box-shadow: 0 24px 70px #173c3926;
-    }
+    .saee-inquiries-menu button { display: block; width: 100%; padding: 11px 12px; border: 0; border-radius: 9px; background: transparent; color: inherit; text-align: right; font: inherit; font-size: 14px; line-height: 1.6; cursor: pointer; }
+    .saee-inquiries-menu button:hover, .saee-inquiries-menu button:focus-visible { background: #eaf2ed; color: #075550; }
+    #saee-inquiry-dialog { box-sizing: border-box; width: min(470px, calc(100% - 28px)); max-height: min(80dvh, 680px); overflow-y: auto; margin: auto; padding: 24px; border: 1px solid #dce8e2; border-radius: 20px; background: #faf8f2; color: #173c39; font-family: inherit; text-align: right; box-shadow: 0 24px 70px #173c3926; }
     #saee-inquiry-dialog::backdrop { background: rgb(7 55 50 / 42%); }
-    #saee-inquiry-dialog .saee-inquiry-close {
-      display: block; margin-inline-start: auto; width: 36px; height: 36px; border: 0;
-      border-radius: 50%; background: #eaf2ed; color: #075550; font: inherit;
-      font-size: 24px; cursor: pointer;
-    }
+    #saee-inquiry-dialog .saee-inquiry-close { display: block; margin-inline-start: auto; width: 36px; height: 36px; border: 0; border-radius: 50%; background: #eaf2ed; color: #075550; font: inherit; font-size: 24px; cursor: pointer; }
     #saee-inquiry-dialog h2 { margin: 8px 0 10px; color: #075550; font-size: 22px; }
     #saee-inquiry-dialog p { line-height: 1.8; }
-    #saee-inquiry-dialog .saee-inquiry-contact {
-      display: flex; justify-content: space-between; align-items: center; gap: 12px;
-      margin: 10px 0; padding: 13px; border: 1px solid #dce8e2; border-radius: 12px;
-      background: #fff;
-    }
-    #saee-inquiry-dialog .saee-inquiry-contact a {
-      color: #075550; direction: ltr; unicode-bidi: embed; font-weight: 700;
-      text-decoration: none; white-space: nowrap;
-    }
+    #saee-inquiry-dialog .saee-inquiry-contact { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 10px 0; padding: 13px; border: 1px solid #dce8e2; border-radius: 12px; background: #fff; }
+    #saee-inquiry-dialog .saee-inquiry-contact a { color: #075550; direction: ltr; unicode-bidi: embed; font-weight: 700; text-decoration: none; white-space: nowrap; }
     #saee-inquiry-dialog .saee-inquiry-note { color: #62716b; font-size: 13px; }
-    @media (max-width: 700px) {
-      .saee-inquiries-nav { display: block; width: 100%; }
-      .saee-inquiries-nav > #saee-inquiries-toggle { width: 100%; text-align: right; }
-      .saee-inquiries-menu { position: static; width: 100%; margin-top: 4px; box-shadow: none; }
-      #saee-inquiry-dialog { padding: 18px; }
-      #saee-inquiry-dialog .saee-inquiry-contact { align-items: flex-start; flex-direction: column; }
-    }
+    @media (max-width: 700px) { .saee-inquiries-nav { display: block; width: 100%; } .saee-inquiries-nav > #saee-inquiries-toggle { width: 100%; text-align: right; } .saee-inquiries-menu { position: static; width: 100%; margin-top: 4px; box-shadow: none; } #saee-inquiry-dialog { padding: 18px; } #saee-inquiry-dialog .saee-inquiry-contact { align-items: flex-start; flex-direction: column; } }
   </style>
 
 </head>
@@ -536,11 +500,11 @@
     <div class="saee-inquiries-nav">
       <button type="button" id="saee-inquiries-toggle" aria-expanded="false" aria-controls="saee-inquiries-menu">استفسارات</button>
       <div id="saee-inquiries-menu" class="saee-inquiries-menu" hidden>
-        <button type="button" data-inquiry="loans">استفسار قروض ومنح ومكارم وأسئلة جامعية</button>
-        <button type="button" data-inquiry="opportunities">استفسار عن الفرص</button>
-        <button type="button" data-inquiry="talents">استفسار عن المواهب</button>
-        <button type="button" data-inquiry="expert">استفسار عن أسئلة خبير</button>
-        <button type="button" data-inquiry="projects">استفسار عن المشاريع</button>
+        <button type="button" data-inquiry="loans">قروض ومنح ومكارم وأسئلة جامعية</button>
+        <button type="button" data-inquiry="opportunities">الفرص</button>
+        <button type="button" data-inquiry="talents">المواهب</button>
+        <button type="button" data-inquiry="expert">اسأل خبير</button>
+        <button type="button" data-inquiry="projects">المشاريع</button>
       </div>
     </div>
   </nav>
@@ -1610,104 +1574,45 @@
 </script>
 
 <dialog id="saee-inquiry-dialog" aria-labelledby="saee-inquiry-title">
-  <button type="button" class="saee-inquiry-close" aria-label="إغلاق" id="saee-inquiry-close">×</button>
-  <div id="saee-inquiry-content" aria-live="polite"></div>
+  <button type="button" class="saee-inquiry-close" aria-label="إغلاق" onclick="this.closest('dialog').close()">×</button>
+  <div id="saee-inquiry-content"></div>
 </dialog>
-
 <script id="saee-inquiries-script">
 (() => {
+  'use strict';
   const toggle = document.getElementById('saee-inquiries-toggle');
   const menu = document.getElementById('saee-inquiries-menu');
   const dialog = document.getElementById('saee-inquiry-dialog');
   const content = document.getElementById('saee-inquiry-content');
-  const close = document.getElementById('saee-inquiry-close');
   if (!toggle || !menu || !dialog || !content) return;
 
   const topics = {
-    loans: {
-      title: 'استفسار قروض ومنح ومكارم والأسئلة الجامعية',
-      contacts: [
-        ['عبد الرحمن', '0798245512'],
-        ['تقى', '0790730665']
-      ]
-    },
-    opportunities: {
-      title: 'استفسار عن الفرص',
-      contacts: [['سلمى', '0782153883']]
-    },
-    talents: {
-      title: 'استفسار عن المواهب',
-      contacts: [['لجين', '0770368592']]
-    },
-    expert: {
-      title: 'استفسار عن أسئلة خبير',
-      contacts: [
-        ['تقى', '0790730665'],
-        ['حمزة', '0788872569']
-      ]
-    },
-    projects: {
-      title: 'استفسار عن المشاريع',
-      contacts: [['لين', '0771059050']]
-    }
+    loans: { title: 'القروض والمنح والمكارم والأسئلة الجامعية', contacts: [['عبد الرحمن', '0798245512'], ['تقى', '0790730665']] },
+    opportunities: { title: 'الفرص', contacts: [['سلمى', '0782153883']] },
+    talents: { title: 'المواهب', contacts: [['لجين', '0770368592']] },
+    expert: { title: 'اسأل خبير', contacts: [['تقى', '0790730665'], ['حمزة', '0788872569']] },
+    projects: { title: 'المشاريع', contacts: [['لين', '0771059050']] }
   };
-
-  function isOpenHours() {
-    const parts = new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'Asia/Amman', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
-    }).formatToParts(new Date());
+  const isOpenHours = () => {
+    const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Amman', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
     const hour = Number(parts.find(part => part.type === 'hour')?.value ?? 0);
     return hour >= 9 && hour < 17;
-  }
-
-  function showDialog(topicKey) {
-    const topic = topics[topicKey];
-    if (!topic) return;
+  };
+  function showDialog(key) {
     if (!isOpenHours()) {
-      content.innerHTML = `
-        <h2 id="saee-inquiry-title">الاستفسارات مغلقة حاليًا</h2>
-        <p>يمكنك الضغط على خيارات الاستفسارات والتواصل من الساعة <strong>9:00 صباحًا حتى 5:00 مساءً</strong> بتوقيت الأردن.</p>
-        <p class="saee-inquiry-note">الوقت الحالي خارج ساعات الاستفسارات. يرجى المحاولة خلال أوقات الدوام.</p>`;
+      content.innerHTML = '<h2 id="saee-inquiry-title">الاستفسارات مغلقة حاليًا</h2><p>يمكنك التواصل خلال ساعات الاستفسارات من <strong>9:00 صباحًا حتى 5:00 مساءً</strong> بتوقيت الأردن.</p><p class="saee-inquiry-note">يرجى العودة خلال أوقات الدوام.</p>';
     } else {
-      const contacts = topic.contacts.map(([name, phone]) => `
-        <div class="saee-inquiry-contact">
-          <strong>${name}</strong>
-          <a href="tel:${phone}" aria-label="الاتصال بـ ${name} على ${phone}">${phone}</a>
-        </div>`).join('');
-      content.innerHTML = `
-        <h2 id="saee-inquiry-title">${topic.title}</h2>
-        <p>للاستفسار، تواصل مع الأشخاص التاليين:</p>
-        ${contacts}
-        <p class="saee-inquiry-note">التواصل متاح من 9:00 صباحًا حتى 5:00 مساءً بتوقيت الأردن.</p>`;
+      const topic = topics[key];
+      if (!topic) return;
+      const contacts = topic.contacts.map(([name, phone]) => `<div class="saee-inquiry-contact"><strong>${name}</strong><a href="tel:${phone.replace(/\s/g, '')}">${phone}</a></div>`).join('');
+      content.innerHTML = `<h2 id="saee-inquiry-title">${topic.title}</h2><p>للاستفسار، تواصل مع:</p>${contacts}<p class="saee-inquiry-note">التواصل متاح من 9:00 صباحًا حتى 5:00 مساءً بتوقيت الأردن.</p>`;
     }
-    if (typeof dialog.showModal === 'function') dialog.showModal();
-    else alert(content.innerText);
+    if (typeof dialog.showModal === 'function') dialog.showModal(); else alert(content.innerText);
   }
-
-  toggle.addEventListener('click', () => {
-    const open = menu.hidden;
-    menu.hidden = !open;
-    toggle.setAttribute('aria-expanded', String(open));
-  });
-
-  menu.querySelectorAll('[data-inquiry]').forEach(button => {
-    button.addEventListener('click', () => {
-      menu.hidden = true;
-      toggle.setAttribute('aria-expanded', 'false');
-      showDialog(button.dataset.inquiry);
-    });
-  });
-
-  close?.addEventListener('click', () => dialog.close());
-  dialog.addEventListener('click', event => {
-    if (event.target === dialog) dialog.close();
-  });
-  document.addEventListener('click', event => {
-    if (!event.target.closest('.saee-inquiries-nav')) {
-      menu.hidden = true;
-      toggle.setAttribute('aria-expanded', 'false');
-    }
-  });
+  toggle.addEventListener('click', () => { const open = menu.hidden; menu.hidden = !open; toggle.setAttribute('aria-expanded', String(open)); });
+  menu.querySelectorAll('[data-inquiry]').forEach(button => button.addEventListener('click', () => { menu.hidden = true; toggle.setAttribute('aria-expanded', 'false'); showDialog(button.dataset.inquiry); }));
+  dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
+  document.addEventListener('click', event => { if (!event.target.closest('.saee-inquiries-nav')) { menu.hidden = true; toggle.setAttribute('aria-expanded', 'false'); } });
 })();
 </script>
 
