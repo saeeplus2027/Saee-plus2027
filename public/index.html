@@ -1,5 +1,53 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+  <style id="saee-navigation-fix">
+@media (min-width: 701px) and (max-width: 1600px) {
+  body > header {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    grid-template-areas:
+      "brand actions"
+      "nav nav" !important;
+    align-items: center !important;
+    height: auto !important;
+    min-height: 0 !important;
+    gap: 16px !important;
+    padding-top: 16px !important;
+    padding-bottom: 16px !important;
+    overflow: visible !important;
+  }
+
+  body > header > .brand {
+    grid-area: brand !important;
+  }
+
+  body > header > .header-actions {
+    grid-area: actions !important;
+    margin: 0 !important;
+  }
+
+  body > header > nav {
+    grid-area: nav !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    gap: 14px 22px !important;
+    overflow: visible !important;
+    visibility: visible !important;
+  }
+
+  body > header > nav a {
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+    visibility: visible !important;
+    font-size: 12px !important;
+  }
+}
+</style>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
