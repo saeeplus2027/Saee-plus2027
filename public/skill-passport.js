@@ -205,7 +205,14 @@
         setSaveStatus('لم تُحمّل بيانات شخصية ولم تُحفظ في هذا المتصفح.', false);
         return;
       }
-      if (!response.ok) throw new Error(result.error || `تعذر تحميل الجواز (HTTP ${response.status}).`);
+      if (!response.ok) {
+        const message = response.status === 404
+          ? 'خدمة الحفظ السحابي غير متاحة على هذا العنوان. افتح الجواز من نسخة Cloudflare بعد تفعيل واجهة API وقاعدة البيانات.'
+          : (result.error || `تعذر تحميل الجواز (HTTP ${response.status}).`);
+        const failure = new Error(message);
+        failure.status = response.status;
+        throw failure;
+      }
       if (!result.user || !Number.isInteger(Number(result.version)) || Number(result.version) < 0) throw new Error('استجابة الخادم غير مكتملة.');
       currentUser = { displayName: String(result.user.displayName || ''), email: String(result.user.email || '') };
       serverVersion = Number(result.version);
@@ -221,7 +228,9 @@
     } catch (error) {
       if (loadEpoch !== authEpoch) return;
       resetPrivateState();
-      authMessage = 'تعذر الاتصال بخادم جواز المهارات. لم يتم استخدام تخزين محلي بديل؛ لا تتابع من نسخة GitHub Pages الثابتة.';
+      authMessage = error && error.status === 404
+        ? 'الحفظ الآمن غير مفعّل لهذا العنوان. سجّل الدخول من النسخة المستضافة على Cloudflare بعد تفعيل API وقاعدة البيانات.'
+        : 'تعذر الاتصال بخادم جواز المهارات. لم يتم استخدام تخزين محلي بديل.';
       updateAuthPanel();
       setEditorEnabled(false);
       setSaveStatus(error instanceof Error ? error.message : 'خدمة الجواز غير متاحة.', true);
