@@ -1,105 +1,136 @@
 (() => {
   'use strict';
 
-  const KEY = 'saee-skill-passport-demo-v1';
+  const STORAGE_KEY = 'saee-skill-passport-demo-v1';
   const $ = (id) => document.getElementById(id);
-  const text = (value) => String(value ?? '').trim();
-  const id = () => (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  const cleanText = (value) => String(value ?? '').trim();
+  const truncate = (value, max) => cleanText(value).slice(0, max);
+  const makeId = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const LEVELS = ['مبتدئ', 'متوسط', 'متقدم', 'خبير'];
+  const EVIDENCE_TYPES = ['github', 'portfolio', 'certificate', 'file', 'challenge', 'other'];
+  const EVIDENCE_LABELS = {
+    github: 'مشروع GitHub',
+    portfolio: 'نموذج أعمال',
+    certificate: 'شهادة أو دورة',
+    file: 'ملف أو تقرير',
+    challenge: 'نتيجة تحدٍ',
+    other: 'رابط آخر'
+  };
 
-  const fresh = () => ({
+  const freshState = () => ({
     profile: { name: '', headline: '', bio: '', location: '', profileLink: '' },
     skills: [],
     projects: [],
     challenges: [],
-    // The owner asked to enable the share-preview option by default.
-    // This only enables the on-device preview; it does NOT publish a public URL.
     privacy: { isPublic: false, showProjects: true, showEvidence: true }
   });
-
-  const asString = (value, max = 3000) => typeof value === 'string' ? value.slice(0, max) : '';
-  const normalizeState = (value) => {
-    const base = fresh();
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return base;
-    const p = value.profile && typeof value.profile === 'object' && !Array.isArray(value.profile) ? value.profile : {};
-    const privacy = value.privacy && typeof value.privacy === 'object' && !Array.isArray(value.privacy) ? value.privacy : {};
-    const normalizeItems = (list, kind) => Array.isArray(list) ? list.filter(x => x && typeof x === 'object' && !Array.isArray(x)).slice(0, 1000).map((x) => {
-      if (kind === 'skill') return {
-        id: asString(x.id, 100) || id(), name: asString(x.name, 80), category: asString(x.category, 80),
-        level: asString(x.level, 40), evidenceType: asString(x.evidenceType, 40),
-        evidenceUrl: safeUrl(asString(x.evidenceUrl, 500)), evidenceDesc: asString(x.evidenceDesc, 220), verified: x.verified === true
-      };
-      if (kind === 'project') return {
-        id: asString(x.id, 100) || id(), title: asString(x.title, 100), type: asString(x.type, 60),
-        desc: asString(x.desc, 500), url: safeUrl(asString(x.url, 500))
-      };
-      return {
-        score: Math.max(0, Math.min(3, Number.isFinite(Number(x.score)) ? Number(x.score) : 0)),
-        feedback: Array.isArray(x.feedback) ? x.feedback.slice(0, 3).map(v => asString(v, 180)) : [],
-        at: asString(x.at, 60)
-      };
-    }) : [];
-    return {
-      profile: {
-        name: asString(p.name, 80), headline: asString(p.headline, 100), bio: asString(p.bio, 500),
-        location: asString(p.location, 100), profileLink: safeUrl(asString(p.profileLink, 300))
-      },
-      skills: normalizeItems(value.skills, 'skill').filter(x => x.name),
-      projects: normalizeItems(value.projects, 'project').filter(x => x.title),
-      challenges: normalizeItems(value.challenges, 'challenge'),
-      privacy: {
-        isPublic: typeof privacy.isPublic === 'boolean' ? privacy.isPublic : base.privacy.isPublic,
-        showProjects: typeof privacy.showProjects === 'boolean' ? privacy.showProjects : true,
-        showEvidence: typeof privacy.showEvidence === 'boolean' ? privacy.showEvidence : true
-      }
-    };
-  };
 
   function safeUrl(value) {
     try {
       const url = new URL(String(value || '').trim());
-      return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+      if (!['http:', 'https:'].includes(url.protocol) || !url.hostname) return '';
+      if (url.username || url.password) return '';
+      return url.href;
     } catch {
       return '';
     }
   }
 
-  function readState() {
+  function normalizeState(value) {
+    const base = freshState();
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return base;
+    const profile = value.profile && typeof value.profile === 'object' && !Array.isArray(value.profile) ? value.profile : {};
+    const privacy = value.privacy && typeof value.privacy === 'object' && !Array.isArray(value.privacy) ? value.privacy : {};
+
+    const skills = Array.isArray(value.skills) ? value.skills.filter((item) => item && typeof item === 'object' && !Array.isArray(item)).slice(0, 1000).map((item) => ({
+      id: truncate(item.id, 100) || makeId(),
+      name: truncate(item.name, 80),
+      category: truncate(item.category, 80) || 'أخرى',
+      level: LEVELS.includes(item.level) ? item.level : 'مبتدئ',
+      evidenceType: EVIDENCE_TYPES.includes(item.evidenceType) ? item.evidenceType : 'other',
+      evidenceUrl: safeUrl(truncate(item.evidenceUrl, 500)),
+      evidenceDesc: truncate(item.evidenceDesc, 220),
+      verified: false
+    })).filter((item) => item.name) : [];
+
+    const projects = Array.isArray(value.projects) ? value.projects.filter((item) => item && typeof item === 'object' && !Array.isArray(item)).slice(0, 1000).map((item) => ({
+      id: truncate(item.id, 100) || makeId(),
+      title: truncate(item.title, 100),
+      type: truncate(item.type, 60) || 'إنجاز آخر',
+      desc: truncate(item.desc, 500),
+      url: safeUrl(truncate(item.url, 500))
+    })).filter((item) => item.title) : [];
+
+    const challenges = Array.isArray(value.challenges) ? value.challenges.filter((item) => item && typeof item === 'object' && !Array.isArray(item)).slice(0, 1000).map((item) => ({
+      score: Math.max(0, Math.min(3, Number.isFinite(Number(item.score)) ? Math.round(Number(item.score)) : 0)),
+      feedback: Array.isArray(item.feedback) ? item.feedback.slice(0, 3).map((entry) => truncate(entry, 180)) : [],
+      at: truncate(item.at, 60)
+    })) : [];
+
+    return {
+      profile: {
+        name: truncate(profile.name, 80),
+        headline: truncate(profile.headline, 100),
+        bio: truncate(profile.bio, 500),
+        location: truncate(profile.location, 100),
+        profileLink: safeUrl(truncate(profile.profileLink, 300))
+      },
+      skills,
+      projects,
+      challenges,
+      privacy: {
+        isPublic: false,
+        showProjects: typeof privacy.showProjects === 'boolean' ? privacy.showProjects : true,
+        showEvidence: typeof privacy.showEvidence === 'boolean' ? privacy.showEvidence : true
+      }
+    };
+  }
+
+  function loadState() {
+    let raw;
     try {
-      const raw = localStorage.getItem(KEY);
-      return raw ? normalizeState(JSON.parse(raw)) : fresh();
-    } catch {
-      return fresh();
+      raw = localStorage.getItem(STORAGE_KEY);
+    } catch (error) {
+      console.warn('Saee Skill Passport: browser storage could not be read.', error);
+      return freshState();
     }
+    if (!raw) return freshState();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (error) {
+      console.warn('Saee Skill Passport: stored JSON was invalid; using an empty passport.', error);
+      return freshState();
+    }
+
+    const normalized = normalizeState(parsed);
+    try {
+      const normalizedJson = JSON.stringify(normalized);
+      if (normalizedJson !== JSON.stringify(parsed)) localStorage.setItem(STORAGE_KEY, normalizedJson);
+    } catch (error) {
+      // Keep the usable in-memory version even if the browser refuses to rewrite legacy data.
+      console.warn('Saee Skill Passport: could not persist normalized legacy data.', error);
+    }
+    return normalized;
   }
 
-  let state = readState();
-  // One-time migration: enable the requested share-preview option for existing
-  // demo data. A later manual opt-out is respected because this marker persists.
-  const SHARE_MIGRATION_KEY = `${KEY}-share-preview-enabled-v2`;
-  try {
-    if (localStorage.getItem(SHARE_MIGRATION_KEY) !== '1') {
-      state.privacy.isPublic = true;
-      localStorage.setItem(KEY, JSON.stringify(state));
-      localStorage.setItem(SHARE_MIGRATION_KEY, '1');
-    }
-  } catch {
-    // The page remains usable if browser storage is blocked.
-  }
+  let state = loadState();
 
-  const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+  const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  })[char]);
+  })[character]);
 
-  // Apply changes to a copy and persist before replacing the live state.
-  // If saving fails, the previous state remains intact in memory.
-  function commit(mutator) {
+  // Save a normalized copy first. If localStorage fails, keep the prior state unchanged.
+  function commit(mutator, options = {}) {
     try {
       const next = normalizeState(state);
       mutator(next);
       const normalized = normalizeState(next);
-      localStorage.setItem(KEY, JSON.stringify(normalized));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
       state = normalized;
       renderSummary();
+      if (options.render) render();
       return true;
     } catch (error) {
       console.error('Saee Skill Passport: save failed.', error);
@@ -108,65 +139,72 @@
     }
   }
 
-  const evidenceLabel = {
-    github: 'مشروع GitHub', portfolio: 'نموذج أعمال', certificate: 'شهادة أو دورة',
-    file: 'ملف أو تقرير', challenge: 'نتيجة تحدٍ', other: 'رابط آخر'
-  };
-
   function renderSummary() {
     $('heroName').textContent = state.profile.name || 'صاحب المهارات';
     $('heroHeadline').textContent = state.profile.headline || 'أضف نبذة تعريفية قصيرة عنك';
     $('statSkills').textContent = state.skills.length;
-    $('statEvidence').textContent = state.skills.filter(s => s.evidenceUrl || s.evidenceDesc).length;
-    $('statChallenges').textContent = state.challenges.filter(c => c.score >= 2).length;
-    const count = (state.profile.name ? 1 : 0) + (state.profile.headline ? 1 : 0) +
-      (state.profile.bio ? 1 : 0) + (state.skills.length ? 1 : 0) + (state.projects.length ? 1 : 0);
-    const pct = Math.round(count / 5 * 100);
-    $('completionBar').style.width = `${pct}%`;
-    $('completionText').textContent = `اكتمال الملف التجريبي: ${pct}%`;
+    $('statEvidence').textContent = state.skills.filter((skill) => skill.evidenceUrl || skill.evidenceDesc).length;
+    $('statChallenges').textContent = state.challenges.length;
+    const completedSections = (state.profile.name ? 1 : 0) + (state.profile.headline ? 1 : 0) + (state.profile.bio ? 1 : 0) + (state.skills.length ? 1 : 0) + (state.projects.length ? 1 : 0);
+    const percentage = Math.round((completedSections / 5) * 100);
+    $('completionBar').style.width = `${percentage}%`;
+    $('completionText').textContent = `اكتمال الملف التجريبي: ${percentage}%`;
   }
 
   function renderSkills() {
-    $('skillsList').innerHTML = state.skills.length ? state.skills.map(skill => {
+    $('skillsList').innerHTML = state.skills.length ? state.skills.map((skill) => {
       const url = safeUrl(skill.evidenceUrl);
-      return `<article class="sp-item"><div><h3>${esc(skill.name)} <span class="sp-chip">${esc(skill.level)}</span></h3>
-        <p>${esc(skill.category)} · ${url || skill.evidenceDesc ? 'مدعومة بدليل' : 'مدخلة ذاتيًا'}${skill.verified ? ' · اجتازت تحديًا عمليًا' : ''}</p>
-        ${skill.evidenceDesc ? `<p>${esc(skill.evidenceDesc)}</p>` : ''}
-        ${state.privacy.showEvidence && url ? `<p><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(evidenceLabel[skill.evidenceType] || 'فتح الدليل')} ↗</a></p>` : ''}
-        </div><div class="sp-item-actions"><button class="sp-mini" type="button" data-edit-skill="${esc(skill.id)}">تعديل</button>
-        <button class="sp-mini" type="button" data-delete-skill="${esc(skill.id)}">حذف</button></div></article>`;
+      return `<article class="sp-item"><div>
+        <h3>${escapeHtml(skill.name)} <span class="sp-chip">${escapeHtml(skill.level)}</span></h3>
+        <p>${escapeHtml(skill.category)} · ${state.privacy.showEvidence && (url || skill.evidenceDesc) ? 'مدعومة بدليل' : 'مدخلة ذاتيًا'}${skill.verified ? ' · اجتازت تحديًا عمليًا' : ''}</p>
+        ${state.privacy.showEvidence && skill.evidenceDesc ? `<p>${escapeHtml(skill.evidenceDesc)}</p>` : ''}
+        ${state.privacy.showEvidence && url ? `<p><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(EVIDENCE_LABELS[skill.evidenceType] || 'فتح الدليل')} ↗</a></p>` : ''}
+        </div><div class="sp-item-actions">
+          <button class="sp-mini" type="button" data-edit-skill="${escapeHtml(skill.id)}">تعديل</button>
+          <button class="sp-mini" type="button" data-delete-skill="${escapeHtml(skill.id)}">حذف</button>
+        </div></article>`;
     }).join('') : '<div class="sp-empty">لم تضف مهارات بعد. ابدأ بمهارة تستطيع دعمها بمثال عملي.</div>';
   }
 
   function renderProjects() {
-    $('projectsList').innerHTML = state.projects.length ? state.projects.map(project => {
+    $('projectsList').innerHTML = state.projects.length ? state.projects.map((project) => {
       const url = safeUrl(project.url);
-      return `<article class="sp-item"><div><h3>${esc(project.title)} <span class="sp-chip">${esc(project.type)}</span></h3>
-        <p>${esc(project.desc)}</p>${url ? `<p><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">فتح الرابط ↗</a></p>` : ''}
-        </div><div class="sp-item-actions"><button class="sp-mini" type="button" data-edit-project="${esc(project.id)}">تعديل</button>
-        <button class="sp-mini" type="button" data-delete-project="${esc(project.id)}">حذف</button></div></article>`;
+      return `<article class="sp-item"><div>
+        <h3>${escapeHtml(project.title)} <span class="sp-chip">${escapeHtml(project.type)}</span></h3>
+        <p>${escapeHtml(project.desc)}</p>
+        ${url ? `<p><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">فتح الرابط ↗</a></p>` : ''}
+        </div><div class="sp-item-actions">
+          <button class="sp-mini" type="button" data-edit-project="${escapeHtml(project.id)}">تعديل</button>
+          <button class="sp-mini" type="button" data-delete-project="${escapeHtml(project.id)}">حذف</button>
+        </div></article>`;
     }).join('') : '<div class="sp-empty">أضف مشروعًا أو شهادة أو تجربة تطوعية لتظهر هنا.</div>';
   }
 
   function renderChallenges() {
-    $('challengeHistory').innerHTML = state.challenges.length ? state.challenges.map(challenge =>
-      `<article class="sp-item"><div><h3>تحدي أساسيات أمن الويب · ${challenge.score}/3</h3><p>${esc(challenge.feedback.join(' · '))}</p></div></article>`
-    ).join('') : '';
+    $('challengeHistory').innerHTML = state.challenges.length ? state.challenges.map((challenge) => `<article class="sp-item"><div><h3>تحدي أساسيات أمن الويب · ${challenge.score}/3</h3><p>${escapeHtml(challenge.feedback.join(' · '))}</p></div></article>`).join('') : '';
   }
 
   function renderPrivacy() {
-    $('publicToggle').checked = state.privacy.isPublic;
+    // No server-backed public profile exists in this build. Keep the control off and read-only.
+    $('publicToggle').checked = false;
+    $('publicToggle').disabled = true;
     $('showProjects').checked = state.privacy.showProjects;
     $('showEvidence').checked = state.privacy.showEvidence;
   }
 
   function render() {
-    for (const field of ['name', 'headline', 'bio', 'location', 'profileLink']) $(field).value = state.profile[field] || '';
-    renderSummary(); renderSkills(); renderProjects(); renderChallenges(); renderPrivacy();
+    ['name', 'headline', 'bio', 'location', 'profileLink'].forEach((field) => {
+      $(field).value = state.profile[field] || '';
+    });
+    renderSummary();
+    renderSkills();
+    renderProjects();
+    renderChallenges();
+    renderPrivacy();
   }
 
-  function validOptionalUrl(raw, label) {
-    const value = text(raw);
+  function readOptionalUrl(raw, label) {
+    const value = cleanText(raw);
     if (!value) return '';
     const url = safeUrl(value);
     if (!url) alert(`رابط ${label} غير صالح. استخدم رابطًا يبدأ بـ https:// أو http://`);
@@ -175,130 +213,177 @@
 
   $('profileForm').addEventListener('submit', (event) => {
     event.preventDefault();
-    const rawLink = text($('profileLink').value);
-    const profileLink = validOptionalUrl(rawLink, 'الملف الشخصي');
-    if (rawLink && !profileLink) return;
+    const rawUrl = cleanText($('profileLink').value);
+    const profileLink = readOptionalUrl(rawUrl, 'الملف الشخصي');
+    if (rawUrl && !profileLink) return;
     const profile = {
-      name: text($('name').value), headline: text($('headline').value), bio: text($('bio').value),
-      location: text($('location').value), profileLink
+      name: truncate($('name').value, 80),
+      headline: truncate($('headline').value, 100),
+      bio: truncate($('bio').value, 500),
+      location: truncate($('location').value, 100),
+      profileLink
     };
-    if (!profile.name) { alert('الاسم المعروض مطلوب.'); return; }
-    if (commit(next => { next.profile = profile; })) alert('تم حفظ الملف في هذا المتصفح.');
+    if (!profile.name) return alert('الاسم المعروض مطلوب.');
+    if (commit((next) => { next.profile = profile; })) alert('تم حفظ الملف في هذا المتصفح.');
   });
 
   $('skillForm').addEventListener('submit', (event) => {
     event.preventDefault();
-    const name = text($('skillName').value);
-    if (!name) { alert('اسم المهارة مطلوب.'); return; }
-    const rawUrl = text($('evidenceUrl').value);
-    const evidenceUrl = validOptionalUrl(rawUrl, 'الدليل');
+    const name = truncate($('skillName').value, 80);
+    if (!name) return alert('اسم المهارة مطلوب.');
+    if (state.skills.length >= 100) return alert('وصلت إلى الحد التجريبي وهو 100 مهارة. احذف مهارة غير لازمة قبل إضافة أخرى.');
+    const rawUrl = cleanText($('evidenceUrl').value);
+    const evidenceUrl = readOptionalUrl(rawUrl, 'الدليل');
     if (rawUrl && !evidenceUrl) return;
     const skill = {
-      id: id(), name, category: $('skillCategory').value, level: $('skillLevel').value,
-      evidenceType: $('evidenceType').value, evidenceUrl, evidenceDesc: text($('evidenceDesc').value), verified: false
+      id: makeId(), name,
+      category: truncate($('skillCategory').value, 80) || 'أخرى',
+      level: LEVELS.includes($('skillLevel').value) ? $('skillLevel').value : 'مبتدئ',
+      evidenceType: EVIDENCE_TYPES.includes($('evidenceType').value) ? $('evidenceType').value : 'other',
+      evidenceUrl,
+      evidenceDesc: truncate($('evidenceDesc').value, 220),
+      verified: false
     };
-    if (commit(next => { next.skills.unshift(skill); })) { event.currentTarget.reset(); renderSkills(); }
+    if (commit((next) => { next.skills.unshift(skill); })) {
+      event.currentTarget.reset();
+      renderSkills();
+    }
   });
 
   $('projectForm').addEventListener('submit', (event) => {
     event.preventDefault();
-    const title = text($('projectTitle').value);
-    const desc = text($('projectDesc').value);
-    if (!title || !desc) { alert('عنوان الإنجاز ووصفه مطلوبان.'); return; }
-    const rawUrl = text($('projectUrl').value);
-    const url = validOptionalUrl(rawUrl, 'المشروع');
+    const title = truncate($('projectTitle').value, 100);
+    const desc = truncate($('projectDesc').value, 500);
+    if (!title || !desc) return alert('عنوان الإنجاز ووصفه مطلوبان.');
+    if (state.projects.length >= 100) return alert('وصلت إلى الحد التجريبي وهو 100 إنجاز. احذف إنجازًا غير لازم قبل إضافة آخر.');
+    const rawUrl = cleanText($('projectUrl').value);
+    const url = readOptionalUrl(rawUrl, 'المشروع');
     if (rawUrl && !url) return;
-    const project = { id: id(), title, type: $('projectType').value, desc, url };
-    if (commit(next => { next.projects.unshift(project); })) { event.currentTarget.reset(); renderProjects(); }
+    const project = {
+      id: makeId(), title, type: truncate($('projectType').value, 60) || 'إنجاز آخر', desc, url
+    };
+    if (commit((next) => { next.projects.unshift(project); })) {
+      event.currentTarget.reset();
+      renderProjects();
+    }
   });
 
   function editSkill(skill) {
-    const name = prompt('اسم المهارة:', skill.name); if (name === null) return;
-    const category = prompt('المجال:', skill.category); if (category === null) return;
-    const level = prompt('المستوى:', skill.level); if (level === null) return;
-    const evidenceType = prompt('نوع الدليل (github / portfolio / certificate / file / challenge / other):', skill.evidenceType); if (evidenceType === null) return;
-    const evidenceDesc = prompt('وصف الدليل (اتركه فارغًا للمسح):', skill.evidenceDesc); if (evidenceDesc === null) return;
-    const rawUrl = prompt('رابط الدليل (اتركه فارغًا للمسح):', skill.evidenceUrl); if (rawUrl === null) return;
-    const evidenceUrl = validOptionalUrl(rawUrl, 'الدليل');
-    if (text(rawUrl) && !evidenceUrl) return;
-    const allowedEvidenceTypes = ['github', 'portfolio', 'certificate', 'file', 'challenge', 'other'];
-    if (!text(name)) { alert('اسم المهارة مطلوب.'); return; }
-    if (!allowedEvidenceTypes.includes(text(evidenceType))) { alert('نوع الدليل غير صالح. استخدم إحدى القيم الموضحة.'); return; }
+    const name = prompt('اسم المهارة:', skill.name);
+    if (name === null) return;
+    const category = prompt('المجال:', skill.category);
+    if (category === null) return;
+    const level = prompt(`المستوى (${LEVELS.join('، ')}):`, skill.level);
+    if (level === null) return;
+    const evidenceType = prompt(`نوع الدليل (${EVIDENCE_TYPES.join(' / ')}):`, skill.evidenceType);
+    if (evidenceType === null) return;
+    const evidenceDesc = prompt('وصف الدليل (اتركه فارغًا للمسح):', skill.evidenceDesc);
+    if (evidenceDesc === null) return;
+    const rawUrl = prompt('رابط الدليل (اتركه فارغًا للمسح):', skill.evidenceUrl);
+    if (rawUrl === null) return;
+    const evidenceUrl = readOptionalUrl(rawUrl, 'الدليل');
+    if (cleanText(rawUrl) && !evidenceUrl) return;
+    if (!truncate(name, 80)) return alert('اسم المهارة مطلوب.');
+    if (!LEVELS.includes(cleanText(level))) return alert('المستوى غير صالح. اختر مستوى من القائمة الموضحة.');
+    if (!EVIDENCE_TYPES.includes(cleanText(evidenceType))) return alert('نوع الدليل غير صالح. اختر قيمة من القائمة الموضحة.');
     const updated = {
-      name: text(name).slice(0, 80), category: text(category).slice(0, 80),
-      level: text(level).slice(0, 40), evidenceType: text(evidenceType),
-      evidenceDesc: text(evidenceDesc).slice(0, 220), evidenceUrl
+      name: truncate(name, 80), category: truncate(category, 80) || 'أخرى', level: cleanText(level),
+      evidenceType: cleanText(evidenceType), evidenceDesc: truncate(evidenceDesc, 220), evidenceUrl
     };
-    if (commit(next => {
-      const item = next.skills.find(entry => entry.id === skill.id);
-      if (!item) throw new Error('لم تعد المهارة موجودة. حدّث الصفحة وحاول مجددًا.');
-      Object.assign(item, updated);
+    if (commit((next) => {
+      const target = next.skills.find((item) => item.id === skill.id);
+      if (!target) throw new Error('لم تعد المهارة موجودة. حدّث الصفحة وحاول مجددًا.');
+      Object.assign(target, updated);
     })) renderSkills();
   }
 
   function editProject(project) {
-    const title = prompt('عنوان المشروع أو الإنجاز:', project.title); if (title === null) return;
-    const type = prompt('نوع الإنجاز:', project.type); if (type === null) return;
-    const desc = prompt('الوصف:', project.desc); if (desc === null) return;
-    const rawUrl = prompt('رابط المشروع (اتركه فارغًا للمسح):', project.url); if (rawUrl === null) return;
-    const url = validOptionalUrl(rawUrl, 'المشروع');
-    if (text(rawUrl) && !url) return;
-    if (!text(title) || !text(desc)) { alert('العنوان والوصف مطلوبان.'); return; }
-    const updated = { title: text(title).slice(0, 100), type: text(type).slice(0, 60), desc: text(desc).slice(0, 500), url };
-    if (commit(next => {
-      const item = next.projects.find(entry => entry.id === project.id);
-      if (!item) throw new Error('لم يعد الإنجاز موجودًا. حدّث الصفحة وحاول مجددًا.');
-      Object.assign(item, updated);
+    const title = prompt('عنوان المشروع أو الإنجاز:', project.title);
+    if (title === null) return;
+    const type = prompt('نوع الإنجاز:', project.type);
+    if (type === null) return;
+    const desc = prompt('الوصف:', project.desc);
+    if (desc === null) return;
+    const rawUrl = prompt('رابط المشروع (اتركه فارغًا للمسح):', project.url);
+    if (rawUrl === null) return;
+    const url = readOptionalUrl(rawUrl, 'المشروع');
+    if (cleanText(rawUrl) && !url) return;
+    if (!truncate(title, 100) || !truncate(desc, 500)) return alert('العنوان والوصف مطلوبان.');
+    if (commit((next) => {
+      const target = next.projects.find((item) => item.id === project.id);
+      if (!target) throw new Error('لم يعد الإنجاز موجودًا. حدّث الصفحة وحاول مجددًا.');
+      Object.assign(target, { title: truncate(title, 100), type: truncate(type, 60) || 'إنجاز آخر', desc: truncate(desc, 500), url });
     })) renderProjects();
   }
 
   document.addEventListener('click', (event) => {
-    const editSkillButton = event.target.closest('[data-edit-skill]');
-    const deleteSkillButton = event.target.closest('[data-delete-skill]');
-    const editProjectButton = event.target.closest('[data-edit-project]');
-    const deleteProjectButton = event.target.closest('[data-delete-project]');
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target) return;
+    const editSkillButton = target.closest('[data-edit-skill]');
+    const deleteSkillButton = target.closest('[data-delete-skill]');
+    const editProjectButton = target.closest('[data-edit-project]');
+    const deleteProjectButton = target.closest('[data-delete-project]');
+    const suggestionButton = target.closest('[data-add-suggest]');
+
     if (editSkillButton) {
-      const skill = state.skills.find(item => item.id === editSkillButton.dataset.editSkill);
+      const skill = state.skills.find((item) => item.id === editSkillButton.dataset.editSkill);
       if (skill) editSkill(skill);
       return;
     }
-    if (deleteSkillButton && confirm('حذف هذه المهارة؟')) {
+    if (deleteSkillButton) {
+      if (!confirm('حذف هذه المهارة؟')) return;
       const skillId = deleteSkillButton.dataset.deleteSkill;
-      if (commit(next => { next.skills = next.skills.filter(item => item.id !== skillId); })) renderSkills();
+      if (commit((next) => { next.skills = next.skills.filter((item) => item.id !== skillId); })) renderSkills();
       return;
     }
     if (editProjectButton) {
-      const project = state.projects.find(item => item.id === editProjectButton.dataset.editProject);
+      const project = state.projects.find((item) => item.id === editProjectButton.dataset.editProject);
       if (project) editProject(project);
       return;
     }
-    if (deleteProjectButton && confirm('حذف هذا الإنجاز؟')) {
+    if (deleteProjectButton) {
+      if (!confirm('حذف هذا الإنجاز؟')) return;
       const projectId = deleteProjectButton.dataset.deleteProject;
-      if (commit(next => { next.projects = next.projects.filter(item => item.id !== projectId); })) renderProjects();
+      if (commit((next) => { next.projects = next.projects.filter((item) => item.id !== projectId); })) renderProjects();
+      return;
+    }
+    if (suggestionButton) {
+      const name = suggestionButton.dataset.addSuggest;
+      if (state.skills.some((skill) => skill.name.toLocaleLowerCase() === name.toLocaleLowerCase())) {
+        alert('هذه المهارة موجودة بالفعل.');
+        return;
+      }
+      const skill = { id: makeId(), name: truncate(name, 80), category: 'أخرى', level: 'مبتدئ', evidenceType: 'other', evidenceUrl: '', evidenceDesc: 'اقتراح من محلل المهارات — راجعه وأضف دليلًا.', verified: false };
+      if (commit((next) => { next.skills.unshift(skill); })) {
+        renderSkills();
+        alert('أضيفت كمهارة مدخلة ذاتيًا.');
+      }
     }
   });
 
   $('challengeForm').addEventListener('submit', (event) => {
     event.preventDefault();
-    const answer = text($('challengeAnswer').value).toLowerCase();
+    const answer = cleanText($('challengeAnswer').value).toLowerCase();
     const criteria = [
       { re: /prepared statement|parameterized|parameterised|استعلامات?\s*معلّمة|استعلامات?\s*مجهزة|استعلامات?\s*معلَمة/, label: 'استخدام الاستعلامات المعلّمة' },
       { re: /validate|validation|تحقق من المدخلات|التحقق من المدخلات|تنقية المدخلات/, label: 'التحقق من المدخلات' },
       { re: /least privilege|minimum privilege|أقل صلاحية|تقليل صلاحيات|صلاحيات محدودة/, label: 'تقليل صلاحيات قاعدة البيانات' }
     ];
-    const matched = criteria.filter(item => item.re.test(answer));
-    const feedback = criteria.map(item => `${matched.includes(item) ? '✓' : '○'} ${item.label}`);
+    const matched = criteria.filter((criterion) => criterion.re.test(answer));
+    const feedback = criteria.map((criterion) => `${matched.includes(criterion) ? '✓' : '○'} ${criterion.label}`);
     const score = matched.length;
-    if (!commit(next => {
-      next.challenges.unshift({ score, feedback, at: new Date().toISOString() });
-      if (score >= 2) next.skills.filter(skill => /sql|أمن الويب|web security|cybersecurity/i.test(skill.name)).forEach(skill => { skill.verified = true; });
+    if (state.challenges.length >= 100) return alert('وصلت إلى الحد التجريبي وهو 100 محاولة. احذف الجواز وابدأ من جديد إذا أردت تصفير السجل.');
+    const challenge = { score, feedback, at: new Date().toISOString() };
+    if (!commit((next) => {
+      next.challenges.unshift(challenge);
     })) return;
-    renderChallenges(); renderSkills();
+    renderChallenges();
+    renderSkills();
     $('challengeResult').hidden = false;
-    $('challengeResult').innerHTML = `<b>${score}/3</b><p>${score === 3 ? 'ممتاز! ذكرت معايير التقييم الثلاثة.' : score === 2 ? 'نتيجة جيدة. راجع المعيار المتبقي وحاول تحسين إجابتك.' : 'راجع المعايير الثلاثة وأعد المحاولة.'}</p><ul>${feedback.map(item => `<li>${esc(item)}</li>`).join('')}</ul><small>هذا تقييم آلي تجريبي قائم على كلمات مفتاحية، وليس شهادة احترافية أو تحققًا رسميًا.</small>`;
+    $('challengeResult').innerHTML = `<b>${score}/3</b><p>${score === 3 ? 'ممتاز! ذكرت معايير التقييم الثلاثة.' : score === 2 ? 'نتيجة جيدة. راجع المعيار المتبقي وحاول تحسين إجابتك.' : 'راجع المعايير الثلاثة وأعد المحاولة.'}</p><ul>${feedback.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul><small>هذا تقييم آلي تجريبي قائم على كلمات مفتاحية، ولا يعتمد المهارات أو يمنح شهادة أو يتحقق من تنفيذ العمل فعليًا.</small>`;
   });
 
-  const rules = [
+  const ANALYSIS_RULES = [
     { name: 'أمن تطبيقات الويب', re: /owasp|xss|sql injection|حقن sql|ثغرات|web security|security scanner|أمن الويب/i, learn: 'تدرّب على OWASP Top 10 واختبر تطبيقًا محليًا ضمن بيئة مصرح بها.' },
     { name: 'تطوير الويب', re: /html|css|javascript|react|next\.?js|api|واجهة|موقع ويب|web app/i, learn: 'أنشئ مشروعًا صغيرًا موثقًا، وأضف اختبارات وتوثيقًا لطريقة التشغيل.' },
     { name: 'قواعد البيانات', re: /sql|database|قاعدة بيانات|mysql|sqlite|postgres/i, learn: 'تدرّب على تصميم الجداول والاستعلامات الآمنة والتحقق من المدخلات.' },
@@ -310,104 +395,109 @@
 
   $('analyzerForm').addEventListener('submit', (event) => {
     event.preventDefault();
-    const description = text($('analyzerText').value);
-    if (!description) return;
-    const found = rules.filter(rule => rule.re.test(description));
+    const description = cleanText($('analyzerText').value);
+    if (!description) return alert('اكتب وصف المشروع أولًا.');
+    const found = ANALYSIS_RULES.filter((rule) => rule.re.test(description));
     const suggestions = found.length ? found : [{ name: 'حل المشكلات والتوثيق', learn: 'اكتب المشكلة التي حللتها، والخطوات التي اتبعتها، والنتيجة، ثم أضف رابطًا أو لقطة موثقة.' }];
     $('analysisResult').hidden = false;
-    $('analysisResult').innerHTML = `<b>اقتراحات أولية — راجعها قبل إضافتها</b><ul>${suggestions.map(rule => `<li><b>${esc(rule.name)}</b><br>${esc(rule.learn)} <button class="sp-mini" type="button" data-add-suggest="${esc(rule.name)}">أضف كمهارة</button></li>`).join('')}</ul><small>هذه اقتراحات قائمة على قواعد وكلمات مفتاحية؛ لا تثبت امتلاكك للمهارة.</small>`;
+    $('analysisResult').innerHTML = `<b>اقتراحات أولية — راجعها قبل إضافتها</b><ul>${suggestions.map((rule) => `<li><b>${escapeHtml(rule.name)}</b><br>${escapeHtml(rule.learn)} <button class="sp-mini" type="button" data-add-suggest="${escapeHtml(rule.name)}">أضف كمهارة</button></li>`).join('')}</ul><small>هذه اقتراحات قائمة على قواعد وكلمات مفتاحية؛ لا تثبت امتلاكك للمهارة.</small>`;
   });
 
-  document.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-add-suggest]');
-    if (!button) return;
-    const name = button.dataset.addSuggest;
-    if (state.skills.some(skill => skill.name.toLowerCase() === name.toLowerCase())) {
-      alert('هذه المهارة موجودة بالفعل.'); return;
-    }
-    const suggestedSkill = { id: id(), name, category: 'أخرى', level: 'مبتدئ', evidenceType: 'other', evidenceUrl: '', evidenceDesc: 'اقتراح من محلل المهارات — راجعه وأضف دليلًا.', verified: false };
-    if (commit(next => { next.skills.unshift(suggestedSkill); })) { renderSkills(); alert('أضيفت كمهارة مدخلة ذاتيًا.'); }
-  });
-
+  // Local preview must work regardless of the sharing toggle. It never publishes a public URL
+  // and must never silently change a user's privacy preference.
   function preview() {
-    if (!state.privacy.isPublic) {
-      alert('فعّل إتاحة صفحة المشاركة أولًا من إعدادات الخصوصية.');
-      return;
-    }
     const profile = state.profile;
     const profileLink = safeUrl(profile.profileLink);
-    $('publicPreview').innerHTML = `<div class="sp-public-head"><span class="sp-kicker">SAEE SKILL PASSPORT · معاينة مشاركة</span>
-      <h2>${esc(profile.name || 'صاحب المهارات')}</h2><b>${esc(profile.headline || '')}</b><p>${esc(profile.bio || 'لم تتم إضافة نبذة بعد.')}</p>
-      ${profile.location ? `<small>${esc(profile.location)}</small>` : ''}
-      ${profileLink ? `<p><a href="${esc(profileLink)}" target="_blank" rel="noopener noreferrer">الرابط المهني ↗</a></p>` : ''}
-      <small>المعاينة محلية على هذا المتصفح فقط؛ ليست رابطًا عامًا. المهارات ذاتية الإدخال ما لم يذكر خلاف ذلك.</small></div>
-      <div class="sp-public-block"><h3>المهارات</h3>${state.skills.length ? state.skills.map(skill => {
-        const url = safeUrl(skill.evidenceUrl);
-        return `<span class="sp-public-skill"><b>${esc(skill.name)}</b><small>${esc(skill.level)} · ${skill.verified ? 'اجتازت تحديًا تجريبيًا' : url || skill.evidenceDesc ? 'مدعومة بدليل' : 'مدخلة ذاتيًا'}</small>${state.privacy.showEvidence && url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">عرض الدليل ↗</a>` : ''}</span>`;
-      }).join('') : '<div class="sp-empty">لا توجد مهارات معروضة.</div>'}</div>
-      ${state.privacy.showProjects ? `<div class="sp-public-block"><h3>المشاريع والإنجازات</h3>${state.projects.length ? state.projects.map(project => {
-        const url = safeUrl(project.url);
-        return `<article class="sp-item"><div><h3>${esc(project.title)}</h3><p>${esc(project.type)} · ${esc(project.desc)}</p>${url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">فتح الرابط ↗</a>` : ''}</div></article>`;
-      }).join('') : '<div class="sp-empty">لا توجد إنجازات معروضة.</div>'}</div>` : ''}
-      <div class="sp-public-block"><h3>التحديات العملية</h3>${state.challenges.length ? state.challenges.map(challenge => `<p>تحدي أساسيات أمن الويب: ${challenge.score}/3 <small>(تقييم آلي تجريبي)</small></p>`).join('') : '<div class="sp-empty">لم تكتمل تحديات بعد.</div>'}</div>`;
+    const privacyNotice = 'معاينة محلية على هذا المتصفح فقط. لا يوجد رابط عام ولا يتم نشر الجواز على الإنترنت.';
+
+    const skillsHtml = state.skills.length ? state.skills.map((skill) => {
+      const url = safeUrl(skill.evidenceUrl);
+      const hasVisibleEvidence = state.privacy.showEvidence && Boolean(url || skill.evidenceDesc);
+      return `<span class="sp-public-skill"><b>${escapeHtml(skill.name)}</b><small>${escapeHtml(skill.level)} · ${hasVisibleEvidence ? 'مدعومة بدليل' : 'مدخلة ذاتيًا'}</small>${state.privacy.showEvidence && url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">عرض الدليل ↗</a>` : ''}</span>`;
+    }).join('') : '<div class="sp-empty">لا توجد مهارات معروضة.</div>';
+
+    const projectsHtml = state.privacy.showProjects
+      ? `<div class="sp-public-block"><h3>المشاريع والإنجازات</h3>${state.projects.length ? state.projects.map((project) => {
+          const url = safeUrl(project.url);
+          return `<article class="sp-item"><div><h3>${escapeHtml(project.title)}</h3><p>${escapeHtml(project.type)} · ${escapeHtml(project.desc)}</p>${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">فتح الرابط ↗</a>` : ''}</div></article>`;
+        }).join('') : '<div class="sp-empty">لا توجد إنجازات معروضة.</div>'}</div>`
+      : '';
+
+    const challengesHtml = state.challenges.length
+      ? state.challenges.map((challenge) => `<p>تحدي أساسيات أمن الويب: ${challenge.score}/3 <small>(تقييم آلي تجريبي)</small></p>`).join('')
+      : '<div class="sp-empty">لم تكتمل تحديات بعد.</div>';
+
+    $('publicPreview').innerHTML = `<div class="sp-public-head"><span class="sp-kicker">SAEE SKILL PASSPORT · معاينة إنجازات</span><div class="sp-warning" role="status">${escapeHtml(privacyNotice)}</div><h2>${escapeHtml(profile.name || 'صاحب المهارات')}</h2><b>${escapeHtml(profile.headline || '')}</b><p>${escapeHtml(profile.bio || 'لم تتم إضافة نبذة بعد.')}</p>${profile.location ? `<small>${escapeHtml(profile.location)}</small>` : ''}${profileLink ? `<p><a href="${escapeHtml(profileLink)}" target="_blank" rel="noopener noreferrer">الرابط المهني ↗</a></p>` : ''}<small>المهارات ذاتية الإدخال ما لم يذكر خلاف ذلك.</small></div><div class="sp-public-block"><h3>المهارات</h3>${skillsHtml}</div>${projectsHtml}<div class="sp-public-block"><h3>التحديات العملية</h3>${challengesHtml}</div>`;
     const dialog = $('publicDialog');
-    if (!dialog.open) dialog.showModal();
+    if (typeof dialog.showModal === 'function' && !dialog.open) dialog.showModal();
+    else if (!dialog.open) dialog.setAttribute('open', '');
   }
 
   $('shareBtn').addEventListener('click', preview);
   $('shareBtn2').addEventListener('click', preview);
-  $('closeDialog').addEventListener('click', () => $('publicDialog').close());
-  $('publicDialog').addEventListener('click', event => { if (event.target === $('publicDialog')) $('publicDialog').close(); });
+  $('closeDialog').addEventListener('click', () => {
+    const dialog = $('publicDialog');
+    if (typeof dialog.close === 'function') dialog.close();
+    else dialog.removeAttribute('open');
+  });
+  $('publicDialog').addEventListener('click', (event) => {
+    if (event.target === $('publicDialog')) {
+      const dialog = $('publicDialog');
+      if (typeof dialog.close === 'function') dialog.close();
+      else dialog.removeAttribute('open');
+    }
+  });
 
-  $('publicToggle').addEventListener('change', event => {
-    if (commit(next => { next.privacy.isPublic = event.target.checked; })) renderPrivacy();
-    else renderPrivacy();
+  $('publicToggle').addEventListener('change', () => {
+    renderPrivacy();
+    alert('المشاركة العامة غير متاحة في النسخة الحالية. المعاينة محلية فقط.');
   });
-  $('showProjects').addEventListener('change', event => {
-    if (!commit(next => { next.privacy.showProjects = event.target.checked; })) renderPrivacy();
+  $('showProjects').addEventListener('change', (event) => {
+    if (!commit((next) => { next.privacy.showProjects = event.target.checked; })) renderPrivacy();
   });
-  $('showEvidence').addEventListener('change', event => {
-    if (commit(next => { next.privacy.showEvidence = event.target.checked; })) renderSkills();
+  $('showEvidence').addEventListener('change', (event) => {
+    if (commit((next) => { next.privacy.showEvidence = event.target.checked; })) renderSkills();
     else renderPrivacy();
   });
 
   $('exportBtn').addEventListener('click', () => {
+    if (!confirm('سيحتوي ملف JSON على بيانات الجواز كاملة، بما فيها الحقول التي أخفيتها من المعاينة. احفظه في مكان خاص ولا تشاركه قبل مراجعته. هل تريد التصدير؟')) return;
+    let objectUrl = '';
     try {
       const blob = new Blob([JSON.stringify(normalizeState(state), null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
+      objectUrl = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
-      anchor.href = url; anchor.download = 'saee-skill-passport.json';
-      document.body.appendChild(anchor); anchor.click(); anchor.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch {
+      anchor.href = objectUrl;
+      anchor.download = 'saee-skill-passport.json';
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+    } catch (error) {
+      console.error('Saee Skill Passport: export failed.', error);
       alert('تعذر تصدير البيانات. حاول مرة أخرى.');
+    } finally {
+      if (objectUrl) setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
     }
   });
 
   $('deletePassportBtn').addEventListener('click', () => {
-    const first = confirm('هل تريد حذف جواز المهارات بالكامل من هذا المتصفح؟ سيتم حذف الملف الشخصي والمهارات والمشاريع ونتائج التحديات وإعدادات الجواز.');
-    if (!first) return;
-    const second = confirm('تأكيد أخير: الحذف نهائي للبيانات المحفوظة في هذا المتصفح، ولا يمكن التراجع عنه. هل تريد المتابعة؟');
-    if (!second) return;
-
+    if (!confirm('هل تريد حذف جواز المهارات بالكامل من هذا المتصفح؟ سيتم حذف الملف الشخصي والمهارات والمشاريع ونتائج التحديات وإعدادات الجواز.')) return;
+    if (!confirm('تأكيد أخير: لا يمكن التراجع عن حذف البيانات المحفوظة في هذا المتصفح. هل تريد المتابعة؟')) return;
     try {
-      // Remove the actual saved passport record rather than merely clearing the UI.
-      localStorage.removeItem(KEY);
-      // Keep the one-time initialization from automatically turning sharing on again.
-      try { localStorage.setItem(SHARE_MIGRATION_KEY, '1'); } catch { /* storage may be restricted */ }
-      state = fresh();
-      state.privacy.isPublic = false;
+      localStorage.removeItem(STORAGE_KEY);
+      state = freshState();
       render();
+      $('profileForm').reset();
       $('skillForm').reset();
       $('projectForm').reset();
       $('challengeForm').reset();
       $('analyzerForm').reset();
       $('challengeResult').hidden = true;
       $('analysisResult').hidden = true;
-      alert('تم حذف بيانات جواز المهارات من هذا المتصفح. بقيت صفحة جواز المهارات نفسها ضمن الموقع.');
+      alert('تم حذف بيانات جواز المهارات من هذا المتصفح. بقيت صفحة الجواز نفسها ضمن الموقع.');
     } catch (error) {
       console.error('Saee Skill Passport: delete failed.', error);
-      alert('تعذر حذف بيانات الجواز من المتصفح. تحقق من إعدادات التخزين ثم حاول مرة أخرى.');
+      alert('تعذر حذف بيانات الجواز. تحقق من إعدادات التخزين في المتصفح ثم حاول مرة أخرى.');
     }
   });
 
