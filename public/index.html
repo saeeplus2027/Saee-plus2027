@@ -338,6 +338,61 @@
       }
     }
   </style>
+
+  <style id="nav-fit-fix">
+    /* Keep every navigation item visible on medium-width screens */
+    @media (min-width: 701px) and (max-width: 1200px) {
+      body > header {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) auto !important;
+        grid-template-areas:
+          "brand actions"
+          "nav nav" !important;
+        align-items: center !important;
+        height: auto !important;
+        min-height: 0 !important;
+        gap: 16px !important;
+        padding-top: 16px !important;
+        padding-bottom: 16px !important;
+        overflow: visible !important;
+      }
+
+      body > header > .brand {
+        grid-area: brand !important;
+        min-width: 0 !important;
+      }
+
+      body > header > .header-actions {
+        grid-area: actions !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        justify-self: end !important;
+      }
+
+      body > header > nav {
+        grid-area: nav !important;
+        order: initial !important;
+        display: flex !important;
+        flex-basis: auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 12px 22px !important;
+        overflow: visible !important;
+        white-space: normal !important;
+      }
+
+      body > header > nav a {
+        flex: 0 0 auto !important;
+        white-space: nowrap !important;
+        font-size: 12px !important;
+      }
+    }
+  </style>
+
 </head>
 
 <body>
