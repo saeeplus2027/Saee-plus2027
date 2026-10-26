@@ -1836,7 +1836,7 @@
 </script>
 
 
-<script id="saee-project-account-gate">
+<script id="saee-project-product-account-gate">
 (() => {
   'use strict';
   const SESSION_KEY = 'sai-local-session-v1';
@@ -1854,20 +1854,23 @@
     } catch (_) { return false; }
   }
 
-  function isAddProjectAction(el) {
-    if (!(el instanceof Element)) return false;
+  function actionKind(el) {
+    if (!(el instanceof Element)) return '';
     const target = el.closest('button, input[type="submit"], input[type="button"], a, [role="button"]');
-    if (!target) return false;
+    if (!target) return '';
     const text = [target.innerText, target.value, target.getAttribute('aria-label'), target.title, target.dataset?.action]
       .filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
-    return /إضافة\s*مشروع|اضافة\s*مشروع|أضف\s*مشروع|اضف\s*مشروع|إضافة\s*فرصة|اضافة\s*فرصة/.test(text);
+    if (/إضافة\s*منتج|اضافة\s*منتج|أضف\s*منتج|اضف\s*منتج|شارك\s*منتجك|نشر\s*منتج/.test(text)) return 'product';
+    if (/إضافة\s*مشروع|اضافة\s*مشروع|أضف\s*مشروع|اضف\s*مشروع|إضافة\s*فرصة|اضافة\s*فرصة/.test(text)) return 'project';
+    return '';
   }
 
-  function requestLogin() {
+  function requestLogin(kind) {
+    const noun = kind === 'product' ? 'منتج' : 'مشروع';
     const dialog = document.getElementById(AUTH_DIALOG_ID);
     const message = document.getElementById('sai-auth-message');
     if (!dialog) {
-      alert('لإضافة مشروع، لازم تنشئ حسابًا أو تسجّل الدخول أولًا.');
+      alert(`لإضافة ${noun}، لازم تنشئ حسابًا أو تسجّل الدخول أولًا.`);
       return;
     }
     dialog.querySelectorAll('[data-auth-panel]').forEach(panel => {
@@ -1876,9 +1879,9 @@
     const title = document.getElementById('sai-auth-title');
     const description = document.getElementById('sai-auth-description');
     if (title) title.textContent = 'تسجيل الدخول مطلوب';
-    if (description) description.textContent = 'لإضافة مشروع، أنشئ حسابًا أو سجّل الدخول أولًا.';
+    if (description) description.textContent = `لإضافة ${noun}، أنشئ حسابًا أو سجّل الدخول أولًا.`;
     if (message) {
-      message.textContent = 'حتى تتمكن من إضافة مشروع، سجّل الدخول أو أنشئ حسابًا جديدًا. بعد تسجيل الدخول ارجع واضغط «إضافة مشروع» مرة ثانية.';
+      message.textContent = `حتى تتمكن من إضافة ${noun}، سجّل الدخول أو أنشئ حسابًا جديدًا. بعد تسجيل الدخول ارجع واضغط «إضافة ${noun}» مرة ثانية.`;
       message.hidden = false;
     }
     if (!dialog.open && typeof dialog.showModal === 'function') dialog.showModal();
@@ -1887,22 +1890,26 @@
   }
 
   document.addEventListener('click', event => {
-    if (!isAddProjectAction(event.target) || hasAccountSession()) return;
+    const kind = actionKind(event.target);
+    if (!kind || hasAccountSession()) return;
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
-    requestLogin();
+    requestLogin(kind);
   }, true);
 
   document.addEventListener('submit', event => {
     const form = event.target;
     if (!(form instanceof HTMLFormElement) || hasAccountSession()) return;
-    const text = (form.innerText || '') + ' ' + (form.getAttribute('aria-label') || '') + ' ' + (form.id || '');
-    if (!/إضافة\s*مشروع|اضافة\s*مشروع|أضف\s*مشروع|اضف\s*مشروع|إضافة\s*فرصة|اضافة\s*فرصة|project.*(add|new)|(add|new).*project/i.test(text)) return;
+    const text = ((form.innerText || '') + ' ' + (form.getAttribute('aria-label') || '') + ' ' + (form.id || '') + ' ' + (form.querySelector('[type="submit"]')?.innerText || '') + ' ' + (form.querySelector('[type="submit"]')?.value || '')).replace(/\s+/g, ' ');
+    let kind = '';
+    if (/إضافة\s*منتج|اضافة\s*منتج|أضف\s*منتج|اضف\s*منتج|شارك\s*منتجك|نشر\s*منتج|product.*(add|new)|(add|new).*product/i.test(text)) kind = 'product';
+    else if (/إضافة\s*مشروع|اضافة\s*مشروع|أضف\s*مشروع|اضف\s*مشروع|إضافة\s*فرصة|اضافة\s*فرصة|project.*(add|new)|(add|new).*project/i.test(text)) kind = 'project';
+    if (!kind) return;
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
-    requestLogin();
+    requestLogin(kind);
   }, true);
 })();
 </script>
