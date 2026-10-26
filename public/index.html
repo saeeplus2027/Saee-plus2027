@@ -335,28 +335,6 @@
     @media (max-width: 480px) {
       #sai-auth {
         padding: 22px;
-
-        /* توحيد حجم زر ابدأ رحلتك مع بقية أزرار الهيدر */
-header .header-actions > a.button.small[href="#services"] {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  flex-wrap: nowrap !important;
-  white-space: nowrap !important;
-  flex-shrink: 0 !important;
-  height: 60px !important;
-  min-height: 60px !important;
-  padding: 11px 19px !important;
-  gap: 12px !important;
-  line-height: 1.2 !important;
-  box-sizing: border-box !important;
-}
-
-header .header-actions > a.button.small[href="#services"] span {
-  display: inline-block !important;
-  flex-shrink: 0 !important;
-  white-space: nowrap !important;
-}
       }
     }
   </style>
@@ -501,6 +479,38 @@ header .header-actions > a.button.small[href="#services"] span {
         width: 100% !important;
         white-space: nowrap !important;
       }
+    }
+  </style>
+
+
+  <style id="saee-start-journey-button-fix">
+    /* Keep "ابدأ رحلتك" on one line and match the header button height. */
+    body > header > .header-actions > a.button.small[href="#services"] {
+      display: inline-flex !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      justify-content: center !important;
+      flex: 0 0 auto !important;
+      width: max-content !important;
+      min-width: max-content !important;
+      max-width: none !important;
+      height: 60px !important;
+      min-height: 60px !important;
+      max-height: 60px !important;
+      padding: 11px 19px !important;
+      gap: 12px !important;
+      box-sizing: border-box !important;
+      white-space: nowrap !important;
+      word-break: keep-all !important;
+      overflow-wrap: normal !important;
+      line-height: 1.2 !important;
+    }
+
+    body > header > .header-actions > a.button.small[href="#services"] span {
+      display: inline-block !important;
+      flex: 0 0 auto !important;
+      white-space: nowrap !important;
+      line-height: 1 !important;
     }
   </style>
 
