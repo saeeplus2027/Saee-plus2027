@@ -32,3 +32,14 @@ html{scroll-behavior:smooth;scroll-padding-top:18px}
 .sp-recovery-actions{margin-top:10px;align-items:center;flex-wrap:wrap}
 .sp-recovery-actions [hidden]{display:none!important}
 .sp-recovery-actions button:disabled{opacity:.55;cursor:not-allowed}
+
+
+/* Compact account status: remove the oversized account/error card. */
+.sp-auth-inline{display:flex;align-items:center;justify-content:space-between;gap:8px 18px;flex-wrap:wrap;margin:8px 0 20px;padding:8px 0;border-bottom:1px solid #e4ece5;background:transparent}
+.sp-auth-inline-copy{flex:1 1 300px;min-width:0}
+.sp-auth-status{margin:0;line-height:1.7;font-size:12px;color:#526d60;overflow-wrap:anywhere}
+.sp-auth-inline-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto;flex-wrap:wrap}
+.sp-auth-inline .sp-save-status{margin:3px 0 0;padding:0;border:0;border-radius:0;background:transparent;color:#718078;font-size:11px;line-height:1.6;overflow-wrap:anywhere}
+.sp-auth-inline .sp-save-status.is-error{border:0;background:transparent;color:#a23b42;font-weight:750}
+.sp-auth-inline .sp-recovery-actions{margin-top:0}
+@media(max-width:560px){.sp-auth-inline{align-items:stretch}.sp-auth-inline-copy{flex-basis:100%}.sp-auth-inline-actions,.sp-auth-inline .sp-recovery-actions{width:100%}.sp-auth-inline .sp-btn{flex:1 1 100%}}
