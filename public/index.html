@@ -457,6 +457,31 @@
     body.admin header .header-actions > a.button.small { display: none !important; }
   </style>
 
+
+  <style id="saee-restore-skill-passport">
+    /* Restore the Skill Passport link on the public site. */
+    body:not(.admin) > header > nav a[href="skill-passport.html"] {
+      display: inline-flex !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      flex: 0 0 auto !important;
+      white-space: nowrap !important;
+      position: relative !important;
+      z-index: 5 !important;
+    }
+
+    /* On phones, show it when the menu is opened. */
+    @media (max-width: 700px) {
+      body:not(.admin) > header > nav.open a[href="skill-passport.html"] {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        width: 100% !important;
+        white-space: nowrap !important;
+      }
+    }
+  </style>
+
 </head>
 
 <body>
