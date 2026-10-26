@@ -2,13 +2,15 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#075550"><title>Saee Skill Passport | سعي بلس</title>
+<meta name="theme-color" content="#075550"><title>جواز المهارات | سعي بلس</title>
   <link
     rel="icon"
     type="image/jpeg"
     href="https://cdn.phototourl.com/member/2026-10-25-a5e80966-a389-47e6-95e0-7d994efae181.jpg">
 
-<link rel="stylesheet" href="style.css"><link rel="stylesheet" href="skill-passport.css">
+<meta name="description" content="جواز المهارات من سعي بلس: ملفك الشخصي ومهاراتك ومشاريعك وأدلتك ضمن تجربة عربية تدعم RTL.">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="skill-passport.css">
 </head>
 <body class="passport-body">
 <header class="passport-header">
@@ -46,10 +48,11 @@
 <form id="analyzerForm" class="sp-form"><label class="sp-wide">وصف المشروع أو الإنجاز<textarea id="analyzerText" rows="4" maxlength="3000" placeholder="صف ما بنيته، الأدوات المستخدمة، دورك والنتيجة..." required></textarea></label><button class="sp-btn" type="submit">تحليل واقتراح مهارات ✦</button></form><div id="analysisResult" class="sp-analysis" hidden></div><div class="sp-ai-foot">يمكن ربط LLM API لاحقًا عبر خادم آمن وإرجاع Structured Outputs. لا تضع مفتاح API داخل ملفات المتصفح.</div>
 </section>
 <section class="sp-panel" id="privacy"><div class="sp-section-head"><div><span class="sp-kicker">أنت تتحكم بملفك</span><h2>الخصوصية والمشاركة</h2><p>اختر ما تريد إظهاره في معاينة صفحة الإنجازات.</p></div><span class="sp-number">06</span></div>
-<label class="sp-switch-row"><span><b>إتاحة صفحة المشاركة</b><small>تظهر بياناتك المختارة في معاينة عامة على هذا الجهاز فقط.</small></span><input type="checkbox" id="publicToggle"></label>
+<label class="sp-switch-row"><span><b>إتاحة صفحة المشاركة</b><small>تظهر البيانات التي تختارها في معاينة محلية داخل هذا المتصفح فقط؛ لا تنشئ رابطًا عامًا.</small></span><input type="checkbox" id="publicToggle"></label>
 <label class="sp-switch-row"><span><b>إظهار المشاريع والإنجازات</b><small>يمكن إخفاء قائمة المشاريع من المعاينة.</small></span><input type="checkbox" id="showProjects" checked></label>
 <label class="sp-switch-row"><span><b>إظهار روابط الأدلة</b><small>تأكد أن الروابط لا تحتوي معلومات خاصة.</small></span><input type="checkbox" id="showEvidence" checked></label>
-<div class="sp-actions"><button class="sp-btn" id="shareBtn2" type="button">معاينة صفحة المشاركة</button><button class="sp-btn sp-btn-light" id="exportBtn" type="button">تصدير نسخة JSON</button><button class="sp-btn sp-danger" id="resetBtn" type="button">مسح بيانات التجربة</button></div>
+<div class="sp-actions"><button class="sp-btn" id="shareBtn2" type="button">معاينة صفحة المشاركة</button><button class="sp-btn sp-btn-light" id="exportBtn" type="button">تصدير نسخة JSON</button><button class="sp-btn sp-danger" id="deletePassportBtn" type="button">حذف الجواز بالكامل</button></div>
+<p class="sp-delete-note">حذف الجواز يزيل الاسم والمهارات والمشاريع ونتائج التحديات المحفوظة في هذا المتصفح فقط. لا يحذف صفحة الموقع من GitHub، ولا يمكن التراجع عن الحذف.</p>
 <p class="sp-warning">تنبيه: هذا النموذج التجريبي يخزن البيانات في localStorage ولا يوفر مصادقة مستخدمين أو تخزينًا آمنًا للملفات أو مشاركة عامة عبر الإنترنت. لا تدخل بيانات حساسة. يلزم ربطه بخادم وقاعدة بيانات وصلاحيات قبل الإنتاج.</p>
 </section>
 </div></div>
