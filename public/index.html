@@ -86,6 +86,17 @@ body.admin header .header-actions > a.button.small {
   display: none !important;
 }
 
+/* إخفاء القائمة العلوية بالكامل من صفحة الإدارة فقط */
+body.admin > header > nav {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* التأكد من عدم ظهور روابط القائمة في صفحة الإدارة */
+body.admin > header > nav a {
+  display: none !important;
+}
+
 </style>
 <head>
   <meta charset="UTF-8">
