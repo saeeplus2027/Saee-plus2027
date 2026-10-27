@@ -62,35 +62,6 @@
       if (timer) { timer.hidden = true; timer.textContent = ''; }
     }
   }
-  function insertButton(id) {
-    const dialog = $('#dialog-content');
-    if (!dialog || !id) return;
-    const kicker = $('.kicker', dialog);
-    const label = (kicker?.textContent || '').replace(/\s+/g, ' ').trim();
-    // Restrict this control to the Saee discounts details dialog.
-    if (!label.includes('خصومات سعي') || !label.includes('التفاصيل')) return;
-    let btn = $('.saee-discount-use', dialog);
-    if (btn) { btn.dataset.discountId = String(id); paint(btn); return; }
-    const wrap = document.createElement('div');
-    wrap.className = 'saee-discount-use-wrap';
-    wrap.style.cssText = 'margin:16px 0 8px;width:100%';
-    btn = document.createElement('button');
-    btn.type = 'button'; btn.className = 'button saee-discount-use';
-    btn.dataset.discountId = String(id);
-    btn.style.cssText = 'width:100%;min-height:58px;justify-content:center;font-weight:800';
-    btn.textContent = 'تم الخصم';
-    const timer = document.createElement('small');
-    timer.className = 'saee-discount-use-timer';
-    timer.style.cssText = 'display:block;text-align:center;margin-top:8px;color:#788675';
-    timer.hidden = true;
-    wrap.append(btn, timer);
-    // Put it near the discount description, without replacing any existing details/actions.
-    const favorite = [...dialog.querySelectorAll('button[onclick]')].find(b => /saveFavorite\(/.test(b.getAttribute('onclick') || ''));
-    if (favorite?.parentElement) favorite.before(wrap);
-    else dialog.appendChild(wrap);
-    paint(btn);
-  }
-
   // Delegated click handler continues to work even when the modal is recreated.
   document.addEventListener('click', function (event) {
     const btn = event.target.closest?.('.saee-discount-use');
@@ -108,24 +79,6 @@
     } catch (_) { toast('تعذر حفظ الاستخدام في المتصفح.'); }
   }, true);
 
-  // Wrap the existing details function instead of editing it; this avoids breaking the modal.
-  function hookDetails() {
-    if (typeof window.details !== 'function' || window.details.__saeeDiscountWrapped) return false;
-    const original = window.details;
-    function wrappedDetails(id) {
-      const result = original.apply(this, arguments);
-      window.setTimeout(() => insertButton(id), 0);
-      return result;
-    }
-    wrappedDetails.__saeeDiscountWrapped = true;
-    window.details = wrappedDetails;
-    return true;
-  }
-  if (!hookDetails()) {
-    let attempts = 0;
-    const timer = window.setInterval(() => { attempts++; if (hookDetails() || attempts > 100) window.clearInterval(timer); }, 50);
-  }
-  document.addEventListener('DOMContentLoaded', hookDetails);
   // Refresh countdown/availability while the dialog remains open.
   window.setInterval(() => { const btn = $('.saee-discount-use'); if (btn) paint(btn); }, 15000);
 })();
