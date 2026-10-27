@@ -2,8 +2,9 @@ let adminTab='dashboard',adminFilter='all',adminQuery='',textQuery='';
 const originalRender=render;
 const serviceLabel=id=>SiteStore.state.services.find(s=>s[0]===id)?.[2]||id;
 function syncContent(){services=SiteStore.state.services;base=SiteStore.state.items;places=SiteStore.state.places;descriptions=SiteStore.state.descriptions;titles=Object.fromEntries(services.map(s=>[s[0],s[2]]));items=[...base,...additions.filter(x=>!base.some(b=>b.id===x.id))];document.documentElement.style.setProperty('--green',SiteStore.state.theme.green);document.documentElement.style.setProperty('--cream',SiteStore.state.theme.cream);document.title=SiteStore.state.siteName+' | من جامعتك، إلى مجتمعك';}
-render=function(){syncContent();route=location.hash.slice(1)||'home';if(SiteStore.remote&&!SiteStore.loaded){main.innerHTML='<div class="container intro"><h2>جاري تحميل الموقع…</h2><p>نحمّل أحدث محتوى محفوظ.</p></div>';return;}const isAdmin=route==='admin';document.body.classList.toggle('admin',isAdmin);if(isAdmin){stopVisual(false);renderAdmin();return;}originalRender();applyContent();visualBar();};
-window.addEventListener('sai-content-changed',()=>{syncContent();if(route!=='admin')render()});
+render=function(){syncContent();route=location.hash.slice(1)||'home';const isAdmin=route==='admin';document.body.classList.toggle('admin',isAdmin);if(isAdmin){stopVisual(false);renderAdmin();return;}if(SiteStore.remote&&!SiteStore.loaded){main.innerHTML='<div class="container intro"><h2>جاري تحميل الموقع…</h2><p>نحمّل أحدث محتوى محفوظ.</p><button class="button" type="button" onclick="SiteStore.reload().then(()=>render()).catch(()=>render())">إعادة المحاولة</button></div>';return;}originalRender();applyContent();visualBar();};
+window.addEventListener('sai-content-changed',()=>{syncContent();render()});
+window.addEventListener('hashchange',()=>render());
 async function storeChange(update){try{let next=SiteStore.clone(SiteStore.state);update(next);await SiteStore.save(next);toast(SiteStore.remote?'تم الحفظ والنشر على الموقع ✓':'تم حفظ التعديلات ✓');return true;}catch(e){toast(e.message);return false;}}
 function goAdmin(tab='dashboard'){adminTab=tab;adminFilter='all';adminQuery='';if(location.hash==='#admin')renderAdmin();else location.hash='admin';}
 
