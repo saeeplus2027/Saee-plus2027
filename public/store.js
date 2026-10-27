@@ -4,6 +4,9 @@
 window.SiteStore = (() => {
   const key = "sai-plus-cms-v1";
   const remote = true;
+  // The static GitHub Pages frontend talks to the separately deployed Cloudflare Worker.
+  const API_BASE = "https://saee-plus-api.ligagym.workers.dev";
+  const apiUrl = (path) => `${API_BASE}${path}`;
 
   let loaded = false;
   let canEdit = false;
@@ -192,17 +195,17 @@ window.SiteStore = (() => {
     loaded = false;
     apiAvailable = false;
     try {
-      const response = await fetch('/api/content', {
+      const response = await fetch(apiUrl('/api/content'), {
         method: 'GET',
         cache: 'no-store',
         headers: { 'Accept': 'application/json' },
-        credentials: 'same-origin'
+        credentials: 'include'
       });
       const body = await readResponse(response);
-      state = validate(body.state);
+      state = validate(body.state ?? body.content);
       state.revision = Number(body.revision ?? state.revision ?? 0);
       etag = response.headers.get('ETag') || `"${state.revision}"`;
-      canEdit = Boolean(body.canEdit);
+      canEdit = Boolean(body.canEdit ?? body.admin ?? body.user?.admin);
       apiAvailable = true;
       loaded = true;
       cache();
@@ -230,27 +233,27 @@ window.SiteStore = (() => {
   async function save(next) {
     if (busy) throw Error('جاري حفظ تعديل سابق.');
     if (!loaded) throw Error('المحتوى لم يجهز بعد. أعد تحميل الصفحة ثم حاول مجددًا.');
-    if (!apiAvailable) throw Error('تعذر الاتصال بخادم المحتوى (/api/content). تم عرض نسخة محفوظة للقراءة فقط؛ لا يمكن حفظ التعديلات أو مزامنتها حتى يتم إصلاح الخادم.');
+    if (!apiAvailable) throw Error('تعذر الاتصال بخادم المحتوى. تم عرض نسخة محفوظة للقراءة فقط؛ لا يمكن حفظ التعديلات أو مزامنتها حتى يتم إصلاح الخادم.');
     if (!canEdit) throw Error('سجّل الدخول بحساب مالك الموقع لتتمكن من حفظ التعديلات.');
     busy = true;
     try {
       const checked = validate(next);
-      const response = await fetch('/api/content', {
+      const response = await fetch(apiUrl('/api/content'), {
         method: 'PUT',
-        credentials: 'same-origin',
+        credentials: 'include',
         cache: 'no-store',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'If-Match': etag
         },
-        body: JSON.stringify(checked)
+        body: JSON.stringify({ content: checked, state: checked })
       });
       const body = await readResponse(response);
-      state = validate(body.state);
+      state = validate(body.state ?? body.content);
       state.revision = Number(body.revision ?? state.revision ?? Date.now());
       etag = response.headers.get('ETag') || `"${state.revision}"`;
-      canEdit = Boolean(body.canEdit);
+      canEdit = Boolean(body.canEdit ?? body.admin ?? body.user?.admin);
       cache();
       notify();
       return state;
