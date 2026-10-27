@@ -41,10 +41,9 @@ export default {
       const candidate = await derive(supplied, credential.salt);
       if (candidate !== credential.password_hash) return fail('كلمة المرور غير صحيحة', 401);
     } else {
+      // First entry: authenticate with the Cloudflare bootstrap secret, but do not
+      // save it as the permanent password. The UI will require setting a new one.
       if (!env.ADMIN_PASSWORD || (await hash(supplied)) !== (await hash(env.ADMIN_PASSWORD))) return fail('كلمة المرور غير صحيحة', 401);
-      const salt = random();
-      const password_hash = await derive(supplied, salt);
-      await env.DB.prepare('INSERT INTO admin_credentials (id, salt, password_hash, updated_at) VALUES (1, ?, ?, ?)').bind(salt, password_hash, Date.now()).run();
     }
     const email = String(env.ADMIN_USER_EMAIL || 'admin@saee.local').trim().toLowerCase();
     const existing = await env.DB.prepare('SELECT id FROM users WHERE email=?').bind(email).first();
@@ -60,7 +59,7 @@ export default {
     }
     const token = random();
     await env.DB.prepare('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)').bind(await hash(token), userId, Date.now() + 7 * 86400000).run();
-    return reply({ message: 'تم تسجيل دخول الإدارة' }, 200, { 'set-cookie': cookie(token, 604800) });
+    return reply({ message: 'تم تسجيل دخول الإدارة', needsPasswordSetup: !credential }, 200, { 'set-cookie': cookie(token, 604800) });
    }
    if (path === '/api/admin-change-password' && req.method === 'POST') {
     const user = await identity(req, env);
@@ -78,7 +77,8 @@ export default {
       const candidate = await derive(currentPassword, credential.salt);
       if (candidate !== credential.password_hash) return fail('كلمة المرور الحالية غير صحيحة', 401);
     } else {
-      if (!env.ADMIN_PASSWORD || (await hash(currentPassword)) !== (await hash(env.ADMIN_PASSWORD))) return fail('كلمة المرور الحالية غير صحيحة', 401);
+      // No credential means this is the first authenticated admin session.
+      // The session itself was issued only after checking ADMIN_PASSWORD.
     }
     const salt = random();
     const password_hash = await derive(newPassword, salt);
