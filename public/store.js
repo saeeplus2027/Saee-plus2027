@@ -286,7 +286,7 @@ window.SiteStore = (() => {
     if (!document.hidden && location.hash !== '#admin' && !busy) {
       refresh(true).catch(() => {});
     }
-  }, 4000);
+  }, 2000);
 
   return {
     get state() { return state; },
