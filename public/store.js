@@ -1,13 +1,18 @@
 
-/* Saee Plus - GitHub Pages local content store */
+/* Saee Plus - shared content store backed by /api/content */
 
 window.SiteStore = (() => {
   const key = "sai-plus-cms-v1";
-  const remote = false;
+  const remote = true;
+  // The static GitHub Pages frontend talks to the separately deployed Cloudflare Worker.
+  const API_BASE = "https://saee-plus-api.ligagym.workers.dev";
+  const apiUrl = (path) => `${API_BASE}${path}`;
 
-  let loaded = true;
-  let canEdit = true;
+  let loaded = false;
+  let canEdit = false;
   let busy = false;
+  let etag = '"0"';
+  let apiAvailable = false;
 
   const clone = (value) =>
     JSON.parse(JSON.stringify(value));
@@ -19,6 +24,8 @@ window.SiteStore = (() => {
       /^data:image\/(png|jpeg|webp|gif);base64,[a-zA-Z0-9+/=]+$/.test(value) ||
       /^https:\/\/[^\s<>"']+$/.test(value)
     ) return value;
+
+    if (/^\/api\/media\/[a-f0-9]{64}\.(png|jpeg|webp|gif)$/.test(value)) return value;
 
     if (/^[a-zA-Z0-9_-]+$/.test(value))
       return "assets/" + value + ".jpg";
@@ -99,15 +106,6 @@ window.SiteStore = (() => {
       if (item.image && !imageSrc(item.image)) {
         throw Error("رابط الصورة غير صالح.");
       }
-
-      if (
-        item.gallery !== undefined &&
-        (!Array.isArray(item.gallery) ||
-          item.gallery.length > 10 ||
-          item.gallery.some((src) => typeof src !== "string" || (src && !imageSrc(src))))
-      ) {
-        throw Error("صور الفرصة غير صالحة. الحد الأقصى 10 صور.");
-      }
     }
 
     for (const place of data.places) {
@@ -173,72 +171,90 @@ window.SiteStore = (() => {
   }
 
   if (!window.SAI_DEFAULTS) {
-    throw Error(
-      "ملف content-data.js غير محمّل أو لا يحتوي على SAI_DEFAULTS."
-    );
+    throw Error("ملف content-data.js غير محمّل أو لا يحتوي على SAI_DEFAULTS.");
   }
 
   let state = validate(clone(window.SAI_DEFAULTS));
 
-  try {
-    const saved = JSON.parse(
-      localStorage.getItem(key) || "null"
-    );
-
-    if (
-      saved &&
-      Number(saved.revision) >= Number(state.revision)
-    ) {
-      state = validate(saved);
-    }
-  } catch (error) {
-    console.warn(
-      "Saee Plus: using default content.",
-      error
-    );
-  }
-
   function notify() {
-    window.dispatchEvent(
-      new Event("sai-content-changed")
-    );
+    window.dispatchEvent(new Event("sai-content-changed"));
   }
 
   function cache() {
+    try { localStorage.setItem(key, JSON.stringify(state)); } catch (_) { /* Cache is optional. */ }
+  }
+
+  async function readResponse(response) {
+    let body = {};
+    try { body = await response.json(); } catch (_) {}
+    if (!response.ok) throw Error(body.error || `تعذر تحميل المحتوى (HTTP ${response.status}).`);
+    return body;
+  }
+
+  async function refresh() {
+    loaded = false;
+    apiAvailable = false;
     try {
-      localStorage.setItem(
-        key,
-        JSON.stringify(state)
-      );
+      const response = await fetch(apiUrl('/api/content'), {
+        method: 'GET',
+        cache: 'no-store',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'include'
+      });
+      const body = await readResponse(response);
+      state = validate(body.state ?? body.content);
+      state.revision = Number(body.revision ?? state.revision ?? 0);
+      etag = response.headers.get('ETag') || `"${state.revision}"`;
+      canEdit = Boolean(body.canEdit ?? body.admin ?? body.user?.admin);
+      apiAvailable = true;
+      loaded = true;
+      cache();
+      notify();
+      return state;
     } catch (error) {
-      throw Error(
-        "تعذر حفظ المحتوى في المتصفح. قد تكون مساحة التخزين ممتلئة."
-      );
+      // Keep the public site usable if the API route is missing or temporarily down.
+      // The shared server remains the source of truth whenever the API is available.
+      console.error('Saee Plus: central content could not be loaded; using cached/default content.', error);
+      try {
+        const cached = localStorage.getItem(key);
+        if (cached) state = validate(JSON.parse(cached));
+      } catch (cacheError) {
+        console.warn('Saee Plus: cached content is unavailable or invalid.', cacheError);
+        // `state` already contains validated SAI_DEFAULTS.
+      }
+      canEdit = false;
+      apiAvailable = false;
+      loaded = true;
+      notify();
+      return state;
     }
   }
 
   async function save(next) {
-    if (busy) {
-      throw Error("جاري حفظ تعديل سابق.");
-    }
-
+    if (busy) throw Error('جاري حفظ تعديل سابق.');
+    if (!loaded) throw Error('المحتوى لم يجهز بعد. أعد تحميل الصفحة ثم حاول مجددًا.');
+    if (!apiAvailable) throw Error('تعذر الاتصال بخادم المحتوى. تم عرض نسخة محفوظة للقراءة فقط؛ لا يمكن حفظ التعديلات أو مزامنتها حتى يتم إصلاح الخادم.');
+    if (!canEdit) throw Error('سجّل الدخول بحساب مالك الموقع لتتمكن من حفظ التعديلات.');
     busy = true;
-
     try {
       const checked = validate(next);
-
-      checked.revision = Date.now();
-
-      const previous = state;
-      state = checked;
-
-      try {
-        cache();
-      } catch (error) {
-        state = previous;
-        throw error;
-      }
-
+      const response = await fetch(apiUrl('/api/content'), {
+        method: 'PUT',
+        credentials: 'include',
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'If-Match': etag
+        },
+        body: JSON.stringify({ content: checked, state: checked })
+      });
+      const body = await readResponse(response);
+      state = validate(body.state ?? body.content);
+      state.revision = Number(body.revision ?? state.revision ?? Date.now());
+      etag = response.headers.get('ETag') || `"${state.revision}"`;
+      canEdit = Boolean(body.canEdit ?? body.admin ?? body.user?.admin);
+      cache();
       notify();
       return state;
     } finally {
@@ -246,33 +262,15 @@ window.SiteStore = (() => {
     }
   }
 
-  async function refresh() {
-    try {
-      const saved = JSON.parse(
-        localStorage.getItem(key) || "null"
-      );
+  const ready = refresh();
 
-      state = saved
-        ? validate(saved)
-        : validate(clone(window.SAI_DEFAULTS));
-
-      notify();
-    } catch (error) {
-      console.warn(error);
-      state = validate(clone(window.SAI_DEFAULTS));
-      notify();
-    }
-
-    return state;
-  }
-
-  window.addEventListener("storage", (event) => {
-    if (
-      event.key === key &&
-      location.hash !== "#admin"
-    ) {
-      refresh();
-    }
+  // Remote mode always fetches the central source. Local storage is only a cache,
+  // never the authority for shared site content.
+  window.addEventListener('focus', () => {
+    if (location.hash !== '#admin') refresh().catch(() => {});
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && location.hash !== '#admin') refresh().catch(() => {});
   });
 
   return {
@@ -280,12 +278,12 @@ window.SiteStore = (() => {
     get loaded() { return loaded; },
     get canEdit() { return canEdit; },
     remote,
-    ready: Promise.resolve(),
+    ready,
     clone,
     save,
     validate,
     imageSrc,
     key,
-    reload: () => refresh()
+    reload: refresh
   };
 })();
