@@ -11,6 +11,7 @@ window.SiteStore = (() => {
   let remoteAvailable = false;
   let busy = false;
   let etag = null;
+  let needsPasswordSetup = false;
 
   const clone = (value) =>
     JSON.parse(JSON.stringify(value));
@@ -299,6 +300,7 @@ window.SiteStore = (() => {
       body: JSON.stringify({ password })
     });
     const body = await readResponse(response);
+    needsPasswordSetup = Boolean(body.needsPasswordSetup);
     await refresh();
     if (!canEdit) throw Error('تم الدخول لكن الخادم لم يمنح صلاحية الإدارة.');
     return body;
@@ -354,6 +356,7 @@ window.SiteStore = (() => {
     reload: () => refresh(),
     loginAdmin,
     changeAdminPassword,
+    get needsPasswordSetup() { return needsPasswordSetup; },
     logoutAdmin
   };
 })();
