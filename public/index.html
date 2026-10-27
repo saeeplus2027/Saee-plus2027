@@ -534,6 +534,7 @@
     <a href="#discounts">خصومات سعي</a>
     <a href="#market">السوق المحلي</a>
     <a href="#projects">فرص المشاريع</a>
+    <button type="button" class="saee-inquiry-nav" id="saee-inquiry-open">الاستفسارات</button>
   </nav>
 
   <div class="header-actions">
@@ -862,6 +863,135 @@
 </dialog>
 
 <div id="toast" role="status"></div>
+
+<button type="button" id="saee-inquiry-float" aria-haspopup="dialog" aria-controls="saee-inquiry-dialog">💬 الاستفسارات</button>
+<dialog id="saee-inquiry-dialog" aria-labelledby="saee-inquiry-title">
+  <div class="saee-inquiry-form">
+    <button type="button" class="saee-inquiry-close" aria-label="إغلاق" id="saee-inquiry-close">×</button>
+    <h2 id="saee-inquiry-title">استفسارات سعي بلس</h2>
+    <p class="saee-inquiry-hours" id="saee-inquiry-hours">اختَر نوع الاستفسار لمعرفة جهة التواصل.</p>
+    <div id="saee-inquiry-categories" class="saee-inquiry-categories">
+      <button type="button" class="saee-inquiry-category" data-inquiry="university">استفسار قروض ومنح ومكارم والأسئلة الجامعية</button>
+      <button type="button" class="saee-inquiry-category" data-inquiry="opportunities">استفسار عن الفرص</button>
+      <button type="button" class="saee-inquiry-category" data-inquiry="talents">استفسار عن المواهب</button>
+      <button type="button" class="saee-inquiry-category" data-inquiry="expert">استفسار عن اسأل خبير</button>
+      <button type="button" class="saee-inquiry-category" data-inquiry="projects">استفسار عن المشاريع</button>
+      <button type="button" class="saee-inquiry-category secondary" data-inquiry="back">رجوع إلى خيارات الاستفسار</button>
+    </div>
+    <div id="saee-inquiry-details" hidden>
+      <h3 id="saee-inquiry-detail-title"></h3>
+      <p id="saee-inquiry-detail-note"></p>
+      <div id="saee-inquiry-contacts" class="saee-inquiry-contacts"></div>
+      <button type="button" id="saee-inquiry-back" class="saee-inquiry-back">رجوع إلى الاستفسارات</button>
+    </div>
+  </div>
+</dialog>
+<style id="saee-inquiry-style">
+  .saee-inquiry-nav { font:inherit; color:inherit; background:transparent; border:0; cursor:pointer; padding:8px 10px; border-radius:8px; }
+  .saee-inquiry-nav:hover { background:#07555012; }
+  #saee-inquiry-float { position:fixed; z-index:9998; inset-inline-end:18px; bottom:18px; display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px; padding:12px 18px; border:0; border-radius:999px; background:#075550; color:#fff; font:inherit; font-weight:700; box-shadow:0 8px 28px #0002; cursor:pointer; }
+  #saee-inquiry-dialog { width:min(92vw,540px); max-width:540px; max-height:85dvh; overflow:auto; padding:0; border:0; border-radius:18px; box-shadow:0 20px 70px #0004; }
+  #saee-inquiry-dialog::backdrop { background:#101a18a8; }
+  .saee-inquiry-form { position:relative; display:grid; gap:12px; padding:28px; direction:rtl; }
+  .saee-inquiry-form h2 { margin:0; color:#075550; padding-inline-end:38px; }
+  .saee-inquiry-form h3 { margin:8px 0 0; }
+  .saee-inquiry-form p { line-height:1.8; color:#53635b; margin:0; }
+  .saee-inquiry-hours { background:#eef7f3; padding:10px 12px; border-radius:10px; }
+  .saee-inquiry-categories,.saee-inquiry-contacts { display:grid; gap:10px; }
+  .saee-inquiry-category,.saee-inquiry-back { width:100%; text-align:right; font:inherit; padding:13px 14px; border:1px solid #d5e4dc; border-radius:12px; background:#fff; color:#153f36; cursor:pointer; }
+  .saee-inquiry-category:hover,.saee-inquiry-back:hover { border-color:#075550; background:#f2faf6; }
+  .saee-inquiry-category.secondary { color:#52645c; background:#f5f7f6; }
+  .saee-inquiry-contact { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:12px; border:1px solid #d8e6df; border-radius:12px; }
+  .saee-inquiry-contact strong { display:block; }
+  .saee-inquiry-contact a { color:#075550; font-weight:800; direction:ltr; white-space:nowrap; }
+  .saee-inquiry-contact a[aria-disabled="true"] { opacity:.5; pointer-events:none; }
+  .saee-inquiry-close { position:absolute; top:10px; inset-inline-end:12px; width:36px; height:36px; border:0; border-radius:50%; font-size:24px; background:#edf2ef; cursor:pointer; }
+  #saee-inquiry-dialog [hidden] { display:none !important; }
+  @media(max-width:700px) {
+    #saee-inquiry-float { inset-inline-end:12px; bottom:12px; min-height:46px; padding:11px 14px; font-size:14px; }
+    .saee-inquiry-form { padding:22px 16px 18px; }
+    .saee-inquiry-nav { width:100%; text-align:right; }
+    .saee-inquiry-contact { align-items:flex-start; flex-direction:column; }
+  }
+</style>
+<script id="saee-inquiry-script">
+(() => {
+  const dialog = document.getElementById('saee-inquiry-dialog');
+  const openButtons = [document.getElementById('saee-inquiry-open'), document.getElementById('saee-inquiry-float')];
+  const closeButton = document.getElementById('saee-inquiry-close');
+  const categories = document.getElementById('saee-inquiry-categories');
+  const details = document.getElementById('saee-inquiry-details');
+  const title = document.getElementById('saee-inquiry-detail-title');
+  const note = document.getElementById('saee-inquiry-detail-note');
+  const contacts = document.getElementById('saee-inquiry-contacts');
+  const hoursLine = document.getElementById('saee-inquiry-hours');
+  if (!dialog || !categories || !details) return;
+
+  const inquiryData = {
+    university: { title: 'القروض والمنح والمكارم والأسئلة الجامعية', people: [['عبد الرحمن','0798245512'],['تقى','0790730665']] },
+    opportunities: { title: 'الاستفسار عن الفرص', people: [['سلمى','0782153883']] },
+    talents: { title: 'الاستفسار عن المواهب', people: [['لجين','0770368592']] },
+    expert: { title: 'الاستفسار عن اسأل خبير', people: [['تقى','0790730665'],['حمزة','0788872569']] },
+    projects: { title: 'الاستفسار عن المشاريع', people: [['لين','0771059050']] }
+  };
+  const jordanTime = () => {
+    const parts = new Intl.DateTimeFormat('en-GB', { timeZone:'Asia/Amman', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).formatToParts(new Date());
+    const hour = Number(parts.find(p => p.type === 'hour')?.value || 0);
+    const minute = Number(parts.find(p => p.type === 'minute')?.value || 0);
+    return { hour, minute, open: hour >= 9 && (hour < 17) };
+  };
+  const resetView = () => { categories.hidden = false; details.hidden = true; };
+  const showInquiry = key => {
+    if (key === 'back') { resetView(); return; }
+    const item = inquiryData[key]; if (!item) return;
+    const time = jordanTime();
+    title.textContent = item.title;
+    note.textContent = time.open
+      ? 'التواصل متاح الآن. اضغط على الرقم للاتصال.'
+      : 'التواصل متاح من الساعة 9:00 صباحًا حتى 5:00 مساءً بتوقيت الأردن. يمكنك الرجوع والاتصال خلال ساعات الدوام.';
+    contacts.replaceChildren();
+    item.people.forEach(([person, phone]) => {
+      const row = document.createElement('div'); row.className = 'saee-inquiry-contact';
+      const label = document.createElement('strong'); label.textContent = person;
+      const number = document.createElement('a'); number.textContent = phone; number.href = 'tel:' + phone;
+      if (!time.open) { number.removeAttribute('href'); number.setAttribute('aria-disabled','true'); number.title = 'الاتصال متاح من 9 صباحًا إلى 5 مساءً بتوقيت الأردن'; }
+      row.append(label, number); contacts.append(row);
+    });
+    categories.hidden = true; details.hidden = false;
+  };
+  openButtons.filter(Boolean).forEach(button => button.addEventListener('click', () => { resetView(); hoursLine.textContent = 'اختَر نوع الاستفسار. الاتصال متاح من 9:00 صباحًا إلى 5:00 مساءً بتوقيت الأردن.'; dialog.showModal(); }));
+  closeButton?.addEventListener('click', () => dialog.close());
+  document.getElementById('saee-inquiry-back')?.addEventListener('click', resetView);
+  categories.addEventListener('click', event => { const button = event.target.closest('[data-inquiry]'); if (button) showInquiry(button.dataset.inquiry); });
+  dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
+
+  // Require a local account before opening add-project/product/book actions.
+  const SESSION_KEY = 'sai-local-session-v1';
+  const hasAccount = () => {
+    try { const email = localStorage.getItem(SESSION_KEY); return !!email && !!localStorage.getItem('sai-local-account-v1:' + encodeURIComponent(email)); }
+    catch { return false; }
+  };
+  const openRegister = () => {
+    const auth = document.getElementById('sai-auth');
+    const registerTab = document.querySelector('[data-auth-go="register"]');
+    if (auth && registerTab) {
+      if (!auth.open) auth.showModal();
+      registerTab.click();
+    } else {
+      alert('يرجى تسجيل الدخول أو إنشاء حساب أولًا.');
+      document.getElementById('sai-open-auth')?.click();
+    }
+  };
+  document.addEventListener('click', event => {
+    const target = event.target.closest('a,button,[role="button"]');
+    if (!target || target.closest('#saee-inquiry-dialog') || target.id === 'sai-open-auth') return;
+    const label = (target.innerText || target.getAttribute('aria-label') || target.title || '').replace(/\s+/g,' ').trim();
+    if (!/(اضف|أضف|إضافة|اضافة).{0,35}(مشروع|منتج|منتك|كتاب)|(?:مشروعك|منتجك|كتابك)/i.test(label)) return;
+    if (hasAccount()) return;
+    event.preventDefault(); event.stopImmediatePropagation(); openRegister();
+  }, true);
+})();
+</script>
 
 <script src="remote-config.js"></script>
 <script src="content-data.js"></script>
@@ -1455,12 +1585,44 @@
     const main = document.getElementById("main");
     if (!main) return;
 
-    const current = bauCampusPlaces[selectedIndex] || bauCampusPlaces[0];
-    const categories = ["الكل", ...new Set(bauCampusPlaces.map(place => place.category))];
+    const normalizeSearch = value => String(value || "")
+      .normalize("NFKC")
+      .toLocaleLowerCase("ar")
+      .replace(/[أإآٱ]/g, "ا")
+      .replace(/ى/g, "ي")
+      .replace(/ة/g, "ه")
+      .replace(/[٠-٩]/g, digit => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)))
+      .replace(/[\u064B-\u065F\u0670ـ]/g, "")
+      .replace(/[–—ـ،,:;.!؟?()\[\]{}\/_-]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const searchAliases = {
+      "ذكاء اصطناعي": "كلية الذكاء الاصطناعي",
+      "it": "تكنولوجيا المعلومات والاتصالات",
+      "تكنولوجيا المعلومات": "كلية تكنولوجيا المعلومات والاتصالات",
+      "حاسوب": "مركز الحاسوب",
+      "كمبيوتر": "مركز الحاسوب",
+      "تسجيل": "وحدة القبول والتسجيل",
+      "قبول": "وحدة القبول والتسجيل",
+      "طلاب": "عمادة شؤون الطلبة",
+      "شؤون الطلاب": "عمادة شؤون الطلبة",
+      "مطعم": "مطعم الجامعة",
+      "ملعب": "الملعب الرياضي ملعب الخماسي",
+      "بوابة": "بوابات الجامعة",
+      "هندسة 2": "كلية الهندسة مبنى 2",
+      "هندسة 3": "كلية الهندسة مبنى 3"
+    };
+    let normalizedTerm = normalizeSearch(mapSearchTerm);
+    if (searchAliases[normalizedTerm]) normalizedTerm = normalizeSearch(searchAliases[normalizedTerm]);
+    const searchWords = normalizedTerm.split(" ").filter(word => word.length > 0);
     const visiblePlaces = bauCampusPlaces
-      .map((place, index) => ({ ...place, index }))
-      .filter(place => selectedCategory === "الكل" || place.category === selectedCategory)
-      .filter(place => !mapSearchTerm || `${place.name} ${place.category}`.toLocaleLowerCase("ar").includes(mapSearchTerm.toLocaleLowerCase("ar")));
+      .map((place, index) => ({ ...place, index, searchable: normalizeSearch(`${place.name} ${place.category} ${place.query}`) }))
+      .filter(place => !searchWords.length || searchWords.every(word => place.searchable.includes(word)));
+
+    // أثناء الكتابة يتم تحديد أول نتيجة مطابقة وتحديث الخريطة معها مباشرة.
+    if (normalizedTerm && visiblePlaces.length) selectedIndex = visiblePlaces[0].index;
+    const current = bauCampusPlaces[selectedIndex] || bauCampusPlaces[0];
 
     const title = window.SAI_DEFAULTS?.services?.find(service => service[0] === "map")?.[2] || "خريطة الجامعة";
     const description = "خريطة جامعة البلقاء التطبيقية – الحرم الرئيسي في السلط. اختر المبنى لعرض موقعه وفتح الاتجاهات عبر Google Maps.";
@@ -1481,18 +1643,11 @@
         <div class="bau-map-search-wrap">
           <label for="bau-map-search">🔎 ابحث عن مبنى أو كلية</label>
           <input id="bau-map-search" type="search" value="${escapeHTML(mapSearchTerm)}" placeholder="مثال: كلية الهندسة، المكتبة، التسجيل..." autocomplete="off" aria-label="ابحث عن مبنى أو كلية" />
+          <span>يمكنك البحث بجزء من الاسم أو بكلمات مثل: هندسة 2، ذكاء اصطناعي، تسجيل، مكتبة أو مطعم.</span>
           <span>اكتب جزءًا من الاسم وستظهر النتائج مباشرة.</span>
         </div>
 
-        <div class="toolbar">
-          <div class="chips" aria-label="تصنيف المباني">
-            ${categories.map((category, index) => `
-              <button type="button" class="chip ${category === selectedCategory ? "selected" : ""}" data-bau-category="${index}">
-                ${escapeHTML(category)}
-              </button>
-            `).join("")}
-          </div>
-        </div>
+        <p class="bau-map-list-intro">اكتب اسم المبنى، ثم اضغط على النتيجة لعرض موقعه.</p>
 
         <div class="bau-map-layout">
           <section class="bau-map-main">
@@ -1537,7 +1692,7 @@
 
       <style id="bau-campus-map-style">
         .bau-campus-page { padding-bottom: 44px; }
-        .bau-map-search-wrap { display:grid; gap:7px; max-width:680px; margin:18px 0 14px; padding:16px; background:#fffefb; border:1px solid var(--line); border-radius:14px; }
+        .bau-map-search-wrap { display:grid; gap:7px; max-width:760px; margin:18px 0 14px; padding:14px; background:#fffefb; border:1px solid var(--line); border-radius:14px; }
         .bau-map-search-wrap label { color:var(--green); font-weight:700; font-size:15px; }
         .bau-map-search-wrap input { width:100%; min-height:48px; padding:11px 14px; border:1px solid #cbd5c9; border-radius:10px; font:inherit; font-size:15px; outline:none; background:#fff; }
         .bau-map-search-wrap input:focus { border-color:var(--green); box-shadow:0 0 0 3px #1b6b4a18; }
@@ -1555,7 +1710,9 @@
         .bau-map-hint { margin:12px 0 0; }
         .bau-map-places { min-width:0; max-height:780px; overflow:auto; padding:17px; background:#fffefb; border:1px solid var(--line); border-radius:14px; }
         .bau-map-places h2 { color:var(--green); font-size:18px; margin:0 0 8px; }
-        .bau-map-place-list { display:grid; gap:9px; }
+        .bau-map-place-list { display:grid; gap:8px; }
+        .bau-map-places .place-card { padding:12px 14px; border-radius:10px; }
+        .bau-map-places .place-card p { margin:4px 0 0; font-size:12px; }
         .bau-map-places .place-card { width:100%; margin:0; cursor:pointer; text-align:right; }
         .bau-map-places .place-card h3 { line-height:1.65; }
         .bau-map-places .place-card.selected { border-color:var(--green); background:#eaf0e5; }
@@ -1564,11 +1721,29 @@
           .bau-map-places { max-height:none; overflow:visible; }
         }
         @media(max-width:700px) {
-          .bau-map-layout { gap:14px; }
-          .bau-map-main,.bau-map-places { padding:12px; }
-          .bau-google-map { height:360px; }
+          .bau-campus-page { padding-inline:12px; padding-bottom:28px; }
+          .bau-map-layout { grid-template-columns:minmax(0,1fr); gap:14px; margin:14px 0 32px; }
+          .bau-map-main,.bau-map-places { box-sizing:border-box; width:100%; min-width:0; padding:12px; }
+          .bau-map-heading h2 { font-size:20px; overflow-wrap:anywhere; }
+          .bau-map-heading p,.bau-map-hint,.bau-map-list-intro { font-size:14px; }
+          .bau-map-search-wrap { box-sizing:border-box; width:100%; padding:12px; }
+          .bau-map-search-wrap label { font-size:16px; }
+          .bau-map-search-wrap input { box-sizing:border-box; font-size:16px; }
+          .bau-map-result-count,.bau-map-search-wrap span { font-size:13px; }
+          .bau-google-map { height: min(62vh, 430px); min-height:300px; }
           .bau-map-actions { flex-direction:column; align-items:stretch; }
-          .bau-map-actions .button,.bau-campus-plan { width:100%; justify-content:center; text-align:center; }
+          .bau-map-actions .button,.bau-campus-plan { box-sizing:border-box; width:100%; min-height:46px; justify-content:center; text-align:center; font-size:14px; }
+          .bau-map-places { max-height:none; overflow:visible; }
+          .bau-map-places h2 { font-size:19px; }
+          .bau-map-places .place-card { box-sizing:border-box; padding:14px 12px; min-height:64px; }
+          .bau-map-places .place-card h3 { font-size:15px; overflow-wrap:anywhere; }
+          .bau-map-places .place-card p { font-size:13px; line-height:1.7; }
+          .demo-note { font-size:14px; line-height:1.9; overflow-wrap:anywhere; }
+        }
+        @media(max-width:380px) {
+          .bau-campus-page { padding-inline:8px; }
+          .bau-map-main,.bau-map-places { padding:9px; }
+          .bau-google-map { min-height:280px; }
         }
       </style>`;
 
@@ -1586,19 +1761,6 @@
       });
     }
 
-    main.querySelectorAll("[data-bau-category]").forEach(button => {
-      button.addEventListener("click", () => {
-        selectedCategory = categories[Number(button.dataset.bauCategory)] || "الكل";
-        const stillVisible = bauCampusPlaces.findIndex((place, index) =>
-          index === selectedIndex && (selectedCategory === "الكل" || place.category === selectedCategory)
-        );
-        if (stillVisible < 0) {
-          selectedIndex = bauCampusPlaces.findIndex(place => selectedCategory === "الكل" || place.category === selectedCategory);
-        }
-        renderBauMap();
-      });
-    });
-
     main.querySelectorAll("[data-bau-place]").forEach(button => {
       button.addEventListener("click", () => {
         selectedIndex = Number(button.dataset.bauPlace);
@@ -1611,13 +1773,8 @@
 
   // Override the demo diagram with the real Google Maps experience on the #map route.
   window.mapPage = renderBauMap;
-  window.mapCategory = function(index) {
-    const categories = ["الكل", ...new Set(bauCampusPlaces.map(place => place.category))];
-    selectedCategory = categories[index] || "الكل";
-    const activeCategory = selectedCategory;
-    if (!bauCampusPlaces[selectedIndex] || (activeCategory !== "الكل" && bauCampusPlaces[selectedIndex].category !== activeCategory)) {
-      selectedIndex = bauCampusPlaces.findIndex(place => activeCategory === "الكل" || place.category === activeCategory);
-    }
+  window.mapCategory = function() {
+    selectedCategory = "الكل";
     renderBauMap();
   };
 
