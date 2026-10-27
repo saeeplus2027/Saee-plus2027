@@ -1561,6 +1561,48 @@
 
   $('year').textContent = new Date().getFullYear();
   updateHeader();
+
+  // First-visit account gate: visitors must create an account or sign in
+  // before browsing. Accounts in this static build remain local to this browser.
+  function hasActiveLocalSession() {
+    try {
+      const email = localStorage.getItem(SESSION_KEY);
+      return Boolean(email && readAccount(email));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function enforceAccountGate() {
+    if (hasActiveLocalSession()) return;
+
+    const guestButton = authDialog.querySelector('.auth-guest');
+    const closeButtons = authDialog.querySelectorAll('[data-auth-close]');
+    if (guestButton) guestButton.hidden = true;
+    closeButtons.forEach(button => { button.hidden = true; });
+
+    let hasAnyAccount = false;
+    try {
+      hasAnyAccount = Object.keys(localStorage).some(key => key.startsWith(ACCOUNT_PREFIX));
+    } catch (_) {}
+
+    showPage(hasAnyAccount ? 'login' : 'register', false);
+    if (!authDialog.open) {
+      try { authDialog.showModal(); } catch (_) { /* Unsupported dialog browsers still get the form in the page. */ }
+    }
+  }
+
+  // Do not allow Escape, backdrop/close controls, or the guest button to bypass
+  // the required first sign-up/sign-in flow.
+  authDialog.addEventListener('cancel', event => {
+    if (!hasActiveLocalSession()) event.preventDefault();
+  });
+
+  authDialog.addEventListener('close', () => {
+    if (!hasActiveLocalSession()) setTimeout(enforceAccountGate, 0);
+  });
+
+  enforceAccountGate();
 })();
 </script>
 
