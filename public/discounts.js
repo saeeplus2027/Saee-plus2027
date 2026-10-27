@@ -1,136 +1,84 @@
-/* Saee Plus: discount-use button inside every discount's details modal. */
+/* Saee Plus: working 24-hour discount button inside discount details */
 (() => {
   'use strict';
-  const API = 'https://saee-plus-api.ligagym.workers.dev';
-  const active = new Map();
-  let loading = null;
+  const PREFIX = 'saee-discount-used-v2:';
+  const DAY = 24 * 60 * 60 * 1000;
+  const $ = (s, root = document) => root.querySelector(s);
+  const $$ = (s, root = document) => [...root.querySelectorAll(s)];
 
-  async function api(path, options = {}) {
-    const response = await fetch(API + path, {
-      ...options,
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
-    });
-    let data = {};
-    try { data = await response.json(); } catch (_) {}
-    if (!response.ok) {
-      const error = new Error(data.error || 'تعذر الاتصال بالخادم');
-      error.status = response.status;
-      error.data = data;
-      throw error;
-    }
-    return data;
+  function accountScope() {
+    try {
+      const email = (localStorage.getItem('sai-local-session-v1') || '').trim().toLowerCase();
+      if (email) return 'user:' + email;
+      let guest = localStorage.getItem('saee-discount-guest-id');
+      if (!guest) {
+        guest = 'guest-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        localStorage.setItem('saee-discount-guest-id', guest);
+      }
+      return guest;
+    } catch (_) { return 'browser'; }
   }
-
-  function remaining(until) {
-    const seconds = Math.max(0, Math.ceil((until - Date.now()) / 1000));
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return `${hours} ساعة و ${minutes} دقيقة`;
+  function key(id) { return PREFIX + encodeURIComponent(accountScope()) + ':' + encodeURIComponent(id); }
+  function getExpiry(id) {
+    try { const n = Number(localStorage.getItem(key(id)) || 0); return n > Date.now() ? n : 0; }
+    catch (_) { return 0; }
   }
-
+  function format(ms) {
+    const total = Math.max(0, Math.ceil(ms / 1000));
+    const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60);
+    return `${h} ساعة و ${m} دقيقة`;
+  }
   function toast(message) {
-    if (typeof window.toast === 'function') window.toast(message);
-    else {
-      let node = document.getElementById('saee-discount-toast');
-      if (!node) {
-        node = document.createElement('div');
-        node.id = 'saee-discount-toast';
-        node.style.cssText = 'position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:99999;background:#124b43;color:white;padding:12px 18px;border-radius:12px;box-shadow:0 5px 25px #0002;max-width:90vw;text-align:center';
-        document.body.appendChild(node);
-      }
-      node.textContent = message;
-      node.hidden = false;
-      clearTimeout(node._hideTimer);
-      node._hideTimer = setTimeout(() => { node.hidden = true; }, 3000);
+    let el = $('#saee-discount-toast');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'saee-discount-toast';
+      el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:999999;background:#075a52;color:#fff;padding:13px 20px;border-radius:12px;box-shadow:0 8px 30px #0003;max-width:90vw;text-align:center;font-weight:700';
+      document.body.appendChild(el);
     }
+    el.textContent = message; el.hidden = false; clearTimeout(el._timer);
+    el._timer = setTimeout(() => { el.hidden = true; }, 3500);
   }
-
-  async function loadUsages() {
-    if (loading) return loading;
-    loading = api('/api/discount-usage').then(data => {
-      active.clear();
-      Object.entries(data.usages || {}).forEach(([id, value]) => {
-        if (Number(value.expiresAt) > Date.now()) active.set(id, Number(value.expiresAt));
-      });
-    }).catch(error => {
-      if (error.status !== 401) console.warn('Saee discount usage:', error);
-    }).finally(() => { loading = null; });
-    return loading;
-  }
-
-  function refreshModalButton() {
-    document.querySelectorAll('#dialog-content .saee-discount-use[data-discount-id]').forEach(button => {
-      const id = button.dataset.discountId;
-      const timer = button.parentElement.querySelector('.saee-discount-timer');
-      const until = active.get(id) || 0;
-      if (until > Date.now()) {
-        button.disabled = true;
-        button.textContent = 'تم استخدام الخصم ✓';
-        button.style.opacity = '.65';
-        button.style.cursor = 'not-allowed';
-        if (timer) {
-          timer.style.display = 'block';
-          timer.dataset.until = String(until);
-          timer.textContent = `يتفعّل بعد ${remaining(until)}`;
-        }
-      } else {
-        active.delete(id);
-        button.disabled = false;
-        button.textContent = 'تم الخصم';
-        button.style.opacity = '1';
-        button.style.cursor = 'pointer';
-        if (timer) { timer.style.display = 'none'; timer.removeAttribute('data-until'); }
-      }
-    });
-  }
-
-  document.addEventListener('click', async event => {
-    const button = event.target.closest('#dialog-content .saee-discount-use[data-discount-id]');
-    if (!button || button.disabled) return;
-    event.preventDefault();
+  function paintButton(button) {
     const id = button.dataset.discountId;
     if (!id) return;
-    button.disabled = true;
-    button.textContent = 'جارٍ تسجيل الخصم...';
-    try {
-      const data = await api('/api/discount-usage', { method: 'POST', body: JSON.stringify({ discountId: id }) });
-      active.set(id, Number(data.expiresAt) || Date.now() + 24 * 60 * 60 * 1000);
-      refreshModalButton();
-      toast('تم تسجيل استخدام الخصم لهذا الحساب لمدة 24 ساعة.');
-    } catch (error) {
-      if (error.status === 401) {
-        button.disabled = false;
-        button.textContent = 'تم الخصم';
-        toast('سجّل الدخول أولًا لاستخدام الخصم.');
-        const login = document.getElementById('sai-open-auth');
-        if (login) login.click();
-      } else if (error.status === 409 && error.data && error.data.expiresAt) {
-        active.set(id, Number(error.data.expiresAt));
-        refreshModalButton();
-        toast('سبق استخدام هذا الخصم، وسيعود متاحًا بعد انتهاء المدة.');
-      } else {
-        button.disabled = false;
-        button.textContent = 'تم الخصم';
-        toast(error.message || 'تعذر تسجيل استخدام الخصم.');
-      }
+    const expiry = getExpiry(id);
+    const wrap = button.closest('.saee-discount-details-use, .saee-discount-use-wrap') || button.parentElement;
+    let timer = $('.saee-discount-timer', wrap);
+    if (!timer) { timer = document.createElement('small'); timer.className = 'saee-discount-timer'; wrap.appendChild(timer); }
+    timer.style.cssText = 'display:block;text-align:center;margin-top:8px;color:#788675';
+    if (expiry) {
+      button.disabled = true; button.textContent = 'تم استخدام الخصم ✓';
+      button.style.opacity = '.7'; button.style.cursor = 'not-allowed';
+      timer.hidden = false; timer.textContent = `يتفعّل بعد ${format(expiry - Date.now())}`;
+    } else {
+      button.disabled = false; button.textContent = 'تم الخصم';
+      button.style.opacity = '1'; button.style.cursor = 'pointer';
+      timer.hidden = true; timer.textContent = '';
     }
-  });
-
-  const observer = new MutationObserver(() => refreshModalButton());
-  function start() {
-    const content = document.getElementById('dialog-content');
-    if (content) observer.observe(content, { childList: true, subtree: true });
-    loadUsages().then(refreshModalButton);
-    refreshModalButton();
   }
-  setInterval(() => {
-    document.querySelectorAll('#dialog-content .saee-discount-timer[data-until]').forEach(timer => {
-      const until = Number(timer.dataset.until || 0);
-      if (until <= Date.now()) { active.delete(timer.parentElement.querySelector('button')?.dataset.discountId); refreshModalButton(); }
-      else timer.textContent = `يتفعّل بعد ${remaining(until)}`;
-    });
-  }, 30000);
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
-  else start();
+  function refresh() { $$('.saee-discount-use').forEach(paintButton); }
+
+  document.addEventListener('click', event => {
+    const button = event.target.closest('.saee-discount-use');
+    if (!button) return;
+    event.preventDefault(); event.stopPropagation();
+    const id = (button.dataset.discountId || '').trim();
+    if (!id) { toast('تعذر تحديد الخصم. أغلق التفاصيل وافتحها مرة أخرى.'); return; }
+    const expiry = getExpiry(id);
+    if (expiry) { paintButton(button); toast(`هذا الخصم مستخدم بالفعل، ويتفعّل بعد ${format(expiry - Date.now())}.`); return; }
+    try {
+      const newExpiry = Date.now() + DAY;
+      localStorage.setItem(key(id), String(newExpiry));
+      paintButton(button);
+      toast('تم تسجيل الخصم بنجاح. يمكنك استخدامه مرة أخرى بعد 24 ساعة.');
+    } catch (_) {
+      toast('تعذر حفظ الاستخدام. تأكد من السماح للموقع باستخدام التخزين المحلي.');
+    }
+  }, true);
+
+  const observer = new MutationObserver(refresh);
+  function start() { refresh(); if (document.body) observer.observe(document.body, { childList: true, subtree: true }); }
+  setInterval(refresh, 30000);
+  window.addEventListener('storage', refresh);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true }); else start();
 })();
