@@ -1079,12 +1079,11 @@
 
   <p id="sai-auth-message" class="auth-message" role="status" aria-live="polite" hidden></p>
 
-  <button type="button" class="auth-guest" data-auth-close>متابعة التصفح بدون حساب</button>
+
 
   <p class="auth-note">
-    الحسابات محفوظة على هذا المتصفح فقط.
-    لا يتم إرسال رسائل بريد إلكتروني.
-    استخدم كلمة مرور خاصة بهذه التجربة.
+    الحساب الحالي محفوظ على هذا المتصفح فقط إلى أن يتم ربط خدمة الحسابات المركزية.
+    لا يتم إرسال رسائل بريد إلكتروني. استخدم كلمة مرور خاصة بهذه التجربة.
   </p>
 </dialog>
 
@@ -1349,12 +1348,20 @@
 
   authDialog.querySelectorAll('[data-auth-close]').forEach(button => {
     button.addEventListener('click', () => {
-      if (!busy) authDialog.close();
+      if (busy) return;
+      if (!localStorage.getItem(SESSION_KEY)) {
+        showMessage('أنشئ حسابًا أو سجّل الدخول أولًا للمتابعة.');
+        return;
+      }
+      authDialog.close();
     });
   });
 
   authDialog.addEventListener('cancel', event => {
-    if (busy) event.preventDefault();
+    if (busy || !localStorage.getItem(SESSION_KEY)) {
+      event.preventDefault();
+      showMessage('أنشئ حسابًا أو سجّل الدخول أولًا للمتابعة.');
+    }
   });
 
   authDialog.addEventListener('close', () => {
@@ -1561,6 +1568,21 @@
 
   $('year').textContent = new Date().getFullYear();
   updateHeader();
+
+  // Require sign-in or account creation before using the site.
+  try {
+    const email = localStorage.getItem(SESSION_KEY);
+    const account = email ? readAccount(email) : null;
+    if (!account) {
+      localStorage.removeItem(SESSION_KEY);
+      showPage('login', false);
+      if (!authDialog.open) authDialog.showModal();
+    }
+  } catch (_) {
+    localStorage.removeItem(SESSION_KEY);
+    showPage('login', false);
+    if (!authDialog.open) authDialog.showModal();
+  }
 })();
 </script>
 
