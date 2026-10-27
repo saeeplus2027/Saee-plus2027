@@ -1,1 +1,2 @@
-/* Button is rendered directly by app.js inside details(). This file intentionally does not modify modal behavior. */
+/* Saee Plus discount button logic is integrated into app.js so it renders
+   directly inside the existing details dialog and cannot block details(). */
