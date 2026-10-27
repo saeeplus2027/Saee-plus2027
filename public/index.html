@@ -1647,14 +1647,32 @@
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   }[char]));
 
+  // Force every map lookup to stay within Al-Balqa Applied University’s main campus in Salt.
+  const campusQualifier = "Al-Balqa Applied University Main Campus, As-Salt, Jordan";
+  const precisePlaceQuery = place => {
+    if (!place || !place.query) return campusQualifier;
+    const query = String(place.query).trim();
+    // Keep the building name, but explicitly qualify it with the exact university/campus.
+    const building = query
+      .replace(/Al-Balqa Applied University( Main Campus)?/ig, "")
+      .replace(/As-Salt,?\s*Jordan/ig, "")
+      .replace(/Jordan/ig, "")
+      .replace(/,+/g, ",")
+      .replace(/^,|,$/g, "")
+      .trim();
+    return building ? `${building}, ${campusQualifier}` : campusQualifier;
+  };
+
   const googleSearch = query =>
     "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(query);
 
   const googleDirections = query =>
     "https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(query);
 
+  // Zoom in more closely than the default campus view. Google still resolves the named place;
+  // a verified coordinate is needed for a guaranteed building-level pin.
   const mapEmbed = query =>
-    "https://maps.google.com/maps?q=" + encodeURIComponent(query) + "&z=17&output=embed";
+    "https://maps.google.com/maps?q=" + encodeURIComponent(query) + "&z=19&output=embed";
 
   function renderBauMap() {
     const main = document.getElementById("main");
@@ -1675,8 +1693,9 @@
     }
     const current = selectedIndex >= 0 ? bauCampusPlaces[selectedIndex] : {
       name: "الحرم الرئيسي – جامعة البلقاء التطبيقية",
-      query: "Al-Balqa Applied University Main Campus, As-Salt, Jordan"
+      query: campusQualifier
     };
+    const currentQuery = precisePlaceQuery(current);
 
     const title = window.SAI_DEFAULTS?.services?.find(service => service[0] === "map")?.[2] || "خريطة الجامعة";
     const description = "خريطة جامعة البلقاء التطبيقية – الحرم الرئيسي في السلط. اختر المبنى لعرض موقعه وفتح الاتجاهات عبر Google Maps.";
@@ -1690,7 +1709,7 @@
         <div class="demo-note">
           أسماء الكليات والمرافق مستندة إلى
           <a href="https://www.bau.edu.jo/bauar/Units/SIR/media/BAU_Map.pdf" target="_blank" rel="noopener noreferrer">مخطط الحرم الجامعي الرسمي (PDF)</a>.
-          بعض المباني قد تظهر في Google Maps كنتيجة بحث باسمها وليس كدبوس مستقل؛ تأكد من اسم النتيجة قبل بدء التنقّل.
+          البحث يقيّد النتائج بحرم السلط ويقرّب الخريطة أكثر. دقة الدبوس النهائي تعتمد على بيانات Google Maps؛ بعض المباني لا تملك دبوسًا مستقلًا، لذلك راجع اسم الموقع والمخطط الرسمي قبل التنقّل.
         </div>
 
         <div class="toolbar">
@@ -1717,14 +1736,14 @@
             <iframe
               class="bau-google-map"
               title="خريطة Google Maps: ${escapeHTML(current.name)}"
-              src="${mapEmbed(current.query)}"
+              src="${mapEmbed(currentQuery)}"
               loading="lazy"
               allowfullscreen
               referrerpolicy="no-referrer-when-downgrade">
             </iframe>
             <div class="bau-map-actions">
-              <a class="button small" href="${googleSearch(current.query)}" target="_blank" rel="noopener noreferrer">عرض الموقع على Google Maps ↗</a>
-              <a class="button small light" href="${googleDirections(current.query)}" target="_blank" rel="noopener noreferrer">كيف أوصل؟ ↗</a>
+              <a class="button small" href="${googleSearch(currentQuery)}" target="_blank" rel="noopener noreferrer">عرض الموقع على Google Maps ↗</a>
+              <a class="button small light" href="${googleDirections(currentQuery)}" target="_blank" rel="noopener noreferrer">كيف أوصل؟ ↗</a>
               <a class="bau-campus-plan" href="https://www.bau.edu.jo/bauar/Units/SIR/media/BAU_Map.pdf" target="_blank" rel="noopener noreferrer">المخطط الرسمي للحرم الجامعي</a>
             </div>
             <p class="bau-map-hint">زر «كيف أوصل؟» يفتح Google Maps لتحديد نقطة الانطلاق تلقائيًا من هاتفك أو إدخالها يدويًا.</p>
