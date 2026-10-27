@@ -2043,6 +2043,10 @@
       {
         type: 'مشروعك',
         regex: /اضاف.{0,10}مشروع|اضف.{0,10}مشروع|مشروع.{0,10}جديد|project.{0,20}(add|new)|(add|new).{0,20}project/
+      },
+      {
+        type: 'مشاركتك',
+        regex: /شارك.{0,15}خبرتك|شارك.{0,15}تجربتك|مشاركة.{0,15}(خبرة|تجربة)|share.{0,15}(your )?experience|experience.{0,15}(share|submit|add)/i
       }
     ];
 
@@ -2088,6 +2092,10 @@
       return { target, type: 'فرصتك' };
     }
 
+    if (/share.?experience|experience.?share|submit.?experience/.test(action)) {
+      return { target, type: 'مشاركتك' };
+    }
+
     return null;
   }
 
@@ -2104,7 +2112,7 @@
 
     if (getProtectedType(description)) return true;
 
-    return /add.?product|product.?add|add.?book|book.?add|add.?project|project.?add|add.?opportunit|opportunit.?add/i.test(description);
+    return /add.?product|product.?add|add.?book|book.?add|add.?project|project.?add|add.?opportunit|opportunit.?add|share.?experience|experience.?share|submit.?experience/i.test(description);
   }
 
   function requestLogin(actionName) {
