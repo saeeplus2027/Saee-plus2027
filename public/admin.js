@@ -1,197 +1,182 @@
-/**
- * لوحة تحكم الأدمن - Admin Panel Script
- * يتعامل مع جلب، إضافة، تحديث، وحذف المحتوى عبر API
- */
+/* ---- Admin-only fixes: live save + login, no other file needs to change ---- */
+(function(){
+ const API='https://saee-plus-api.ligagym.workers.dev';
+ const post=async(path,body)=>{const r=await fetch(API+path,{method:'POST',credentials:'include',cache:'no-store',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(body||{})});let b={};try{b=await r.json()}catch(_){}if(!r.ok)throw Error(b.error||'تعذر الاتصال بالخادم (HTTP '+r.status+').');return b;};
+ if(typeof SiteStore.loginAdmin!=='function')SiteStore.loginAdmin=async function(password){await post('/api/admin-login',{password:String(password||'')});await SiteStore.reload(true);if(!SiteStore.canEdit)throw Error('تم قبول كلمة المرور لكن المتصفح لم يحفظ جلسة الإدارة. فعّل ملفات تعريف الارتباط لجهات خارجية لهذا الموقع أو جرّب متصفحًا آخر.');return true;};
+ if(typeof SiteStore.logoutAdmin!=='function')SiteStore.logoutAdmin=async function(){try{await post('/api/logout',{});}finally{await SiteStore.reload(true).catch(()=>{});}};
+ // Never say "saved" unless the server really holds the change.
+ const originalSave=SiteStore.save;
+ SiteStore.save=async function(next){
+  await originalSave.call(SiteStore,next);
+  const r=await fetch(API+'/api/content',{cache:'no-store',credentials:'include',headers:{'Accept':'application/json'}});
+  const b=await r.json();const stored=b.state||b.content;
+  const same=stored&&Number(b.revision)===Number(SiteStore.state.revision)&&JSON.stringify(stored.items.map(x=>x.id))===JSON.stringify(SiteStore.state.items.map(x=>x.id));
+  if(!same)throw Error('لم يتم تثبيت التعديل على الخادم. أعد تحميل الصفحة وحاول مرة أخرى.');
+  return SiteStore.state;
+ };
+})();
+let adminTab='dashboard',adminFilter='all',adminQuery='',textQuery='';
+const originalRender=render;
+const serviceLabel=id=>SiteStore.state.services.find(s=>s[0]===id)?.[2]||id;
+function syncContent(){services=SiteStore.state.services;base=SiteStore.state.items;places=SiteStore.state.places;descriptions=SiteStore.state.descriptions;titles=Object.fromEntries(services.map(s=>[s[0],s[2]]));items=[...base,...additions.filter(x=>!base.some(b=>b.id===x.id))];document.documentElement.style.setProperty('--green',SiteStore.state.theme.green);document.documentElement.style.setProperty('--cream',SiteStore.state.theme.cream);document.title=SiteStore.state.siteName+' | من جامعتك، إلى مجتمعك';}
+render=function(){syncContent();route=location.hash.slice(1)||'home';const isAdmin=route==='admin';document.body.classList.toggle('admin',isAdmin);if(isAdmin){stopVisual(false);renderAdmin();return;}if(SiteStore.remote&&!SiteStore.loaded){main.innerHTML='<div class="container intro"><h2>جاري تحميل الموقع…</h2><p>نحمّل أحدث محتوى محفوظ.</p><button class="button" type="button" onclick="SiteStore.reload().then(()=>render()).catch(()=>render())">إعادة المحاولة</button></div>';return;}originalRender();applyContent();visualBar();};
+window.addEventListener('sai-content-changed',()=>{syncContent();render()});
+window.addEventListener('hashchange',()=>render());
+async function storeChange(update){try{let next=SiteStore.clone(SiteStore.state);update(next);await SiteStore.save(next);toast(SiteStore.remote?'تم الحفظ والنشر على الموقع ✓':'تم حفظ التعديلات ✓');return true;}catch(e){toast(e.message);return false;}}
+function goAdmin(tab='dashboard'){adminTab=tab;adminFilter='all';adminQuery='';if(location.hash==='#admin')renderAdmin();else location.hash='admin';}
 
-const API_BASE = '/api/content';
-
-// عند تحميل الصفحة بالكامل
-document.addEventListener('DOMContentLoaded', () => {
-    initAdminPanel();
-});
-
-function initAdminPanel() {
-    loadAdminData();
-    setupEventListeners();
+const ADMIN_PASSWORD_HASH_KEY='saee-plus-admin-password-hash-v1';
+const ADMIN_PASSWORD_SESSION_KEY='saee-plus-admin-unlocked-v1';
+async function adminPasswordHash(value){
+  const bytes=new TextEncoder().encode(value);
+  const digest=await crypto.subtle.digest('SHA-256',bytes);
+  return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
+}
+function adminPasswordGate(){
+  if(SiteStore.remote) return true;
+  if(sessionStorage.getItem(ADMIN_PASSWORD_SESSION_KEY)==='yes')return true;
+  const hasPassword=Boolean(localStorage.getItem(ADMIN_PASSWORD_HASH_KEY));
+  main.innerHTML=`<section class="admin-password-screen"><form id="admin-password-form" class="admin-password-card"><div class="admin-password-icon">🔐</div><span class="kicker">سعي بلس · حماية الإدارة</span><h1>${hasPassword?'تسجيل الدخول إلى لوحة الإدارة':'إنشاء كلمة مرور الإدارة'}</h1><p>${hasPassword?'أدخل كلمة المرور التي أنشأتها لحماية لوحة الإدارة.':'هذه أول مرة تدخل فيها. أنشئ كلمة مرور خاصة بك، وستُطلب منك في المرات القادمة على هذا المتصفح.'}</p><label for="admin-password">${hasPassword?'كلمة المرور':'كلمة المرور الجديدة'}</label><input id="admin-password" name="password" type="password" minlength="8" autocomplete="${hasPassword?'current-password':'new-password'}" required placeholder="8 أحرف على الأقل"><label for="admin-password-confirm" ${hasPassword?'hidden':''}>تأكيد كلمة المرور</label><input id="admin-password-confirm" name="confirm" type="password" minlength="8" autocomplete="new-password" ${hasPassword?'hidden':''} placeholder="أعد كتابة كلمة المرور"><p id="admin-password-error" class="admin-password-error" role="alert"></p><button class="button" type="submit">${hasPassword?'دخول لوحة الإدارة':'حفظ كلمة المرور والمتابعة'}</button><a href="#home" class="admin-password-back">العودة إلى الموقع</a><small>مهم: كلمة المرور محفوظة في هذا المتصفح. لا تمسح بيانات الموقع من المتصفح حتى لا تفقد إعداد الحماية.</small></form></section>`;
+  const form=document.getElementById('admin-password-form');
+  form.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const password=form.elements.password.value;
+    const confirm=form.elements.confirm.value;
+    const error=document.getElementById('admin-password-error');
+    const button=form.querySelector('button[type="submit"]');
+    if(password.length<8){error.textContent='استخدم كلمة مرور من 8 أحرف على الأقل.';return;}
+    if(!hasPassword&&password!==confirm){error.textContent='كلمتا المرور غير متطابقتين.';return;}
+    button.disabled=true;error.textContent='';
+    try{
+      const hash=await adminPasswordHash(password);
+      if(hasPassword){
+        if(hash!==localStorage.getItem(ADMIN_PASSWORD_HASH_KEY)){error.textContent='كلمة المرور غير صحيحة.';button.disabled=false;form.elements.password.value='';form.elements.password.focus();return;}
+      }else{
+        localStorage.setItem(ADMIN_PASSWORD_HASH_KEY,hash);
+      }
+      sessionStorage.setItem(ADMIN_PASSWORD_SESSION_KEY,'yes');
+      renderAdmin();
+    }catch(err){error.textContent='تعذر حفظ كلمة المرور. افتح الموقع عبر HTTPS وحاول مرة أخرى.';button.disabled=false;}
+  });
+  return false;
+}
+async function adminPasswordLogout(){sessionStorage.removeItem(ADMIN_PASSWORD_SESSION_KEY);if(SiteStore.remote){try{await SiteStore.logoutAdmin();}catch(e){console.warn(e);}}renderAdmin();}
+function adminChangePassword(){
+  const content=document.getElementById('admin-content');
+  if(!content)return;
+  content.innerHTML=`<div class="admin-panel admin-change-password"><span class="kicker">حماية الحساب</span><h2>تغيير كلمة مرور الإدارة</h2><p>أدخل كلمة المرور الحالية، ثم اختر كلمة مرور جديدة من 8 أحرف على الأقل.</p><form id="admin-change-password-form" class="admin-form"><label>كلمة المرور الحالية<input name="current" type="password" autocomplete="current-password" minlength="8" required></label><label>كلمة المرور الجديدة<input name="next" type="password" autocomplete="new-password" minlength="8" required></label><label>تأكيد كلمة المرور الجديدة<input name="confirm" type="password" autocomplete="new-password" minlength="8" required></label><p id="admin-change-password-error" class="admin-password-error" role="alert"></p><div class="admin-actions"><button class="button" type="submit">حفظ كلمة المرور الجديدة</button><button class="button light" type="button" onclick="renderAdmin()">إلغاء</button></div></form></div>`;
+  const form=document.getElementById('admin-change-password-form');
+  form.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const current=form.elements.current.value;
+    const next=form.elements.next.value;
+    const confirm=form.elements.confirm.value;
+    const error=document.getElementById('admin-change-password-error');
+    const button=form.querySelector('button[type="submit"]');
+    error.textContent='';
+    if(next.length<8){error.textContent='كلمة المرور الجديدة يجب أن تتكون من 8 أحرف على الأقل.';return;}
+    if(next!==confirm){error.textContent='تأكيد كلمة المرور غير مطابق.';return;}
+    if(current===next){error.textContent='اختر كلمة مرور مختلفة عن الحالية.';return;}
+    button.disabled=true;
+    try{
+      const currentHash=await adminPasswordHash(current);
+      if(currentHash!==localStorage.getItem(ADMIN_PASSWORD_HASH_KEY)){error.textContent='كلمة المرور الحالية غير صحيحة.';button.disabled=false;form.elements.current.value='';form.elements.current.focus();return;}
+      localStorage.setItem(ADMIN_PASSWORD_HASH_KEY,await adminPasswordHash(next));
+      toast('تم تغيير كلمة مرور الإدارة بنجاح ✓');
+      renderAdmin();
+    }catch(err){error.textContent='تعذر تغيير كلمة المرور. تأكد أنك تستخدم الموقع عبر HTTPS.';button.disabled=false;}
+  });
 }
 
-/**
- * جلب البيانات وعرضها في الجدول
- */
-async function loadAdminData() {
-    try {
-        const response = await fetch(API_BASE);
-        if (!response.ok) throw new Error('فشل في جلب البيانات من السيرفر');
-        
-        const data = await response.json();
-        renderAdminTable(data);
-    } catch (error) {
-        console.error('Error loading data:', error);
-        showNotification('حدث خطأ أثناء تحميل البيانات', 'error');
-    }
+function renderAdmin(){if(!adminPasswordGate())return;if(SiteStore.remote&&!SiteStore.canEdit){main.innerHTML=`<section class="admin-password-screen"><form id="admin-api-login-form" class="admin-password-card"><div class="admin-password-icon">🔐</div><span class="kicker">سعي بلس · حماية الإدارة</span><h1>دخول إدارة الموقع</h1><p>أدخل كلمة مرور الإدارة للمتابعة.</p><label for="admin-api-password">كلمة المرور</label><input id="admin-api-password" name="password" type="password" autocomplete="current-password" required autofocus><p id="admin-api-login-error" class="admin-password-error" role="alert"></p><button class="button" type="submit">دخول لوحة الإدارة</button><a href="#home" class="admin-password-back">العودة إلى الموقع</a></form></section>`;const form=document.getElementById('admin-api-login-form');form.addEventListener('submit',async e=>{e.preventDefault();const button=form.querySelector('button[type="submit"]');const error=document.getElementById('admin-api-login-error');button.disabled=true;error.textContent='';try{await SiteStore.loginAdmin(form.elements.password.value);toast('تم تسجيل الدخول إلى الإدارة ✓');renderAdmin();}catch(err){error.textContent=err.message||'تعذر تسجيل الدخول.';button.disabled=false;form.elements.password.value='';form.elements.password.focus();}});return;}const nav=[['dashboard','leaf','نظرة عامة'],['items','book','إدارة المحتوى'],['services','store','الأقسام والخدمات'],['places','pin','أماكن الخريطة'],['texts','grad','نصوص الموقع'],['settings','bulb','الهوية والإعدادات'],['backup','check','التصدير والنسخ الاحتياطي']];main.innerHTML=`<div class="admin-shell"><aside class="admin-sidebar"><div class="admin-logo">${escapeHtml(SiteStore.state.siteName)}<small>مساحة إدارة الموقع</small></div><div class="admin-nav">${nav.map(([id,ico,label])=>`<button class="${adminTab===id?'selected':''}" onclick="goAdmin('${id}')">${icon(ico)} ${label}</button>`).join('')}</div><a href="#home">↗ العودة إلى الموقع</a>${SiteStore.remote?'':'<button class="admin-password-logout" onclick="adminChangePassword()">🔑 تغيير كلمة المرور</button>'}<button class="admin-password-logout" onclick="adminPasswordLogout()">🔒 قفل لوحة الإدارة</button></aside><section class="admin-main"><div class="admin-top"><div><span class="kicker">أهلًا بك في لوحة التحكم</span><h1>${nav.find(n=>n[0]===adminTab)?.[2]||'إدارة الموقع'}</h1><p>محتواك، بطريقتك. أضف وعدّل واحذف من مكان واحد.</p></div><span class="admin-status">${SiteStore.remote?"● نشر مركزي؛ يظهر للزوار خلال ثوانٍ":"● حفظ محلي فقط؛ لا ينشر للزوار تلقائيًا"}</span></div><div id="admin-content"></div></section></div>`;const fn={dashboard:adminDashboard,items:adminItems,services:adminServices,places:adminPlaces,texts:adminTexts,settings:adminSettings,backup:adminBackup}[adminTab]||adminDashboard;fn();}
+function adminDashboard(){const d=SiteStore.state;document.getElementById('admin-content').innerHTML=`<div class="admin-notice">${SiteStore.remote?"تُحفظ الإضافات والتعديلات والحذف في الخادم المركزي بعد الضغط على حفظ. تظهر للزوار تلقائيًا خلال ثوانٍ قليلة؛ انتظر رسالة تأكيد الحفظ قبل مغادرة الصفحة.":"هذه لوحة تحرير محلية. صدّر نسخة محدثة لنشر التغييرات."}</div><div class="admin-stats"><div class="admin-stat"><strong>${d.items.length}</strong><span>عنصر محتوى</span></div><div class="admin-stat"><strong>${d.services.length}</strong><span>قسم وخدمة</span></div><div class="admin-stat"><strong>${d.places.length}</strong><span>مكان في الخريطة</span></div></div><div class="admin-panel"><h2>ماذا تريد أن تغيّر اليوم؟</h2><p>ابدأ بإضافة محتوى جديد، أو حرّر النصوص والصور في واجهة الموقع نفسها.</p><div class="admin-actions"><button class="button" onclick="editItem()">+ إضافة محتوى</button><button class="button light" onclick="startVisual()">تعديل مباشر على الموقع ↖</button><button class="button light" onclick="exportWebsite(this)">تحميل الموقع بعد التعديل ↓</button></div></div><div class="admin-tips"><div class="admin-panel"><span class="kicker">من فكرة إلى محتوى</span><h3>كل الأقسام تحت إدارتك</h3><p>خصومات، كتب، خبراء، منتجات ومشاريع. عدّل التفاصيل والتصنيفات والأسعار والصور وبيانات التواصل.</p><button class="text-btn" onclick="goAdmin('items')">إدارة المحتوى ←</button></div><div class="admin-panel"><span class="kicker">تصميم يعكس هويتك</span><h3>اسم الموقع، صوره وألوانه</h3><p>حدّث الهوية والنصوص وأظهر أو أخفِ مساحات الصفحة الرئيسية، واحتفظ بنسخة احتياطية من عملك.</p><button class="text-btn" onclick="goAdmin('settings')">إعدادات الموقع ←</button></div></div>`;}
+function adminItems(){document.getElementById('admin-content').innerHTML=`<div class="admin-panel"><div class="admin-toolbar"><div class="admin-actions"><select aria-label="تصفية حسب القسم" onchange="adminFilter=this.value;adminItemsRows()"><option value="all">كل الأقسام</option>${SiteStore.state.services.filter(s=>s[0]!=='map').map(s=>`<option value="${s[0]}" ${adminFilter===s[0]?'selected':''}>${escapeHtml(s[2])}</option>`).join('')}</select><input aria-label="بحث المحتوى" placeholder="ابحث بعنوان أو تصنيف..." value="${escapeHtml(adminQuery)}" oninput="adminQuery=this.value;adminItemsRows()"></div><button class="button small" onclick="editItem()">+ إضافة محتوى</button></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>العنصر</th><th>القسم</th><th>التصنيف</th><th>الإجراءات</th></tr></thead><tbody id="admin-rows"></tbody></table></div></div>`;adminItemsRows();}
+function adminItemsRows(){let list=SiteStore.state.items.map((x,i)=>({...x,index:i})).filter(x=>(adminFilter==='all'||x.type===adminFilter)&&`${x.title} ${x.cat}`.includes(adminQuery));document.getElementById('admin-rows').innerHTML=list.map(x=>`<tr><td><div class="admin-item-title">${x.image?`<img src="${escapeHtml(SiteStore.imageSrc(x.image))}" alt="">`:icon('book')}<strong>${escapeHtml(x.title)}</strong></div></td><td>${escapeHtml(serviceLabel(x.type))}</td><td>${escapeHtml(x.cat)}</td><td><div class="admin-actions"><button onclick="editItem(${x.index})">تعديل</button><button class="danger" onclick="deleteItem(${x.index})">حذف</button></div></td></tr>`).join('')||'<tr><td colspan="4">لا يوجد محتوى مطابق. يمكنك إضافة عنصر جديد.</td></tr>';}
+function inputField(label,name,value='',opts=''){return `<label>${label}<input name="${name}" value="${escapeHtml(value)}" ${opts}></label>`;}
+function imageField(name,value='',label='الصورة'){return `<label>${label}<input name="${name}" value="${escapeHtml(value)}" placeholder="رابط https أو اختر صورة من جهازك" oninput="previewImage(this)"><img class="admin-image-preview" ${value?`src="${escapeHtml(SiteStore.imageSrc(value))}"`:''} alt="معاينة الصورة" ${value?'':'hidden'}><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onchange="uploadImage(this,'${name}')"><small>تُصغّر الصور الكبيرة تلقائيًا لتسهيل الحفظ. امسح الحقل لإزالة الصورة.</small></label>`;}
+function previewImage(input){let img=input.parentElement.querySelector('img');const src=SiteStore.imageSrc(input.value);img.hidden=!src;if(src)img.src=src;}
+async function uploadImage(input,name){const file=input.files?.[0];if(!file)return;const form=input.closest('form');const field=form.elements[name];try{if(!/^image\/(png|jpeg|webp|gif)$/.test(file.type)||file.size>15*1024*1024)throw Error('اختر صورة PNG أو JPG أو WebP أو GIF بحجم أقل من 15 ميغابايت.');const image=new Image();const url=URL.createObjectURL(file);try{await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=reject;image.src=url;});const canvas=document.createElement('canvas');const scale=Math.min(1,900/image.width,900/image.height);canvas.width=Math.max(1,Math.round(image.width*scale));canvas.height=Math.max(1,Math.round(image.height*scale));canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);field.value=canvas.toDataURL('image/webp',.6);previewImage(field);}finally{URL.revokeObjectURL(url)}}catch(e){toast(e.message||'تعذر قراءة الصورة.');}}
+function projectGalleryField(value=[]){const photos=Array.isArray(value)?value.slice(0,10):[];return `<div class="admin-panel" style="padding:14px;margin:8px 0"><strong>صور فرصة المشروع الشبابي</strong><p class="admin-help">ارفع حتى 10 صور لهذه الفرصة. ستظهر الصور في تفاصيل الفرصة على الموقع. الصيغ المدعومة: JPG وPNG وWebP وGIF، وبحد أقصى 15 ميغابايت للصورة قبل التصغير.</p><input type="hidden" name="gallery" value="${escapeHtml(JSON.stringify(photos))}"><label>اختيار الصور (حتى 10)<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple onchange="uploadProjectImages(this)"></label><div data-project-gallery-preview style="display:grid;grid-template-columns:repeat(auto-fill,minmax(95px,1fr));gap:9px;margin-top:12px">${photos.map((src,i)=>`<div style="position:relative"><img src="${escapeHtml(SiteStore.imageSrc(src))}" alt="صورة ${i+1}" style="width:100%;height:90px;object-fit:cover;border-radius:9px"><button type="button" class="danger" onclick="removeProjectImage(this,${i})" style="width:100%;margin-top:4px">حذف الصورة</button></div>`).join('')}</div><small data-project-gallery-count>${photos.length}/10 صور</small></div>`;}
+function paintProjectGallery(form,photos){const field=form.elements.gallery;field.value=JSON.stringify(photos.slice(0,10));const box=form.querySelector('[data-project-gallery-preview]');box.innerHTML=photos.map((src,i)=>`<div style="position:relative"><img src="${escapeHtml(SiteStore.imageSrc(src))}" alt="صورة ${i+1}" style="width:100%;height:90px;object-fit:cover;border-radius:9px"><button type="button" class="danger" onclick="removeProjectImage(this,${i})" style="width:100%;margin-top:4px">حذف الصورة</button></div>`).join('');form.querySelector('[data-project-gallery-count]').textContent=photos.length+'/10 صور';}
+async function uploadProjectImages(input){const files=Array.from(input.files||[]);if(!files.length)return;const form=input.closest('form');let photos=[];try{photos=JSON.parse(form.elements.gallery.value||'[]')}catch{};if(photos.length+files.length>10){toast('الحد الأقصى 10 صور لكل فرصة. اختر '+Math.max(0,10-photos.length)+' صورة إضافية فقط.');input.value='';return;}try{for(const file of files){if(!/^image\/(png|jpeg|webp|gif)$/.test(file.type)||file.size>15*1024*1024)throw Error('اختر صور PNG أو JPG أو WebP أو GIF بحجم أقل من 15 ميغابايت للصورة.');const image=new Image(),url=URL.createObjectURL(file);try{await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=reject;image.src=url;});const canvas=document.createElement('canvas');const scale=Math.min(1,900/image.width,900/image.height);canvas.width=Math.max(1,Math.round(image.width*scale));canvas.height=Math.max(1,Math.round(image.height*scale));const ctx=canvas.getContext('2d');if(!ctx)throw Error('تعذر معالجة الصورة.');ctx.drawImage(image,0,0,canvas.width,canvas.height);photos.push(canvas.toDataURL('image/webp',.6));}finally{URL.revokeObjectURL(url);}}paintProjectGallery(form,photos);}catch(e){toast(e.message||'تعذر قراءة الصور.');}finally{input.value='';}}
+function removeProjectImage(button,index){const form=button.closest('form');let photos=[];try{photos=JSON.parse(form.elements.gallery.value||'[]')}catch{}photos.splice(index,1);paintProjectGallery(form,photos);}
+function editItem(index){const isNew=index===undefined;const x=isNew?{type:adminFilter==='all'?'discounts':adminFilter,title:'',cat:'عام',desc:'',image:'',badge:'',meta:'',price:'',extra:'',contact:'',shopLocation:'',shopImage1:'',shopImage2:''}:SiteStore.state.items[index];if(!x)return;const isDiscount=x.type==='discounts';modal(`<span class="kicker">إدارة محتوى سعي بلس</span><h2>${isNew?'إضافة عنصر جديد':'تعديل المحتوى'}</h2><form class="admin-form" onsubmit="submitItem(event,${isNew?'null':index})"><label>القسم<select name="type" required onchange="const box=this.form.querySelector('[data-discount-fields]');if(box)box.hidden=this.value!=='discounts';const projects=this.form.querySelector('[data-project-fields]');if(projects)projects.hidden=this.value!=='projects'">${SiteStore.state.services.filter(s=>s[0]!=='map').map(s=>`<option value="${s[0]}" ${x.type===s[0]?'selected':''}>${escapeHtml(s[2])}</option>`).join('')}</select></label>${inputField('العنوان','title',x.title,'required maxlength="120"')}${inputField('التصنيف','cat',x.cat,'required maxlength="60"')}<label>الوصف المختصر<textarea name="desc" required rows="3" maxlength="800">${escapeHtml(x.desc)}</textarea></label><div data-discount-fields ${isDiscount?'':'hidden'}><div class="admin-panel" style="padding:14px;margin:8px 0"><strong>صور المحل</strong><p class="admin-help">المحل الجديد يحتاج 3 صور: صورة رئيسية تظهر على بطاقة الخصم، وصورتان تظهران عند فتح «التفاصيل». للمحل الموجود يمكنك إضافة أو تغيير صور التفاصيل وتعديل الصورة الرئيسية متى شئت.</p>${imageField('image',x.image||'','الصورة الرئيسية للمحل (تظهر على البطاقة)')}${imageField('shopImage1',x.shopImage1||'','صورة التفاصيل الأولى')}${imageField('shopImage2',x.shopImage2||'','صورة التفاصيل الثانية')}</div>${inputField('رابط موقع المحل (Google Maps أو رابط موقع)','shopLocation',x.shopLocation||'','type="url" placeholder="https://maps.google.com/..." maxlength="1000"')}</div><div data-project-fields ${x.type==='projects'?'':'hidden'}>${projectGalleryField(x.gallery||[])}</div>${inputField('شارة العرض أو الحالة','badge',x.badge,'maxlength="80"')}${inputField('السعر أو النص أسفل البطاقة','price',x.price,'placeholder="مثال: 15 د.أ — اتركه فارغًا عند عدم الحاجة" maxlength="60"')}${inputField('التصنيف أسفل البطاقة','meta',x.meta,'maxlength="80"')}<label>التفاصيل الكاملة<textarea name="extra" rows="4" maxlength="4000">${escapeHtml(x.extra)}</textarea></label>${inputField('بيانات التواصل (رقم هاتف أو بريد أو وصف)','contact',x.contact,'maxlength="300"')}<button class="button" type="submit">${isNew?'إضافة المحتوى ✓':'حفظ التعديل ✓'}</button></form>`);}
+async function submitItem(e,index){e.preventDefault();let f=new FormData(e.target);let x=Object.fromEntries(f);try{x.gallery=JSON.parse(String(x.gallery||'[]'));}catch{x.gallery=[];}if(!Array.isArray(x.gallery)||x.gallery.length>10||x.gallery.some(v=>typeof v!=='string')){toast('صور الفرصة غير صالحة. الحد الأقصى 10 صور.');return;}if(x.type==='projects')x.image=x.gallery[0]||'';delete x.galleryRaw;x.title=x.title.trim();x.cat=x.cat.trim();x.desc=x.desc.trim();if(!x.title||!x.cat||!x.desc){toast('أكمل العنوان والتصنيف والوصف.');return;}const prior=index===null?null:SiteStore.state.items[index];if(x.type==='discounts'){for(const key of ['image','shopImage1','shopImage2','shopLocation'])if(!x[key]&&prior)x[key]=prior[key]||'';if(index===null&&(!x.image||!x.shopImage1||!x.shopImage2)){toast('للمحل الجديد أضف الصورة الرئيسية وصورتي التفاصيل.');return;}}x.id=index===null?'entry_'+Date.now()+'_'+Math.random().toString(36).slice(2,7):prior.id;if(await storeChange(d=>{if(index===null)d.items.push(x);else d.items[index]=x;})){document.getElementById('dialog').close();if(route==='admin'){adminTab='items';renderAdmin();}}}
+function deleteItem(index){const x=SiteStore.state.items[index];modal(`<h2>حذف المحتوى؟</h2><p>سيُحذف «${escapeHtml(x.title)}» من محتوى الموقع بعد تأكيد الحفظ. يمكنك الرجوع عبر آخر نسخة احتياطية.</p><div class="admin-actions"><button class="button danger" onclick="confirmDeleteItem(${index})">حذف العنصر</button><button class="button light" onclick="document.getElementById('dialog').close()">إلغاء</button></div>`);}
+async function confirmDeleteItem(i){if(await storeChange(d=>d.items.splice(i,1))){document.getElementById('dialog').close();adminItems();}}
+function adminServices(){document.getElementById('admin-content').innerHTML=`<div class="admin-toolbar"><p class="admin-help">تحكم في عنوان ووصف وترتيب وظهور كل قسم.</p><button class="button small" onclick="editService()">+ إضافة قسم</button></div><div class="admin-grid">${SiteStore.state.services.map((s,i)=>`<div class="admin-service"><div class="admin-actions"><h3>${icon(s[1])} ${escapeHtml(s[2])}</h3>${SiteStore.state.hidden.includes(s[0])?'<span class="admin-hidden-badge">مخفي</span>':''}</div><p class="admin-help">${escapeHtml(s[3])}</p><div class="admin-actions"><button class="admin-compact" onclick="editService(${i})">تعديل القسم</button><button class="admin-compact" onclick="moveService(${i},-1)" ${i===0?'disabled':''}>↑</button><button class="admin-compact" onclick="moveService(${i},1)" ${i===SiteStore.state.services.length-1?'disabled':''}>↓</button><button class="admin-compact" onclick="toggleService(${i})">${SiteStore.state.hidden.includes(s[0])?'إظهار':'إخفاء'}</button><button class="admin-compact" onclick="removeService(${i})">حذف</button></div></div>`).join('')}</div>`;}
+function editService(i){const s=i===undefined?['','leaf','','']:SiteStore.state.services[i];modal(`<h2>${i===undefined?'إضافة قسم جديد':'تعديل القسم'}</h2><form class="admin-form" onsubmit="submitService(event,${i===undefined?'null':i})">${inputField('اسم القسم','title',s[2],'required maxlength="80"')}<label>وصف البطاقة<textarea name="desc" required rows="3">${escapeHtml(s[3])}</textarea></label><label>تعريف صفحة القسم<textarea name="intro" rows="3">${escapeHtml(SiteStore.state.descriptions[s[0]]||'')}</textarea></label><label>الأيقونة<select name="icon">${['pin','book','percent','users','store','bulb','leaf','coffee','grad'].map(k=>`<option ${s[1]===k?'selected':''}>${k}</option>`).join('')}</select></label><button class="button">حفظ القسم</button></form>`);}
+async function submitService(e,i){e.preventDefault();const f=new FormData(e.target);const id=i===null?'section_'+Date.now():SiteStore.state.services[i][0];if(await storeChange(d=>{const s=[id,String(f.get('icon')),String(f.get('title')).trim(),String(f.get('desc')).trim()];if(i===null)d.services.push(s);else d.services[i]=s;d.descriptions[id]=String(f.get('intro'));})){document.getElementById('dialog').close();adminServices();}}
+async function toggleService(i){const id=SiteStore.state.services[i][0];if(await storeChange(d=>{d.hidden=d.hidden.includes(id)?d.hidden.filter(x=>x!==id):[...d.hidden,id]}))adminServices();}
+async function moveService(i,dir){if(i+dir<0||i+dir>=SiteStore.state.services.length)return;if(await storeChange(d=>{[d.services[i],d.services[i+dir]]=[d.services[i+dir],d.services[i]]}))adminServices();}
+function removeService(i){const s=SiteStore.state.services[i];modal(`<h2>حذف القسم؟</h2><p>سيُحذف قسم «${escapeHtml(s[2])}» وجميع العناصر الموجودة فيه. يُفضّل تصدير نسخة احتياطية أولًا. يمكنك اختيار الإخفاء بدل الحذف.</p><div class="admin-actions"><button class="button danger" onclick="confirmRemoveService(${i})">حذف القسم ومحتواه</button><button class="button light" onclick="document.getElementById('dialog').close()">إلغاء</button></div>`);}
+async function confirmRemoveService(i){if(await storeChange(d=>{const id=d.services[i][0];d.services.splice(i,1);d.items=d.items.filter(x=>x.type!==id);d.hidden=d.hidden.filter(x=>x!==id);delete d.descriptions[id];})){document.getElementById('dialog').close();adminServices();}}
+function adminPlaces(){document.getElementById('admin-content').innerHTML=`<div class="admin-notice">المواقع على مخطط توضيحي. إحداثيات X وY هي نسب مئوية داخل الصورة، وليست إحداثيات جغرافية.</div><div class="admin-panel"><div class="admin-toolbar"><h2>أماكن الجامعة</h2><button class="button small" onclick="editPlace()">+ إضافة مكان</button></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>اسم المكان</th><th>التصنيف</th><th>الإحداثيات</th><th>الإجراءات</th></tr></thead><tbody>${SiteStore.state.places.map((p,i)=>`<tr><td>${escapeHtml(p.name)}</td><td>${escapeHtml(p.cat)}</td><td>${p.x}% / ${p.y}%</td><td><div class="admin-actions"><button onclick="editPlace(${i})">تعديل</button><button class="danger" onclick="deletePlace(${i})">حذف</button></div></td></tr>`).join('')||'<tr><td colspan="4">لا توجد أماكن بعد. أضف أول مكان.</td></tr>'}</tbody></table></div></div>`;}
+function editPlace(i){const p=i===undefined?{name:'',cat:'خدمات',desc:'',x:45,y:45,icon:'pin'}:SiteStore.state.places[i];modal(`<h2>${i===undefined?'إضافة مكان':'تعديل المكان'}</h2><form class="admin-form" onsubmit="submitPlace(event,${i===undefined?'null':i})">${inputField('اسم المكان','name',p.name,'required maxlength="100"')}${inputField('التصنيف','cat',p.cat,'required maxlength="60"')}<label>التفاصيل وساعات العمل<textarea name="desc" rows="3" required>${escapeHtml(p.desc)}</textarea></label><div class="admin-grid">${inputField('الموقع الأفقي X (%)','x',p.x,'type="number" min="0" max="95" required')}${inputField('الموقع العمودي Y (%)','y',p.y,'type="number" min="0" max="95" required')}</div><label>الأيقونة<select name="icon">${['pin','book','coffee','grad','users','store'].map(k=>`<option ${p.icon===k?'selected':''}>${k}</option>`).join('')}</select></label><button class="button">حفظ المكان</button></form>`);}
+async function submitPlace(e,i){e.preventDefault();const p=Object.fromEntries(new FormData(e.target));p.x=Number(p.x);p.y=Number(p.y);if(await storeChange(d=>{if(i===null)d.places.push(p);else d.places[i]=p;})){document.getElementById('dialog').close();adminPlaces();}}
+function deletePlace(i){modal(`<h2>حذف المكان؟</h2><p>${escapeHtml(SiteStore.state.places[i].name)}</p><button class="button danger" onclick="confirmDeletePlace(${i})">تأكيد الحذف</button>`);}
+async function confirmDeletePlace(i){if(await storeChange(d=>d.places.splice(i,1))){document.getElementById('dialog').close();adminPlaces();}}
+function adminTexts(){document.getElementById('admin-content').innerHTML=`<div class="admin-panel"><div class="admin-toolbar"><div><h2>نصوص الصفحات والقوائم</h2><p class="admin-help">عدّل النص أو امسحه لإزالته، ثم احفظ. لا يتغير التصميم.</p></div><button class="button small" onclick="startVisual()">تعديل مباشر ↖</button></div><input class="admin-search" aria-label="البحث في نصوص الموقع" placeholder="ابحث في النص الأصلي أو المعدل..." oninput="textQuery=this.value;renderTextRows()"><form id="texts-form" onsubmit="saveTexts(event)"><div id="text-rows"></div><button class="button" style="margin-top:20px">حفظ جميع النصوص</button></form></div>`;renderTextRows();}
+function textKeys(){return [...new Set([...window.SAI_TEXT_CATALOG,...Object.keys(SiteStore.state.texts)])];}
+function renderTextRows(){const old=document.getElementById('text-rows');if(old){old.querySelectorAll('textarea').forEach(t=>{textDraft[t.dataset.key]=t.value;});}document.getElementById('text-rows').innerHTML=textKeys().map((k,i)=>({k,i})).filter(({k})=>(k+' '+(textDraft[k]??SiteStore.state.texts[k]??'')).includes(textQuery)).map(({k,i})=>`<div class="admin-text-card"><p>${escapeHtml(k)}</p><textarea data-key="${escapeHtml(k)}" aria-label="تعديل النص ${i+1}" rows="2">${escapeHtml(textDraft[k]??SiteStore.state.texts[k]??k)}</textarea></div>`).join('')||'<p class="admin-help">لا توجد نصوص مطابقة.</p>';}
+let textDraft={};
+async function saveTexts(e){e.preventDefault();document.querySelectorAll('#text-rows textarea').forEach(t=>textDraft[t.dataset.key]=t.value);if(await storeChange(d=>{for(const [k,v]of Object.entries(textDraft)){if(v===k)delete d.texts[k];else d.texts[k]=v;}})){textDraft={};}}
+function adminSettings(){const d=SiteStore.state;document.getElementById('admin-content').innerHTML=`<form class="admin-form" onsubmit="saveSettings(event)"><div class="admin-panel"><h2>هوية الموقع</h2><div class="admin-grid" style="margin-top:20px">${inputField('اسم الموقع','siteName',d.siteName,'required maxlength="70"')}${inputField('اللون الرئيسي','green',d.theme.green,'type="color"')}${inputField('لون الخلفية','cream',d.theme.cream,'type="color"')}${imageField('logo',d.images['assets/brand.jpg']??'brand','شعار الموقع')}${imageField('heroImage',d.images['assets/campus.jpg']??'campus','صورة الواجهة الرئيسية')}${imageField('mapImage',d.images['map-background']||'','صورة خريطة الجامعة (اختياري)')}</div></div><div class="admin-panel"><h2>النصوص التوضيحية</h2><div class="admin-grid" style="margin-top:20px"><label>تنبيه صفحات المحتوى<textarea name="notice" rows="3">${escapeHtml(d.notice)}</textarea><small>يمكنك تركه فارغًا بعد إضافة محتوى حقيقي.</small></label><label>تنبيه الخريطة<textarea name="mapNotice" rows="3">${escapeHtml(d.mapNotice)}</textarea></label></div></div><div class="admin-panel"><h2>ظهور مساحات الصفحة الرئيسية</h2>${[['hero','المقدمة والصورة الرئيسية'],['community-strip','شريط مزايا المجتمع'],['services','خانات الخدمات في الرئيسية'],['offers-section','عروض الرئيسية'],['about','التعريف بالموقع'],['join-banner','دعوة المشاركة'],['footer','تذييل الموقع']].map(([id,label])=>`<label class="admin-block-row"><span>${label}</span><input type="checkbox" name="block_${id}" ${!d.hidden.includes('block:'+id)?'checked':''}></label>`).join('')}</div><div class="admin-actions"><button class="button">حفظ الإعدادات ✓</button><button type="button" class="button light" onclick="startVisual()">تعديل النصوص مباشرة</button></div></form>`;}
+async function saveSettings(e){e.preventDefault();const f=new FormData(e.target);if(await storeChange(d=>{d.siteName=String(f.get('siteName')).trim();d.theme={green:f.get('green'),cream:f.get('cream')};d.images['assets/brand.jpg']=f.get('logo');d.images['assets/campus.jpg']=f.get('heroImage');d.images['map-background']=f.get('mapImage');d.notice=f.get('notice');d.mapNotice=f.get('mapNotice');for(const id of ['hero','community-strip','services','offers-section','about','join-banner','footer']){d.hidden=d.hidden.filter(x=>x!=='block:'+id);if(!f.has('block_'+id))d.hidden.push('block:'+id);}}))adminSettings();}
+function adminBackup(){if(SiteStore.remote){document.getElementById('admin-content').innerHTML=`<div class="admin-panel"><h2>الحفظ المباشر مفعّل</h2><p>كل تعديل تحفظه يُنشر على الموقع تلقائيًا. لا تحتاج تنزيل ملفات أو إعادة رفعها. تظهر التغييرات في الصفحات المفتوحة خلال ثوانٍ قليلة.</p><button class="button" onclick="exportBackup()">تنزيل نسخة احتياطية للمحتوى ↓</button></div><div class="admin-panel"><h2>استيراد نسخة احتياطية</h2><p>الاستيراد يستبدل المحتوى الحالي على الموقع لجميع الزوار بعد التأكيد.</p><div class="admin-file"><label>اختيار ملف JSON<input type="file" accept=".json,application/json" onchange="prepareImport(this)"></label></div></div><div class="admin-panel"><h2>نسخة محلية منفصلة</h2><p>اختياري: تحميل نسخة ثابتة للعرض دون اتصال. هذه النسخة منفصلة عن الموقع المباشر ولا تنشر تغييراتك عليه.</p><button class="button light" onclick="exportWebsite(this)">تحميل نسخة محلية ZIP ↓</button></div>`;return;}document.getElementById('admin-content').innerHTML=`<div class="admin-panel"><h2>تحميل الموقع كاملًا بعد التعديل</h2><p>ملف ZIP يحتوي الموقع والصور وصفحة الأدمن ومحتواك الحالي. فك الضغط وافتح index.html، أو ارفع محتوياته على استضافة الموقع ليشاهد الزوار آخر تعديلاتك.</p><button class="button" onclick="exportWebsite(this)">تحميل النسخة المحدثة ZIP ↓</button></div><div class="admin-grid"><div class="admin-panel"><h2>نسخة احتياطية للمحتوى</h2><p>ملف JSON للنصوص والمحتوى والصور والإعدادات. احتفظ به لاستعادة تعديلاتك في أي وقت أو على جهاز آخر.</p><button class="button light" onclick="exportBackup()">تنزيل نسخة احتياطية ↓</button></div><div class="admin-panel"><h2>استيراد نسخة احتياطية</h2><p>اختر ملف JSON صادرًا من هذه اللوحة. ستراجع طلب الاستبدال قبل تطبيق البيانات.</p><div class="admin-file"><label>اختيار ملف المحتوى<input type="file" accept=".json,application/json" onchange="prepareImport(this)"></label></div></div></div><div class="admin-panel"><h2>طريقة الاستخدام</h2><ol class="admin-help"><li>نفّذ تعديلاتك من اللوحة واضغط «حفظ».</li><li>افتح الموقع من المتصفح نفسه لمراجعة النتيجة؛ تظهر التعديلات أيضًا في التبويبات المفتوحة على نفس العنوان.</li><li>حمّل نسخة ZIP المحدثة، ثم استبدل ملفات الاستضافة بمحتوياتها.</li><li>احتفظ بنسخة JSON احتياطية. هذه النسخة محرر محلي، ولا تتضمن تسجيل دخول أو قاعدة بيانات مشتركة.</li></ol></div>`;}
+function downloadBlob(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
+async function currentExportState(){let d=SiteStore.clone(SiteStore.state);const ids=new Set(d.items.map(x=>x.id));d.items.push(...additions.filter(x=>!ids.has(x.id)&&d.services.some(s=>s[0]===x.type)));d.revision=Date.now();const media=new Map();async function embed(value){if(!value||!value.startsWith('/api/media/'))return value;if(!media.has(value))media.set(value,(async()=>{const res=await fetch(value);if(!res.ok)throw Error('تعذر تصدير إحدى الصور. حاول مجددًا.');const bytes=new Uint8Array(await res.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i++)binary+=String.fromCharCode(bytes[i]);return 'data:'+res.headers.get('content-type')+';base64,'+btoa(binary);})());return media.get(value);}for(const x of d.items){if(x.image)x.image=await embed(x.image);if(Array.isArray(x.gallery))x.gallery=await Promise.all(x.gallery.map(embed));}for(const k of Object.keys(d.images))d.images[k]=await embed(d.images[k]);return SiteStore.validate(d);}
+async function exportBackup(){try{downloadBlob(new Blob([JSON.stringify(await currentExportState(),null,2)],{type:'application/json'}),'Sai-Plus-Content.json');toast('تم تجهيز النسخة الاحتياطية');}catch(e){toast(e.message);}}
+let pendingImport=null;
+async function prepareImport(input){try{let file=input.files?.[0];if(!file)return;if(file.size>30*1024*1024)throw Error('الملف كبير جدًا. الحد الأقصى 30 ميغابايت.');pendingImport=SiteStore.validate(JSON.parse(await file.text()));modal(`<h2>استيراد المحتوى؟</h2><p>تحتوي النسخة على ${pendingImport.items.length} عنصرًا و${pendingImport.services.length} قسمًا. ستستبدل هذه العملية المحتوى والإعدادات الحالية. في النسخة المباشرة يتغير المحتوى لجميع الزوار.</p><div class="admin-actions"><button class="button" onclick="confirmImport()">استبدال المحتوى</button><button class="button light" onclick="exportBackup()">احفظ نسخة حالية أولًا</button></div>`);}catch(e){toast(e.message||'تعذر قراءة الملف.');input.value='';}}
+async function confirmImport(){try{await SiteStore.save(pendingImport);pendingImport=null;additions=[];localStorage.removeItem('sai-additions');items=[...SiteStore.state.items];textDraft={};document.getElementById('dialog').close();renderAdmin();toast('تم استيراد المحتوى بنجاح');}catch(e){toast(e.message);}}
+let exportLoader;
+async function loadExportKit(){if(window.SAI_EXPORT_FILES)return;if(!exportLoader)exportLoader=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='export-kit.js';script.onload=resolve;script.onerror=()=>{exportLoader=null;script.remove();reject(Error('تعذر تحميل حزمة التصدير. تأكد من وجود export-kit.js بجانب ملفات الموقع.'))};document.head.append(script)});await exportLoader;}
+function crc32(data){let crc=-1;for(const b of data){crc^=b;for(let j=0;j<8;j++)crc=(crc>>>1)^((crc&1)?0xedb88320:0);}return (crc^-1)>>>0;}
+function zipFiles(files){const enc=new TextEncoder(),parts=[],centers=[];let offset=0;for(const [name,bytes] of Object.entries(files)){const n=enc.encode('Sai-Plus/'+name),crc=crc32(bytes);const header=new Uint8Array(30+n.length),v=new DataView(header.buffer);v.setUint32(0,0x04034b50,true);v.setUint16(4,20,true);v.setUint16(6,0x800,true);v.setUint16(12,0x21,true);v.setUint32(14,crc,true);v.setUint32(18,bytes.length,true);v.setUint32(22,bytes.length,true);v.setUint16(26,n.length,true);header.set(n,30);const c=new Uint8Array(46+n.length),cv=new DataView(c.buffer);cv.setUint32(0,0x02014b50,true);cv.setUint16(4,20,true);cv.setUint16(6,20,true);cv.setUint16(8,0x800,true);cv.setUint16(14,0x21,true);cv.setUint32(16,crc,true);cv.setUint32(20,bytes.length,true);cv.setUint32(24,bytes.length,true);cv.setUint16(28,n.length,true);cv.setUint32(42,offset,true);c.set(n,46);parts.push(header,bytes);centers.push(c);offset+=header.length+bytes.length;}const centralSize=centers.reduce((s,c)=>s+c.length,0),end=new Uint8Array(22),ev=new DataView(end.buffer);ev.setUint32(0,0x06054b50,true);ev.setUint16(8,centers.length,true);ev.setUint16(10,centers.length,true);ev.setUint32(12,centralSize,true);ev.setUint32(16,offset,true);return new Blob([...parts,...centers,end],{type:'application/zip'});}
+async function exportWebsite(button){const original=button.textContent;button.disabled=true;button.textContent='جاري تجهيز الملفات...';try{await loadExportKit();let files={};for(const [name,b64]of Object.entries(window.SAI_EXPORT_FILES)){const raw=atob(b64);files[name]=Uint8Array.from(raw,c=>c.charCodeAt(0));}const enc=new TextEncoder();files['content-data.js']=enc.encode('window.SAI_DEFAULTS='+JSON.stringify(await currentExportState())+';\nwindow.SAI_TEXT_CATALOG='+JSON.stringify(window.SAI_TEXT_CATALOG)+';\n');files['remote-config.js']=enc.encode('window.SAI_REMOTE=false;');files['export-kit.js']=enc.encode('window.SAI_EXPORT_FILES='+JSON.stringify(window.SAI_EXPORT_FILES)+';\n');downloadBlob(zipFiles(files),'Sai-Plus-Updated.zip');toast('تم تجهيز الموقع بتعديلاتك الحالية ✓');}catch(e){toast(e.message);}finally{button.disabled=false;button.textContent=original;}}
+const originalTextNodes=new WeakMap(),originalImages=new WeakMap();
+let contentObserver;
+function applyContent(){
+ if(document.body.classList.contains('admin'))return;
+ if(contentObserver)contentObserver.disconnect();
+ const d=SiteStore.state;
+ for(const root of document.querySelectorAll('header,main,footer')){
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let node;
+  while(node=walker.nextNode()){
+   if(node.parentElement?.closest('script,style,.editor-bar'))continue;
+   if(!originalTextNodes.has(node))originalTextNodes.set(node,node.nodeValue);
+   const orig=originalTextNodes.get(node),trim=orig.trim();
+   const value=Object.hasOwn(d.texts,trim)?d.texts[trim]:(trim==='سعي بلس'?d.siteName:trim);
+   const next=trim?orig.replace(trim,value):orig;if(node.nodeValue!==next)node.nodeValue=next;
+  }
+ }
+ for(const img of document.querySelectorAll('header img,main img,footer img')){if(!originalImages.has(img))originalImages.set(img,img.getAttribute('src'));let orig=originalImages.get(img);if(Object.hasOwn(d.images,orig)){const src=SiteStore.imageSrc(d.images[orig]);img.hidden=!src;if(src&&img.getAttribute('src')!==src)img.setAttribute('src',src);}img.dataset.editableImage='true';}
+ const selectors={hero:'.hero','community-strip':'.community-strip',services:'main .services','offers-section':'.offers-section',about:'#about','join-banner':'.join-banner',footer:'footer'};
+ for(const [id,selector]of Object.entries(selectors))document.querySelectorAll(selector).forEach(el=>{el.style.display=d.hidden.includes('block:'+id)?'none':''});
+ document.querySelectorAll('header nav a').forEach(a=>{const id=a.hash.slice(1);if(!['home','services'].includes(id)){const service=d.services.find(s=>s[0]===id);a.style.display=(!service||d.hidden.includes(id))?'none':'';if(service&&a.textContent!==service[2])a.textContent=service[2];}});
+ if(!d.services.some(s=>s[0]==='discounts')||d.hidden.includes('discounts'))document.querySelectorAll('.offers-section').forEach(e=>e.style.display='none');
+ const map=document.querySelector('.map');if(map){const src=SiteStore.imageSrc(d.images['map-background']||'');map.style.backgroundImage=src?`url("${src}")`:'';map.style.backgroundSize='100% 100%';const svg=map.querySelector('svg.layout');if(svg)svg.style.display=src?'none':'';}
+ if(contentObserver)contentObserver.observe(main,{childList:true,subtree:true});
 }
-
-/**
- * رسم الجدول وعرض البيانات داخل واجهة الأدمن
- */
-function renderAdminTable(items) {
-    const tableBody = document.getElementById('adminTableBody');
-    if (!tableBody) return;
-
-    tableBody.innerHTML = '';
-
-    if (!items || items.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="100" style="text-align: center; padding: 20px;">لا توجد بيانات متاحة حالياً</td></tr>`;
-        return;
-    }
-
-    items.forEach(item => {
-        const row = document.createElement('tr');
-        
-        // تخصيص الأعمدة بناءً على الحقول المتوفرة في الكائن (العنوان، الوصف، الحالة، إلخ)
-        row.innerHTML = `
-            <td>${item.id || item._id || ''}</td>
-            <td><strong>${item.title || item.name || 'بدون عنوان'}</strong></td>
-            <td>${item.category || item.type || '-'}</td>
-            <td class="actions-cell">
-                <button class="btn-edit" onclick="openEditModal('${item.id || item._id}')">تعديل</button>
-                <button class="btn-delete" onclick="deleteItem('${item.id || item._id}')">حذف</button>
-            </td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
-
-/**
- * إعداد مستمعي الأحداث للأزرار والنماذج (Forms)
- */
-function setupEventListeners() {
-    const form = document.getElementById('adminItemForm');
-    if (form) {
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const itemId = document.getElementById('itemId')?.value;
-            const payload = {
-                title: document.getElementById('itemTitle')?.value,
-                description: document.getElementById('itemDescription')?.value,
-                category: document.getElementById('itemCategory')?.value,
-            };
-
-            await saveItem(itemId, payload);
-            form.reset();
-            if (document.getElementById('itemId')) document.getElementById('itemId').value = '';
-        });
-    }
-}
-
-/**
- * حفظ عنصر جديد أو تحديث عنصر موجود (POST / PUT)
- */
-async function saveItem(id, payload) {
-    try {
-        const method = id ? 'PUT' : 'POST';
-        const url = id ? `${API_BASE}?id=${id}` : API_BASE;
-        
-        const response = await fetch(url, {
-            method: method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.error || 'فشل حفظ البيانات');
-        }
-
-        showNotification(id ? 'تم التعديل بنجاح' : 'تمت الإضافة بنجاح', 'success');
-        loadAdminData();
-        
-        // إغلاق النافذة المنخفضة أو المودال إن وجد
-        closeModal();
-    } catch (error) {
-        console.error('Error saving item:', error);
-        showNotification(error.message, 'error');
-    }
-}
-
-/**
- * حذف عنصر عبر الـ API (DELETE)
- */
-async function deleteItem(id) {
-    if (!confirm('هل أنت متأكد من رغبتك في حذف هذا العنصر؟')) return;
-    
-    try {
-        const response = await fetch(`${API_BASE}?id=${id}`, {
-            method: 'DELETE'
-        });
-
-        if (!response.ok) throw new Error('فشل الحذف من السيرفر');
-
-        showNotification('تم الحذف بنجاح', 'success');
-        loadAdminData();
-    } catch (error) {
-        console.error('Error deleting item:', error);
-        showNotification('حدث خطأ أثناء عملية الحذف', 'error');
-    }
-}
-
-/**
- * فتح نافذة التعديل وتعبئة البيانات القديمة
- */
-async function openEditModal(id) {
-    try {
-        const response = await fetch(API_BASE);
-        const items = await response.json();
-        const item = items.find(i => (i.id == id || i._id == id));
-
-        if (!item) throw new Error('العنصر غير موجود');
-
-        // تعبئة حقول نموذج التعديل (تأكد من مطابقة الـ IDs في ملف الـ HTML الخاص بك)
-        if (document.getElementById('itemId')) document.getElementById('itemId').value = item.id || item._id;
-        if (document.getElementById('itemTitle')) document.getElementById('itemTitle').value = item.title || item.name || '';
-        if (document.getElementById('itemDescription')) document.getElementById('itemDescription').value = item.description || '';
-        if (document.getElementById('itemCategory')) document.getElementById('itemCategory').value = item.category || '';
-
-        // إظهار المودال (إذا كان لديك نافذة منبثقة)
-        const modal = document.getElementById('adminModal');
-        if (modal) modal.style.display = 'block';
-
-    } catch (error) {
-        console.error('Error opening edit modal:', error);
-        showNotification('فشل جلب بيانات العنصر للتعديل', 'error');
-    }
-}
-
-/**
- * إغلاق نافذة التعديل/الإضافة المنبثقة
- */
-function closeModal() {
-    const modal = document.getElementById('adminModal');
-    if (modal) modal.style.display = 'none';
-}
-
-/**
- * نظام إشعارات مرئي خفيف وسريع للمستخدم
- */
-function showNotification(message, type = 'success') {
-    const existingNotification = document.querySelector('.admin-notification');
-    if (existingNotification) existingNotification.remove();
-
-    const notification = document.createElement('div');
-    notification.className = `admin-notification ${type}`;
-    notification.innerText = message;
-    notification.style.cssText = `
-        position: fixed; bottom: 20px; left: 20px; z-index: 99999;
-        padding: 12px 24px; border-radius: 6px; color: #fff; font-size: 14px;
-        background-color: ${type === 'success' ? '#28a745' : '#dc3545'};
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-family: system-ui, -apple-system, sans-serif;
-        transition: opacity 0.3s ease;
-    `;
-    
-    document.body.appendChild(notification);
-    setTimeout(() => {
-        notification.style.opacity = '0';
-        setTimeout(() => notification.remove(), 3000);
-    }, 2500);
-}
+contentObserver=new MutationObserver(()=>applyContent());
+function startVisual(){try{sessionStorage.setItem('sai-visual','1');}catch(e){}document.getElementById('dialog').close();location.hash='home';render();window.scrollTo(0,0);}
+function stopVisual(clear=true){document.body.classList.remove('visual-edit');document.querySelector('.editor-bar')?.remove();if(clear)sessionStorage.removeItem('sai-visual');}
+function visualBar(){document.querySelector('.editor-bar')?.remove();const enabled=sessionStorage.getItem('sai-visual')==='1';document.body.classList.toggle('visual-edit',enabled);if(!enabled)return;const bar=document.createElement('div');bar.className='editor-bar';bar.innerHTML=`<span>اضغط على أي نص أو صورة لتعديلها</span><select aria-label="صفحة المعاينة" onchange="location.hash=this.value"><option value="home">الرئيسية</option><option value="services">الخدمات</option>${services.map(s=>`<option value="${s[0]}" ${route===s[0]?'selected':''}>${escapeHtml(s[2])}</option>`).join('')}</select><a href="#admin" onclick="stopVisual()">إنهاء والعودة للأدمن</a>`;document.body.prepend(bar);}
+let visualTextKey='',visualImageKey='';
+document.addEventListener('click',e=>{
+ if(!document.body.classList.contains('visual-edit')||e.target.closest('.editor-bar,dialog')||e.ctrlKey||e.metaKey)return;
+ if(!e.target.closest('header,main,footer'))return;
+ e.preventDefault();e.stopImmediatePropagation();
+ if(e.target.tagName==='IMG'){visualImageKey=originalImages.get(e.target)||e.target.getAttribute('src');const current=SiteStore.state.images[visualImageKey]??visualImageKey;modal(`<h2>تعديل الصورة</h2><form class="admin-form" onsubmit="saveVisualImage(event)">${imageField('image',current)}<button class="button">حفظ الصورة</button></form>`);return;}
+ const direct=[...e.target.childNodes].find(n=>n.nodeType===Node.TEXT_NODE&&n.nodeValue.trim());const node=direct||[...e.target.childNodes].flatMap(n=>[...n.childNodes]).find(n=>n.nodeType===Node.TEXT_NODE&&n.nodeValue.trim());
+ if(!node){toast('اضغط على النص نفسه أو الصورة.');return;}
+ visualTextKey=(originalTextNodes.get(node)||node.nodeValue).trim();
+ modal(`<span class="kicker">تعديل مباشر</span><h2>تعديل النص</h2><p>النص الأصلي: ${escapeHtml(visualTextKey)}</p><form class="admin-form" onsubmit="saveVisualText(event)"><label>النص الجديد<textarea name="text" rows="4">${escapeHtml(SiteStore.state.texts[visualTextKey]??node.nodeValue.trim())}</textarea><small>اترك الحقل فارغًا لحذف هذا النص.</small></label><button class="button">حفظ التعديل ✓</button></form>`);
+},true);
+async function saveVisualText(e){e.preventDefault();const value=new FormData(e.target).get('text');if(await storeChange(d=>{d.texts[visualTextKey]=value;}))document.getElementById('dialog').close();}
+async function saveVisualImage(e){e.preventDefault();if(await storeChange(d=>{d.images[visualImageKey]=new FormData(e.target).get('image');}))document.getElementById('dialog').close();}
+window.addEventListener('focus',()=>{if(route!=='admin'&&!SiteStore.remote){SiteStore.reload();}});
+// Apply updates from another tab immediately; form editing stays local until saved.
+render();
+SiteStore.ready.then(()=>{syncContent();render();}).catch(error=>{main.innerHTML='<div class="container intro"><h2>تعذر تحميل المحتوى</h2><p>'+escapeHtml(error.message)+'</p><button class="button" onclick="location.reload()">إعادة المحاولة</button></div>';});
