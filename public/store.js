@@ -304,6 +304,18 @@ window.SiteStore = (() => {
     return body;
   }
 
+
+  async function changeAdminPassword(currentPassword, newPassword) {
+    const response = await fetch(API_BASE + '/api/admin-change-password', {
+      method: 'POST',
+      credentials: 'include',
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ currentPassword, newPassword })
+    });
+    return await readResponse(response);
+  }
+
   async function logoutAdmin() {
     await fetch(API_BASE + '/api/logout', { method: 'POST', credentials: 'include', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: '{}' });
     canEdit = false;
@@ -332,9 +344,8 @@ window.SiteStore = (() => {
     get state() { return state; },
     get loaded() { return loaded; },
     get canEdit() { return canEdit; },
-    get remoteAvailable() { return remoteAvailable; },
     remote,
-    ready,
+    ready: Promise.resolve(),
     clone,
     save,
     validate,
@@ -342,6 +353,7 @@ window.SiteStore = (() => {
     key,
     reload: () => refresh(),
     loginAdmin,
+    changeAdminPassword,
     logoutAdmin
   };
 })();

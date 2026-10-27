@@ -34,7 +34,18 @@ export default {
     if (!await throttle(env, (req.headers.get('cf-connecting-ip') || 'unknown') + ':admin-login', 8)) return fail('محاولات كثيرة، حاول لاحقاً', 429);
     const b = await readBody(req);
     const supplied = typeof b.password === 'string' ? b.password : '';
-    if (!supplied || supplied.length > 128 || (await hash(supplied)) !== (await hash(env.ADMIN_PASSWORD))) return fail('كلمة المرور غير صحيحة', 401);
+    if (!supplied || supplied.length > 128) return fail('كلمة المرور غير صحيحة', 401);
+    await env.DB.prepare('CREATE TABLE IF NOT EXISTS admin_credentials (id INTEGER PRIMARY KEY CHECK (id = 1), salt TEXT NOT NULL, password_hash TEXT NOT NULL, updated_at INTEGER NOT NULL)').run();
+    let credential = await env.DB.prepare('SELECT salt, password_hash FROM admin_credentials WHERE id=1').first();
+    if (credential) {
+      const candidate = await derive(supplied, credential.salt);
+      if (candidate !== credential.password_hash) return fail('كلمة المرور غير صحيحة', 401);
+    } else {
+      if (!env.ADMIN_PASSWORD || (await hash(supplied)) !== (await hash(env.ADMIN_PASSWORD))) return fail('كلمة المرور غير صحيحة', 401);
+      const salt = random();
+      const password_hash = await derive(supplied, salt);
+      await env.DB.prepare('INSERT INTO admin_credentials (id, salt, password_hash, updated_at) VALUES (1, ?, ?, ?)').bind(salt, password_hash, Date.now()).run();
+    }
     const email = String(env.ADMIN_USER_EMAIL || 'admin@saee.local').trim().toLowerCase();
     const existing = await env.DB.prepare('SELECT id FROM users WHERE email=?').bind(email).first();
     let userId;
@@ -50,6 +61,30 @@ export default {
     const token = random();
     await env.DB.prepare('INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,?)').bind(await hash(token), userId, Date.now() + 7 * 86400000).run();
     return reply({ message: 'تم تسجيل دخول الإدارة' }, 200, { 'set-cookie': cookie(token, 604800) });
+   }
+   if (path === '/api/admin-change-password' && req.method === 'POST') {
+    const user = await identity(req, env);
+    if (!user?.is_admin) return fail('يجب تسجيل الدخول إلى الإدارة أولاً', 401);
+    const ip = req.headers.get('cf-connecting-ip') || 'unknown';
+    if (!await throttle(env, ip + ':admin-change-password', 5)) return fail('محاولات كثيرة، حاول لاحقاً', 429);
+    const b = await readBody(req);
+    const currentPassword = typeof b.currentPassword === 'string' ? b.currentPassword : '';
+    const newPassword = typeof b.newPassword === 'string' ? b.newPassword : '';
+    if (newPassword.length < 12 || newPassword.length > 128) return fail('كلمة المرور الجديدة يجب أن تكون بين 12 و128 حرفاً');
+    if (currentPassword === newPassword) return fail('اختر كلمة مرور مختلفة عن الحالية');
+    await env.DB.prepare('CREATE TABLE IF NOT EXISTS admin_credentials (id INTEGER PRIMARY KEY CHECK (id = 1), salt TEXT NOT NULL, password_hash TEXT NOT NULL, updated_at INTEGER NOT NULL)').run();
+    const credential = await env.DB.prepare('SELECT salt, password_hash FROM admin_credentials WHERE id=1').first();
+    if (credential) {
+      const candidate = await derive(currentPassword, credential.salt);
+      if (candidate !== credential.password_hash) return fail('كلمة المرور الحالية غير صحيحة', 401);
+    } else {
+      if (!env.ADMIN_PASSWORD || (await hash(currentPassword)) !== (await hash(env.ADMIN_PASSWORD))) return fail('كلمة المرور الحالية غير صحيحة', 401);
+    }
+    const salt = random();
+    const password_hash = await derive(newPassword, salt);
+    await env.DB.prepare('INSERT INTO admin_credentials (id, salt, password_hash, updated_at) VALUES (1, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET salt=excluded.salt, password_hash=excluded.password_hash, updated_at=excluded.updated_at').bind(salt, password_hash, Date.now()).run();
+    await env.DB.prepare('DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE is_admin=1)').run();
+    return reply({ success: true, message: 'تم تغيير كلمة المرور. سجّل الدخول مجدداً.' });
    }
    const user = await identity(req, env);
    if (path === '/api/content' && req.method === 'PUT') {
