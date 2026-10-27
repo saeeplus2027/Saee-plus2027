@@ -11,7 +11,6 @@ window.SiteStore = (() => {
   let remoteAvailable = false;
   let busy = false;
   let etag = null;
-  let needsPasswordSetup = false;
 
   const clone = (value) =>
     JSON.parse(JSON.stringify(value));
@@ -256,12 +255,22 @@ window.SiteStore = (() => {
   async function refresh() {
     loaded = false;
     try {
-      const response = await fetch(API_BASE + '/api/content', {
-        method: 'GET',
-        cache: 'no-store',
-        headers: { 'Accept': 'application/json' },
-        credentials: 'include'
-      });
+      // لا تترك الصفحة معلقة إذا كان خادم المحتوى لا يرد.
+      // بعد 8 ثوانٍ ننتقل إلى المحتوى المحفوظ/الافتراضي.
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      let response;
+      try {
+        response = await fetch(API_BASE + '/api/content', {
+          method: 'GET',
+          cache: 'no-store',
+          headers: { 'Accept': 'application/json' },
+          credentials: 'include',
+          signal: controller.signal
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
       const body = await readResponse(response);
       state = validate(body.state);
       state.revision = Number(body.revision ?? state.revision ?? 0);
@@ -277,7 +286,7 @@ window.SiteStore = (() => {
       // cached/default content so the public page still renders instead of
       // showing a permanent loading/404 screen. Editing stays disabled until
       // the shared API is available, to avoid pretending local saves sync.
-      console.warn('Saee Plus: shared content API unavailable; using cached/default content.', error);
+      console.warn('Saee Plus: shared content API unavailable or timed out; using cached/default content.', error);
       remoteAvailable = false;
       canEdit = false;
       etag = null;
@@ -300,22 +309,9 @@ window.SiteStore = (() => {
       body: JSON.stringify({ password })
     });
     const body = await readResponse(response);
-    needsPasswordSetup = Boolean(body.needsPasswordSetup);
     await refresh();
     if (!canEdit) throw Error('تم الدخول لكن الخادم لم يمنح صلاحية الإدارة.');
     return body;
-  }
-
-
-  async function changeAdminPassword(currentPassword, newPassword) {
-    const response = await fetch(API_BASE + '/api/admin-change-password', {
-      method: 'POST',
-      credentials: 'include',
-      cache: 'no-store',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({ currentPassword, newPassword })
-    });
-    return await readResponse(response);
   }
 
   async function logoutAdmin() {
@@ -346,8 +342,9 @@ window.SiteStore = (() => {
     get state() { return state; },
     get loaded() { return loaded; },
     get canEdit() { return canEdit; },
+    get remoteAvailable() { return remoteAvailable; },
     remote,
-    ready: Promise.resolve(),
+    ready,
     clone,
     save,
     validate,
@@ -355,8 +352,6 @@ window.SiteStore = (() => {
     key,
     reload: () => refresh(),
     loginAdmin,
-    changeAdminPassword,
-    get needsPasswordSetup() { return needsPasswordSetup; },
     logoutAdmin
   };
 })();
