@@ -72,9 +72,22 @@ async function readBody(req) {
   return JSON.parse(text);
 }
 
+// Session token: HttpOnly cookie first, then "Authorization: Bearer <token>".
+// The Bearer fallback keeps the admin working in browsers that block
+// third-party cookies (Safari / iOS / private tabs), because the site on
+// GitHub Pages and the Worker live on different domains.
+function sessionToken(req) {
+  return (
+    (req.headers.get('cookie') || '')
+      .match(/(?:^|;\s*)saee_session=([a-f0-9]{64})/)?.[1] ||
+    (req.headers.get('authorization') || '')
+      .match(/^Bearer ([a-f0-9]{64})$/)?.[1] ||
+    null
+  );
+}
+
 async function identity(req, env) {
-  const token = (req.headers.get('cookie') || '')
-    .match(/(?:^|;\s*)saee_session=([a-f0-9]{64})/)?.[1];
+  const token = sessionToken(req);
 
   if (!token) return null;
 
@@ -106,6 +119,40 @@ async function throttle(env, key, limit = 10) {
   return row.count <= limit;
 }
 
+// ---------------------------------------------------------------
+// Image storage (D1). Keeps big Base64 images out of the main content
+// JSON so the site content stays far below the save limit.
+// ---------------------------------------------------------------
+const MEDIA_MIME = {
+  png: 'image/png',
+  jpeg: 'image/jpeg',
+  webp: 'image/webp',
+  gif: 'image/gif'
+};
+
+function sniffImage(b) {
+  if (b.length < 12) return null;
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'png';
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'jpeg';
+  if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38) return 'gif';
+  if (
+    b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
+    b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50
+  ) return 'webp';
+  return null;
+}
+
+async function ensureMedia(env) {
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS media (
+      hash TEXT PRIMARY KEY,
+      ext TEXT NOT NULL,
+      data TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    )
+  `).run();
+}
+
 export default {
   async fetch(req, env) {
     const origin = req.headers.get('origin') || '';
@@ -119,7 +166,7 @@ export default {
       ? {
           'access-control-allow-origin': origin,
           'access-control-allow-credentials': 'true',
-          'access-control-allow-headers': 'Content-Type, If-Match',
+          'access-control-allow-headers': 'Content-Type, If-Match, Authorization',
           'vary': 'Origin'
         }
       : {};
@@ -136,7 +183,7 @@ export default {
         headers: {
           ...cors,
           'access-control-allow-methods': 'GET,POST,PUT,OPTIONS',
-          'access-control-allow-headers': 'Content-Type, If-Match',
+          'access-control-allow-headers': 'Content-Type, If-Match, Authorization',
           'access-control-max-age': '600'
         }
       });
@@ -320,7 +367,8 @@ export default {
         return reply(
           {
             message: 'تم تسجيل دخول الإدارة',
-            needsPasswordSetup: !credential
+            needsPasswordSetup: !credential,
+            token
           },
           200,
           { 'set-cookie': cookie(token, 604800) }
@@ -456,6 +504,81 @@ export default {
       // =========================================
 
       const user = await identity(req, env);
+
+      // =========================================
+      // MEDIA: PUBLIC READ
+      // =========================================
+      const mediaMatch = path.match(
+        /^\/api\/media\/([a-f0-9]{64})\.(png|jpeg|webp|gif)$/
+      );
+
+      if (mediaMatch && req.method === 'GET') {
+        await ensureMedia(env);
+
+        const row = await env.DB.prepare(
+          'SELECT ext, data FROM media WHERE hash = ?'
+        ).bind(mediaMatch[1]).first();
+
+        if (!row || row.ext !== mediaMatch[2]) {
+          return fail('Not found', 404);
+        }
+
+        const raw = atob(row.data);
+        const bytes = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+
+        return new Response(bytes, {
+          status: 200,
+          headers: {
+            ...cors,
+            'content-type': MEDIA_MIME[row.ext],
+            'cache-control': 'public, max-age=31536000, immutable',
+            'cross-origin-resource-policy': 'cross-site',
+            'x-content-type-options': 'nosniff'
+          }
+        });
+      }
+
+      // =========================================
+      // MEDIA: ADMIN UPLOAD
+      // =========================================
+      if (path === '/api/media' && req.method === 'POST') {
+        if (!user?.is_admin) {
+          return fail('يجب تسجيل الدخول إلى الإدارة أولاً', 401);
+        }
+
+        const b = await readBody(req);
+        const m = String(b.dataUrl || '').match(
+          /^data:image\/(png|jpeg|webp|gif);base64,([A-Za-z0-9+/=]+)$/
+        );
+
+        if (!m) return fail('صيغة الصورة غير مدعومة');
+
+        let raw;
+        try { raw = atob(m[2]); } catch (_) { return fail('الصورة تالفة'); }
+
+        if (raw.length > 900000) {
+          return fail('الصورة كبيرة جداً بعد الضغط', 413);
+        }
+
+        const bytes = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+
+        if (sniffImage(bytes) !== m[1]) {
+          return fail('محتوى الملف لا يطابق نوع الصورة');
+        }
+
+        const id = hex(await crypto.subtle.digest('SHA-256', bytes));
+
+        await ensureMedia(env);
+
+        await env.DB.prepare(
+          `INSERT OR IGNORE INTO media (hash, ext, data, created_at)
+           VALUES (?, ?, ?, ?)`
+        ).bind(id, m[1], m[2], Date.now()).run();
+
+        return reply({ url: `/api/media/${id}.${m[1]}` });
+      }
 
       if (path === '/api/content' && req.method === 'PUT') {
         if (!user?.is_admin) {
@@ -609,8 +732,7 @@ export default {
       // =========================================
 
       if (path === '/api/logout' && req.method === 'POST') {
-        const token = (req.headers.get('cookie') || '')
-          .match(/saee_session=([a-f0-9]{64})/)?.[1];
+        const token = sessionToken(req);
 
         if (token) {
           await env.DB.prepare(

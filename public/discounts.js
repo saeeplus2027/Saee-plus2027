@@ -35,7 +35,12 @@
             return 'account:' + String(email).trim().toLowerCase();
           }
         } catch (error) {
-          // قد تكون الجلسة مخزنة كنص عادي.
+          // الجلسة مخزنة كنص عادي (البريد الإلكتروني مباشرة).
+          const plain = String(session).trim().toLowerCase();
+
+          if (plain.includes('@')) {
+            return 'account:' + plain;
+          }
         }
       }
 
@@ -173,6 +178,12 @@
      6. تحديث شكل الزر بحسب حالة الخصم
      --------------------------------------------------------- */
 
+  function setText(element, text) {
+    if (element.textContent !== text) {
+      element.textContent = text;
+    }
+  }
+
   function updateButton(button) {
     if (!button || !button.dataset.discountId) {
       return;
@@ -203,7 +214,7 @@
 
     if (expiry > Date.now()) {
       button.disabled = true;
-      button.textContent = 'تم الخصم ✓';
+      setText(button, 'تم الخصم ✓');
 
       button.setAttribute(
         'aria-label',
@@ -215,13 +226,15 @@
 
       timer.hidden = false;
 
-      timer.textContent =
+      setText(
+        timer,
         'إعادة التفعيل بعد ' +
-        formatRemaining(expiry - Date.now());
+        formatRemaining(expiry - Date.now())
+      );
 
     } else {
       button.disabled = false;
-      button.textContent = 'تم الخصم';
+      setText(button, 'تم الخصم');
 
       button.setAttribute(
         'aria-label',
@@ -232,7 +245,7 @@
       button.style.cursor = 'pointer';
 
       timer.hidden = true;
-      timer.textContent = '';
+      setText(timer, '');
     }
   }
 
@@ -338,8 +351,19 @@
       document.getElementById('dialog-content');
 
     if (modalContent) {
+      let scheduled = false;
+
       const observer = new MutationObserver(function () {
-        refreshButtons();
+        if (scheduled) {
+          return;
+        }
+
+        scheduled = true;
+
+        window.requestAnimationFrame(function () {
+          scheduled = false;
+          refreshButtons();
+        });
       });
 
       observer.observe(modalContent, {
