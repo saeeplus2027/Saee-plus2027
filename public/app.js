@@ -23,7 +23,50 @@ window.addEventListener('hashchange',()=>{category='الكل';query='';render();
 function toast(t){const e=document.getElementById('toast');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2700)}
 function saveFavorite(id,b){favorites=favorites.includes(id)?favorites.filter(x=>x!==id):[...favorites,id];localStorage.setItem('sai-favorites',JSON.stringify(favorites));if(b){b.classList.toggle('saved',favorites.includes(id));b.setAttribute('aria-pressed',favorites.includes(id))}toast(favorites.includes(id)?'أُضيفت إلى مفضلتك':'أُزيلت من المفضلة')}
 function modal(html){document.getElementById('dialog-content').innerHTML=html;const d=document.getElementById('dialog');if(!d.open)d.showModal()}
-function details(id){let x=items.find(x=>x.id===id);if(!x)return;const isDiscount=x.type==='discounts';const locationUrl=String(x.shopLocation||'').trim();const safeLocation=/^https?:\/\//i.test(locationUrl)?locationUrl:'';const shopPhotos=[x.shopImage1,x.shopImage2].filter(Boolean);const projectPhotos=Array.isArray(x.gallery)?x.gallery.filter(Boolean).slice(0,10):[];modal(`<span class="kicker">${titles[x.type]} · التفاصيل</span><h2>${escapeHtml(x.title)}</h2>${x.type==='projects'&&projectPhotos.length?`<div class="project-photo-gallery" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:12px 0 18px">${projectPhotos.map((src,i)=>`<a href="${escapeHtml(SiteStore.imageSrc(src))}" target="_blank" rel="noopener noreferrer" aria-label="فتح الصورة ${i+1} بحجم كامل"><img src="${escapeHtml(SiteStore.imageSrc(src))}" alt="${escapeHtml(x.title)} - صورة ${i+1}" loading="lazy" style="width:100%;height:150px;object-fit:cover;border-radius:12px;border:1px solid #e1e8df"></a>`).join('')}</div>`:x.image?`<img src="${escapeHtml(SiteStore.imageSrc(x.image))}" alt="${escapeHtml(x.title)}" style="width:100%;height:180px;object-fit:cover;border-radius:12px;margin-bottom:12px">`:''}<p>${escapeHtml(x.extra||x.desc)}</p>${isDiscount&&shopPhotos.length?`<div class="discount-shop-photos" style="display:grid;grid-template-columns:repeat(${shopPhotos.length===1?1:2},minmax(0,1fr));gap:10px;margin:14px 0">${shopPhotos.map((src,i)=>`<img src="${escapeHtml(SiteStore.imageSrc(src))}" alt="صورة ${i+1} من ${escapeHtml(x.title)}" style="width:100%;height:160px;object-fit:cover;border-radius:12px;border:1px solid #e1e8df">`).join('')}</div>`:''}${isDiscount&&safeLocation?`<p><a class="button" href="${escapeHtml(safeLocation)}" target="_blank" rel="noopener noreferrer">📍 عرض موقع المحل</a></p>`:''}${x.price?`<p class="price">السعر التوضيحي: ${escapeHtml(x.price)}</p>`:''}<p>${escapeHtml(x.contact||"لم تُضف بيانات تواصل لهذا الإعلان بعد.")}</p><button class="button" onclick="saveFavorite('${id}');this.textContent=favorites.includes('${id}')?'محفوظ في المفضلة ✓':'حفظ في المفضلة'">${favorites.includes(id)?'محفوظ في المفضلة ✓':'حفظ في المفضلة ♡'}</button>`)}
+
+const SAEE_DISCOUNT_DAY = 24 * 60 * 60 * 1000;
+function saeeDiscountKey(id){
+  let scope='guest';
+  try {
+    const raw=localStorage.getItem('sai-local-session-v1')||'';
+    let s=raw; try { const o=JSON.parse(raw); s=o.email||o.user?.email||o.account?.email||raw; } catch(_) {}
+    s=String(s||'').trim().toLowerCase();
+    if(s && s!=='null' && s!=='{}' && s!=='undefined') scope=s;
+    else { scope=localStorage.getItem('saee-discount-browser-id'); if(!scope){scope='guest-'+Math.random().toString(36).slice(2)+Date.now();localStorage.setItem('saee-discount-browser-id',scope);} }
+  } catch(_) {}
+  return 'saee-discount-used:'+encodeURIComponent(scope)+':'+encodeURIComponent(String(id));
+}
+function markSaeeDiscountUsed(btn){
+  const id=btn && btn.dataset ? btn.dataset.discountId : '';
+  if(!id) return;
+  const key=saeeDiscountKey(id), now=Date.now();
+  let expiry=0; try { expiry=Number(localStorage.getItem(key)||0); } catch(_) {}
+  if(expiry>now){ updateSaeeDiscountButton(btn,expiry); return; }
+  expiry=now+SAEE_DISCOUNT_DAY;
+  try { localStorage.setItem(key,String(expiry)); } catch(_) { alert('تعذر حفظ الاستخدام في المتصفح.'); return; }
+  updateSaeeDiscountButton(btn,expiry);
+  const p=btn.parentElement.querySelector('.saee-discount-countdown'); if(p) p.textContent='تم تسجيل الخصم ✓ سيُعاد تفعيل الزر بعد 24 ساعة.';
+}
+function updateSaeeDiscountButton(btn,expiry){
+  const now=Date.now(), p=btn.parentElement.querySelector('.saee-discount-countdown');
+  if(expiry>now){
+    btn.disabled=true; btn.textContent='تم الخصم ✓'; btn.style.opacity='.72'; btn.style.cursor='not-allowed';
+    const total=Math.ceil((expiry-now)/1000), h=Math.floor(total/3600), m=Math.floor((total%3600)/60);
+    if(p) p.textContent='تم استخدام الخصم. يرجع يتفعّل بعد '+h+' ساعة و '+m+' دقيقة.';
+  } else {
+    btn.disabled=false; btn.textContent='تم الخصم'; btn.style.opacity='1'; btn.style.cursor='pointer';
+    if(p) p.textContent='الخصم متاح للاستخدام.';
+  }
+}
+function refreshSaeeDiscountButton(){
+  const btn=document.querySelector('#dialog-content .saee-discount-use'); if(!btn) return;
+  let expiry=0; try { expiry=Number(localStorage.getItem(saeeDiscountKey(btn.dataset.discountId))||0); } catch(_) {}
+  if(expiry<=Date.now() && expiry!==0){ try{localStorage.removeItem(saeeDiscountKey(btn.dataset.discountId));}catch(_){} expiry=0; }
+  updateSaeeDiscountButton(btn,expiry);
+}
+setInterval(refreshSaeeDiscountButton,15000);
+
+function details(id){let x=items.find(x=>x.id===id);if(!x)return;const isDiscount=x.type==='discounts';const locationUrl=String(x.shopLocation||'').trim();const safeLocation=/^https?:\/\//i.test(locationUrl)?locationUrl:'';const shopPhotos=[x.shopImage1,x.shopImage2].filter(Boolean);const projectPhotos=Array.isArray(x.gallery)?x.gallery.filter(Boolean).slice(0,10):[];modal(`<span class="kicker">${titles[x.type]} · التفاصيل</span><h2>${escapeHtml(x.title)}</h2>${x.type==='projects'&&projectPhotos.length?`<div class="project-photo-gallery" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:12px 0 18px">${projectPhotos.map((src,i)=>`<a href="${escapeHtml(SiteStore.imageSrc(src))}" target="_blank" rel="noopener noreferrer" aria-label="فتح الصورة ${i+1} بحجم كامل"><img src="${escapeHtml(SiteStore.imageSrc(src))}" alt="${escapeHtml(x.title)} - صورة ${i+1}" loading="lazy" style="width:100%;height:150px;object-fit:cover;border-radius:12px;border:1px solid #e1e8df"></a>`).join('')}</div>`:x.image?`<img src="${escapeHtml(SiteStore.imageSrc(x.image))}" alt="${escapeHtml(x.title)}" style="width:100%;height:180px;object-fit:cover;border-radius:12px;margin-bottom:12px">`:''}<p>${escapeHtml(x.extra||x.desc)}</p>${isDiscount&&shopPhotos.length?`<div class="discount-shop-photos" style="display:grid;grid-template-columns:repeat(${shopPhotos.length===1?1:2},minmax(0,1fr));gap:10px;margin:14px 0">${shopPhotos.map((src,i)=>`<img src="${escapeHtml(SiteStore.imageSrc(src))}" alt="صورة ${i+1} من ${escapeHtml(x.title)}" style="width:100%;height:160px;object-fit:cover;border-radius:12px;border:1px solid #e1e8df">`).join('')}</div>`:''}${isDiscount&&safeLocation?`<p><a class="button" href="${escapeHtml(safeLocation)}" target="_blank" rel="noopener noreferrer">📍 عرض موقع المحل</a></p>`:''}${x.price?`<p class="price">السعر التوضيحي: ${escapeHtml(x.price)}</p>`:''}<p>${escapeHtml(x.contact||"لم تُضف بيانات تواصل لهذا الإعلان بعد.")}</p>${isDiscount?`<div class="saee-discount-action" style="margin:16px 0;padding:12px;border:1px solid #d5e8df;border-radius:14px"><button type="button" class="button saee-discount-use" data-discount-id="${escapeHtml(id)}" onclick="markSaeeDiscountUsed(this)">تم الخصم</button><p class="saee-discount-countdown" style="margin:8px 0 0;font-size:13px;color:#547066" aria-live="polite"></p></div>`:''}<button class="button" onclick="saveFavorite('${id}');this.textContent=favorites.includes('${id}')?'محفوظ في المفضلة ✓':'حفظ في المفضلة'">${favorites.includes(id)?'محفوظ في المفضلة ✓':'حفظ في المفضلة ♡'}</button>`)}
 function showFavorites(){favorites=favorites.filter(id=>items.some(x=>x.id===id));modal(`<span class="kicker">اختياراتك، في مكان واحد</span><h2>المفضلة</h2>${favorites.length?favorites.map(id=>items.find(x=>x.id===id)).filter(Boolean).map(x=>`<button class="place-card" onclick="details('${x.id}')"><h3>${escapeHtml(x.title)}</h3><p>${titles[x.type]} ←</p></button>`).join(''):'<p>مفضلتك فارغة حتى الآن. اضغط على القلب بجانب أي عرض أو كتاب أو منتج لحفظه هنا.</p>'}`)}
 function addForm(type){if(type==='market'||type==='library'){let loggedIn=false;try{const session=localStorage.getItem('sai-local-session-v1');loggedIn=!!session&&session!=='null'&&session!=='{}';}catch(e){}if(!loggedIn){const authButton=document.getElementById('sai-open-auth');if(authButton)authButton.click();toast('سجّل دخولك أولًا حتى تتمكن من إضافة '+(type==='market'?'منتجك':'كتابك'));return;}}const label={library:'كتابك',market:'منتجك',experts:'خبرتك',projects:'مشروعك'}[type]||'مشروعك';modal(`<span class="kicker">كل مشاركة تصنع فرقًا</span><h2>شارك ${label}</h2><p>تُحفظ المشاركات عبر حساب مالك الموقع.</p><form class="form-grid" onsubmit="submitEntry(event,'${type}')"><label>العنوان<input name="title" required maxlength="70" placeholder="اكتب عنوانًا واضحًا"></label><label>التصنيف<select name="cat">${[...new Set([...base.filter(x=>x.type===type).map(x=>x.cat),'عام'])].map(c=>`<option>${escapeHtml(c)}</option>`).join('')}</select></label><label>وصف مختصر<textarea name="desc" required rows="3" maxlength="350" placeholder="احكِ لنا عن مشاركتك..."></textarea></label>${type==='market'?'<label>السعر بالدينار الأردني<input name="price" type="number" min="0" step="0.01" required></label>':''}<button class="button" type="submit">حفظ المشاركة <span>↖</span></button></form>`)}
 async function submitEntry(e,type){e.preventDefault();let f=new FormData(e.target);let item={id:'local'+Date.now(),type,title:f.get('title').trim(),cat:f.get('cat'),desc:f.get('desc').trim(),badge:'مشاركتك',meta:f.get('cat'),emoji:'✦'};if(!item.title||!item.desc)return;if(f.get('price'))item.price=f.get('price')+' د.أ';try{const next=SiteStore.clone(SiteStore.state);next.items.push(item);await SiteStore.save(next);}catch(error){toast(error.message);return;}document.getElementById('dialog').close();category='الكل';query='';if(route===type)listing();else location.hash=type;toast('تم حفظ المشاركة على الموقع بنجاح')}
