@@ -458,59 +458,242 @@
   </style>
 
 
-  <style id="saee-restore-skill-passport">
-    /* Restore the Skill Passport link on the public site. */
-    body:not(.admin) > header > nav a[href="skill-passport.html"] {
-      display: inline-flex !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-      flex: 0 0 auto !important;
-      white-space: nowrap !important;
-      position: relative !important;
-      z-index: 5 !important;
-    }
+  <style id="saee-inquiries-styles">
+    .saee-inquiries-nav { position: relative; display: inline-flex; align-items: center; }
+    .saee-inquiries-nav > #saee-inquiries-toggle { border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; padding: 8px 10px; white-space: nowrap; }
+    .saee-inquiries-nav > #saee-inquiries-toggle:hover, .saee-inquiries-nav > #saee-inquiries-toggle:focus-visible { color: #075550; }
+    .saee-inquiries-menu { position: absolute; z-index: 10000; top: calc(100% + 10px); inset-inline-start: 0; width: min(385px, 88vw); padding: 8px 10px; background: #faf8f2; color: #173c39; border: 1px solid #e4e7df; border-radius: 4px; box-shadow: 0 12px 32px #173c3918; text-align: right; }
+    .saee-inquiries-menu[hidden] { display: none !important; }
+    .saee-inquiries-menu button { display: block; width: 100%; min-height: 48px; padding: 11px 14px; border: 0; border-radius: 3px; background: transparent; color: inherit; text-align: right; font: inherit; font-size: 14px; line-height: 1.6; cursor: pointer; }
+    .saee-inquiries-menu button:hover, .saee-inquiries-menu button:focus-visible { background: #edf3ee; color: #075550; }
+    @media (hover: hover) and (min-width: 701px) { .saee-inquiries-nav:hover > .saee-inquiries-menu, .saee-inquiries-nav:focus-within > .saee-inquiries-menu { display: block; } .saee-inquiries-nav:hover > #saee-inquiries-toggle, .saee-inquiries-nav:focus-within > #saee-inquiries-toggle { color: #075550; } }
+    #saee-inquiry-dialog { box-sizing: border-box; width: min(470px, calc(100% - 28px)); max-height: min(80dvh, 680px); overflow-y: auto; margin: auto; padding: 24px; border: 1px solid #dce8e2; border-radius: 20px; background: #faf8f2; color: #173c39; font-family: inherit; text-align: right; box-shadow: 0 24px 70px #173c3926; }
+    #saee-inquiry-dialog::backdrop { background: rgb(7 55 50 / 42%); }
+    #saee-inquiry-dialog .saee-inquiry-close { display: block; margin-inline-start: auto; width: 36px; height: 36px; border: 0; border-radius: 50%; background: #eaf2ed; color: #075550; font: inherit; font-size: 24px; cursor: pointer; }
+    #saee-inquiry-dialog h2 { margin: 8px 0 10px; color: #075550; font-size: 22px; }
+    #saee-inquiry-dialog p { line-height: 1.8; }
+    #saee-inquiry-dialog .saee-inquiry-contact { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 10px 0; padding: 13px; border: 1px solid #dce8e2; border-radius: 12px; background: #fff; }
+    #saee-inquiry-dialog .saee-inquiry-contact a { color: #075550; direction: ltr; unicode-bidi: embed; font-weight: 700; text-decoration: none; white-space: nowrap; }
+    #saee-inquiry-dialog .saee-inquiry-note { color: #62716b; font-size: 13px; }
+    @media (max-width: 700px) { .saee-inquiries-nav { display: block; width: 100%; } .saee-inquiries-nav > #saee-inquiries-toggle { width: 100%; text-align: right; } .saee-inquiries-menu { position: static; width: 100%; margin-top: 4px; box-shadow: none; } #saee-inquiry-dialog { padding: 18px; } #saee-inquiry-dialog .saee-inquiry-contact { align-items: flex-start; flex-direction: column; } }
+  </style>
 
-    /* On phones, show it when the menu is opened. */
-    @media (max-width: 700px) {
-      body:not(.admin) > header > nav.open a[href="skill-passport.html"] {
+
+  <style id="saee-header-button-size-fix">
+    /* ضبط توزيع القائمة وأحجام الأزرار في الهيدر */
+    @media (min-width: 1201px) {
+      body > header {
         display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 18px !important;
+        height: auto !important;
+        min-height: 88px !important;
+        padding: 14px 28px !important;
+        box-sizing: border-box !important;
+        overflow: visible !important;
+      }
+      body > header > .brand { flex: 0 0 auto !important; }
+      body > header > nav {
+        position: static !important;
+        display: flex !important;
+        flex: 1 1 auto !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex-wrap: nowrap !important;
+        gap: clamp(8px, 1.15vw, 18px) !important;
+        width: auto !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+      }
+      body > header > nav > a,
+      body > header > nav .saee-inquiries-nav > #saee-inquiries-toggle {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-height: 42px !important;
+        padding: 8px 5px !important;
+        font-size: 14px !important;
+        line-height: 1.35 !important;
+        white-space: nowrap !important;
+        text-align: center !important;
+      }
+      body > header > .header-actions {
+        display: flex !important;
+        flex: 0 0 auto !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        gap: 10px !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+      }
+      body > header > .header-actions .button.small {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-sizing: border-box !important;
+        min-height: 48px !important;
+        height: 48px !important;
+        padding: 0 16px !important;
+        margin: 0 !important;
+        font-size: 14px !important;
+        line-height: 1.2 !important;
+        white-space: nowrap !important;
+        flex: 0 0 auto !important;
+      }
+      body > header > .header-actions > a.button.small { min-width: 132px !important; }
+      body > header > .header-actions #sai-open-auth { max-width: 190px !important; }
+      body > header > .header-actions > .icon-btn {
+        flex: 0 0 42px !important;
+        width: 42px !important;
+        height: 42px !important;
+        min-width: 42px !important;
+        padding: 0 !important;
+      }
+      body > header > .header-actions #menu { display: none !important; }
+    }
+    @media (min-width: 701px) and (max-width: 1200px) {
+      body > header > .header-actions .button.small {
+        min-height: 44px !important; height: 44px !important;
+        padding: 0 13px !important; font-size: 13px !important;
+        white-space: nowrap !important;
+      }
+      body > header > .header-actions > a.button.small { min-width: 120px !important; }
+      body > header > nav > a,
+      body > header > nav .saee-inquiries-nav > #saee-inquiries-toggle {
+        min-height: 38px !important; padding: 7px 5px !important;
+        font-size: 13px !important; line-height: 1.35 !important;
+      }
+    }
+    @media (max-width: 700px) {
+      body > header > .header-actions .button.small {
+        min-height: 42px !important; height: 42px !important;
+        padding: 0 12px !important; font-size: 12px !important;
+        white-space: nowrap !important;
+      }
+      body > header > .header-actions > a.button.small { display: none !important; }
+    }
+  </style>
+
+
+  <style id="saee-show-skills-passport-final-fix">
+    /* Keep the skills passport visible by giving the navigation its own row. */
+    @media (min-width: 701px) {
+      body > header {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        height: auto !important;
+        min-height: 0 !important;
+        gap: 12px 20px !important;
+        padding-top: 14px !important;
+        padding-bottom: 14px !important;
+        overflow: visible !important;
+      }
+      body > header > .brand { order: 1 !important; flex: 0 0 auto !important; }
+      body > header > .header-actions { order: 2 !important; margin-inline-start: auto !important; flex: 0 0 auto !important; }
+      body > header > nav {
+        order: 3 !important;
+        display: flex !important;
+        flex: 1 0 100% !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 10px 22px !important;
+        overflow: visible !important;
+        visibility: visible !important;
+      }
+      body > header > nav a,
+      body > header > nav .saee-inquiries-nav {
+        display: inline-flex !important;
+        flex: 0 0 auto !important;
         visibility: visible !important;
         opacity: 1 !important;
-        width: 100% !important;
         white-space: nowrap !important;
+      }
+      body > header > nav a[href="skill-passport.html"] {
+        display: inline-flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        order: 3 !important;
       }
     }
   </style>
 
 
-  <style id="saee-start-journey-button-fix">
-    /* Keep "ابدأ رحلتك" on one line and match the header button height. */
-    body > header > .header-actions > a.button.small[href="#services"] {
-      display: inline-flex !important;
-      flex-direction: row !important;
-      align-items: center !important;
-      justify-content: center !important;
-      flex: 0 0 auto !important;
-      width: max-content !important;
-      min-width: max-content !important;
-      max-width: none !important;
-      height: 60px !important;
-      min-height: 60px !important;
-      max-height: 60px !important;
-      padding: 11px 19px !important;
-      gap: 12px !important;
-      box-sizing: border-box !important;
-      white-space: nowrap !important;
-      word-break: keep-all !important;
-      overflow-wrap: normal !important;
-      line-height: 1.2 !important;
-    }
-
-    body > header > .header-actions > a.button.small[href="#services"] span {
-      display: inline-block !important;
-      flex: 0 0 auto !important;
-      white-space: nowrap !important;
-      line-height: 1 !important;
+  <style id="saee-mobile-navigation-visibility-fix">
+    /* إظهار جواز المهارات والاستفسارات على الهاتف داخل قائمة ☰ */
+    @media (max-width: 700px) {
+      body > header {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: 12px !important;
+        overflow: visible !important;
+      }
+      body > header > .brand { order: 1 !important; }
+      body > header > .header-actions {
+        order: 2 !important;
+        flex: 1 0 100% !important;
+        width: 100% !important;
+      }
+      body > header > nav {
+        order: 3 !important;
+        display: none !important;
+        position: static !important;
+        inset: auto !important;
+        flex: 1 0 100% !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 10px !important;
+        box-sizing: border-box !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        justify-content: flex-start !important;
+        gap: 4px !important;
+        background: #faf8f2 !important;
+        border: 1px solid #dce8e2 !important;
+        border-radius: 14px !important;
+        overflow: visible !important;
+      }
+      body > header > nav.open {
+        display: flex !important;
+      }
+      body > header > nav > a,
+      body > header > nav > a[href="skill-passport.html"],
+      body > header > nav .saee-inquiries-nav > #saee-inquiries-toggle {
+        display: flex !important;
+        width: 100% !important;
+        min-height: 44px !important;
+        box-sizing: border-box !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        padding: 10px 12px !important;
+        white-space: normal !important;
+        text-align: right !important;
+        font-size: 14px !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
+      body > header > nav .saee-inquiries-nav {
+        display: block !important;
+        width: 100% !important;
+      }
+      body > header > nav .saee-inquiries-menu {
+        position: static !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-top: 4px !important;
+        box-sizing: border-box !important;
+      }
     }
   </style>
 
@@ -534,7 +717,16 @@
     <a href="#discounts">خصومات سعي</a>
     <a href="#market">السوق المحلي</a>
     <a href="#projects">فرص المشاريع</a>
-    <button type="button" class="saee-inquiry-nav" id="saee-inquiry-open">الاستفسارات</button>
+    <div class="saee-inquiries-nav">
+      <button type="button" id="saee-inquiries-toggle" aria-expanded="false" aria-controls="saee-inquiries-menu" aria-haspopup="true">استفسارات</button>
+      <div id="saee-inquiries-menu" class="saee-inquiries-menu" hidden>
+        <button type="button" data-inquiry="loans">قروض ومنح ومكارم وأسئلة جامعية</button>
+        <button type="button" data-inquiry="opportunities">الفرص</button>
+        <button type="button" data-inquiry="talents">المواهب</button>
+        <button type="button" data-inquiry="expert">اسأل خبير</button>
+        <button type="button" data-inquiry="projects">المشاريع</button>
+      </div>
+    </div>
   </nav>
 
   <div class="header-actions">
@@ -863,135 +1055,6 @@
 </dialog>
 
 <div id="toast" role="status"></div>
-
-<button type="button" id="saee-inquiry-float" aria-haspopup="dialog" aria-controls="saee-inquiry-dialog">💬 الاستفسارات</button>
-<dialog id="saee-inquiry-dialog" aria-labelledby="saee-inquiry-title">
-  <div class="saee-inquiry-form">
-    <button type="button" class="saee-inquiry-close" aria-label="إغلاق" id="saee-inquiry-close">×</button>
-    <h2 id="saee-inquiry-title">استفسارات سعي بلس</h2>
-    <p class="saee-inquiry-hours" id="saee-inquiry-hours">اختَر نوع الاستفسار لمعرفة جهة التواصل.</p>
-    <div id="saee-inquiry-categories" class="saee-inquiry-categories">
-      <button type="button" class="saee-inquiry-category" data-inquiry="university">استفسار قروض ومنح ومكارم والأسئلة الجامعية</button>
-      <button type="button" class="saee-inquiry-category" data-inquiry="opportunities">استفسار عن الفرص</button>
-      <button type="button" class="saee-inquiry-category" data-inquiry="talents">استفسار عن المواهب</button>
-      <button type="button" class="saee-inquiry-category" data-inquiry="expert">استفسار عن اسأل خبير</button>
-      <button type="button" class="saee-inquiry-category" data-inquiry="projects">استفسار عن المشاريع</button>
-      <button type="button" class="saee-inquiry-category secondary" data-inquiry="back">رجوع إلى خيارات الاستفسار</button>
-    </div>
-    <div id="saee-inquiry-details" hidden>
-      <h3 id="saee-inquiry-detail-title"></h3>
-      <p id="saee-inquiry-detail-note"></p>
-      <div id="saee-inquiry-contacts" class="saee-inquiry-contacts"></div>
-      <button type="button" id="saee-inquiry-back" class="saee-inquiry-back">رجوع إلى الاستفسارات</button>
-    </div>
-  </div>
-</dialog>
-<style id="saee-inquiry-style">
-  .saee-inquiry-nav { font:inherit; color:inherit; background:transparent; border:0; cursor:pointer; padding:8px 10px; border-radius:8px; }
-  .saee-inquiry-nav:hover { background:#07555012; }
-  #saee-inquiry-float { position:fixed; z-index:9998; inset-inline-end:18px; bottom:18px; display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px; padding:12px 18px; border:0; border-radius:999px; background:#075550; color:#fff; font:inherit; font-weight:700; box-shadow:0 8px 28px #0002; cursor:pointer; }
-  #saee-inquiry-dialog { width:min(92vw,540px); max-width:540px; max-height:85dvh; overflow:auto; padding:0; border:0; border-radius:18px; box-shadow:0 20px 70px #0004; }
-  #saee-inquiry-dialog::backdrop { background:#101a18a8; }
-  .saee-inquiry-form { position:relative; display:grid; gap:12px; padding:28px; direction:rtl; }
-  .saee-inquiry-form h2 { margin:0; color:#075550; padding-inline-end:38px; }
-  .saee-inquiry-form h3 { margin:8px 0 0; }
-  .saee-inquiry-form p { line-height:1.8; color:#53635b; margin:0; }
-  .saee-inquiry-hours { background:#eef7f3; padding:10px 12px; border-radius:10px; }
-  .saee-inquiry-categories,.saee-inquiry-contacts { display:grid; gap:10px; }
-  .saee-inquiry-category,.saee-inquiry-back { width:100%; text-align:right; font:inherit; padding:13px 14px; border:1px solid #d5e4dc; border-radius:12px; background:#fff; color:#153f36; cursor:pointer; }
-  .saee-inquiry-category:hover,.saee-inquiry-back:hover { border-color:#075550; background:#f2faf6; }
-  .saee-inquiry-category.secondary { color:#52645c; background:#f5f7f6; }
-  .saee-inquiry-contact { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:12px; border:1px solid #d8e6df; border-radius:12px; }
-  .saee-inquiry-contact strong { display:block; }
-  .saee-inquiry-contact a { color:#075550; font-weight:800; direction:ltr; white-space:nowrap; }
-  .saee-inquiry-contact a[aria-disabled="true"] { opacity:.5; pointer-events:none; }
-  .saee-inquiry-close { position:absolute; top:10px; inset-inline-end:12px; width:36px; height:36px; border:0; border-radius:50%; font-size:24px; background:#edf2ef; cursor:pointer; }
-  #saee-inquiry-dialog [hidden] { display:none !important; }
-  @media(max-width:700px) {
-    #saee-inquiry-float { inset-inline-end:12px; bottom:12px; min-height:46px; padding:11px 14px; font-size:14px; }
-    .saee-inquiry-form { padding:22px 16px 18px; }
-    .saee-inquiry-nav { width:100%; text-align:right; }
-    .saee-inquiry-contact { align-items:flex-start; flex-direction:column; }
-  }
-</style>
-<script id="saee-inquiry-script">
-(() => {
-  const dialog = document.getElementById('saee-inquiry-dialog');
-  const openButtons = [document.getElementById('saee-inquiry-open'), document.getElementById('saee-inquiry-float')];
-  const closeButton = document.getElementById('saee-inquiry-close');
-  const categories = document.getElementById('saee-inquiry-categories');
-  const details = document.getElementById('saee-inquiry-details');
-  const title = document.getElementById('saee-inquiry-detail-title');
-  const note = document.getElementById('saee-inquiry-detail-note');
-  const contacts = document.getElementById('saee-inquiry-contacts');
-  const hoursLine = document.getElementById('saee-inquiry-hours');
-  if (!dialog || !categories || !details) return;
-
-  const inquiryData = {
-    university: { title: 'القروض والمنح والمكارم والأسئلة الجامعية', people: [['عبد الرحمن','0798245512'],['تقى','0790730665']] },
-    opportunities: { title: 'الاستفسار عن الفرص', people: [['سلمى','0782153883']] },
-    talents: { title: 'الاستفسار عن المواهب', people: [['لجين','0770368592']] },
-    expert: { title: 'الاستفسار عن اسأل خبير', people: [['تقى','0790730665'],['حمزة','0788872569']] },
-    projects: { title: 'الاستفسار عن المشاريع', people: [['لين','0771059050']] }
-  };
-  const jordanTime = () => {
-    const parts = new Intl.DateTimeFormat('en-GB', { timeZone:'Asia/Amman', hour:'2-digit', minute:'2-digit', hourCycle:'h23' }).formatToParts(new Date());
-    const hour = Number(parts.find(p => p.type === 'hour')?.value || 0);
-    const minute = Number(parts.find(p => p.type === 'minute')?.value || 0);
-    return { hour, minute, open: hour >= 9 && (hour < 17) };
-  };
-  const resetView = () => { categories.hidden = false; details.hidden = true; };
-  const showInquiry = key => {
-    if (key === 'back') { resetView(); return; }
-    const item = inquiryData[key]; if (!item) return;
-    const time = jordanTime();
-    title.textContent = item.title;
-    note.textContent = time.open
-      ? 'التواصل متاح الآن. اضغط على الرقم للاتصال.'
-      : 'التواصل متاح من الساعة 9:00 صباحًا حتى 5:00 مساءً بتوقيت الأردن. يمكنك الرجوع والاتصال خلال ساعات الدوام.';
-    contacts.replaceChildren();
-    item.people.forEach(([person, phone]) => {
-      const row = document.createElement('div'); row.className = 'saee-inquiry-contact';
-      const label = document.createElement('strong'); label.textContent = person;
-      const number = document.createElement('a'); number.textContent = phone; number.href = 'tel:' + phone;
-      if (!time.open) { number.removeAttribute('href'); number.setAttribute('aria-disabled','true'); number.title = 'الاتصال متاح من 9 صباحًا إلى 5 مساءً بتوقيت الأردن'; }
-      row.append(label, number); contacts.append(row);
-    });
-    categories.hidden = true; details.hidden = false;
-  };
-  openButtons.filter(Boolean).forEach(button => button.addEventListener('click', () => { resetView(); hoursLine.textContent = 'اختَر نوع الاستفسار. الاتصال متاح من 9:00 صباحًا إلى 5:00 مساءً بتوقيت الأردن.'; dialog.showModal(); }));
-  closeButton?.addEventListener('click', () => dialog.close());
-  document.getElementById('saee-inquiry-back')?.addEventListener('click', resetView);
-  categories.addEventListener('click', event => { const button = event.target.closest('[data-inquiry]'); if (button) showInquiry(button.dataset.inquiry); });
-  dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
-
-  // Require a local account before opening add-project/product/book actions.
-  const SESSION_KEY = 'sai-local-session-v1';
-  const hasAccount = () => {
-    try { const email = localStorage.getItem(SESSION_KEY); return !!email && !!localStorage.getItem('sai-local-account-v1:' + encodeURIComponent(email)); }
-    catch { return false; }
-  };
-  const openRegister = () => {
-    const auth = document.getElementById('sai-auth');
-    const registerTab = document.querySelector('[data-auth-go="register"]');
-    if (auth && registerTab) {
-      if (!auth.open) auth.showModal();
-      registerTab.click();
-    } else {
-      alert('يرجى تسجيل الدخول أو إنشاء حساب أولًا.');
-      document.getElementById('sai-open-auth')?.click();
-    }
-  };
-  document.addEventListener('click', event => {
-    const target = event.target.closest('a,button,[role="button"]');
-    if (!target || target.closest('#saee-inquiry-dialog') || target.id === 'sai-open-auth') return;
-    const label = (target.innerText || target.getAttribute('aria-label') || target.title || '').replace(/\s+/g,' ').trim();
-    if (!/(اضف|أضف|إضافة|اضافة).{0,35}(مشروع|منتج|منتك|كتاب)|(?:مشروعك|منتجك|كتابك)/i.test(label)) return;
-    if (hasAccount()) return;
-    event.preventDefault(); event.stopImmediatePropagation(); openRegister();
-  }, true);
-})();
-</script>
 
 <script src="remote-config.js"></script>
 <script src="content-data.js"></script>
@@ -1537,36 +1600,48 @@
   "use strict";
 
   const bauCampusPlaces = [
-    { name: "كلية السلط التقنية – جامعة البلقاء التطبيقية، السلط", category: "الكليات والعمادات", query: "Al-Salt Technical College, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية الذكاء الاصطناعي – جامعة البلقاء التطبيقية، السلط", category: "الكليات والعمادات", query: "Faculty of Artificial Intelligence, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية الهندسة – المباني 2 و3", category: "الكليات والعمادات", query: "Faculty of Engineering Buildings 2 and 3, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية الأمير عبدالله بن غازي للاتصالات وتكنولوجيا المعلومات", category: "الكليات والعمادات", query: "Prince Abdullah Bin Ghazi Faculty for Information and Communication Technology, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية العلوم", category: "الكليات والعمادات", query: "Faculty of Science, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية التمريض", category: "الكليات والعمادات", query: "Faculty of Nursing, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية الأعمال", category: "الكليات والعمادات", query: "Faculty of Business, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية الحقوق والدراسات العليا وعمادة البحث العلمي", category: "الكليات والعمادات", query: "Faculty of Law Graduate Studies Scientific Research Deanship, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية السلط للعلوم الإنسانية", category: "الكليات والعمادات", query: "Al-Salt College for Human Sciences, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية التكنولوجيا الزراعية", category: "الكليات والعمادات", query: "Faculty of Agricultural Technology, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "عمادة شؤون الطلبة", category: "الكليات والعمادات", query: "Deanship of Student Affairs, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "رئاسة الجامعة", category: "الإدارة والخدمات", query: "Presidency Unit, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "وحدة التعاون والعلاقات الدولية", category: "الإدارة والخدمات", query: "Cooperation and International Relations Unit, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "وحدة الامتحانات", category: "الإدارة والخدمات", query: "Examination Unit, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "المكاتب الإدارية", category: "الإدارة والخدمات", query: "Administration Offices, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "وحدة القبول والتسجيل", category: "الإدارة والخدمات", query: "Admission and Registration Unit, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "المكتبة", category: "المرافق الجامعية", query: "Library, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "مركز الحاسوب", category: "المرافق الجامعية", query: "Computer Centre, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "مباني المحاضرات", category: "المرافق الجامعية", query: "Lecture Premises, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "مركز الابتكار والإبداع وريادة الأعمال", category: "المرافق الجامعية", query: "Innovation Creativity and Entrepreneurship Centre, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "مطعم الجامعة", category: "المرافق الجامعية", query: "University Restaurant, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "الملعب الرياضي", category: "المرافق الرياضية", query: "Stadium, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "ملعب الخماسي", category: "المرافق الرياضية", query: "Futsal Court, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "بوابات الجامعة", category: "المداخل والبوابات", query: "University Gates, Al-Balqa Applied University Main Campus, As-Salt, Jordan" }
+    { name: "كلية السلط التقنية", category: "الكليات والعمادات", query: "Al-Salt Technical College, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية الهندسة – مبنى 2", category: "الكليات والعمادات", query: "Engineering Building 2, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية الهندسة – مبنى 3", category: "الكليات والعمادات", query: "Engineering Building 3, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية تكنولوجيا المعلومات والاتصالات", category: "الكليات والعمادات", query: "Information and Communication Technology, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية العلوم", category: "الكليات والعمادات", query: "Faculty of Science, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية التمريض", category: "الكليات والعمادات", query: "Faculty of Nursing, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية الأعمال", category: "الكليات والعمادات", query: "Faculty of Business, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية الحقوق والدراسات العليا والبحث العلمي", category: "الكليات والعمادات", query: "Faculty of Law Graduate Studies Deanship of Scientific Research, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية السلط للعلوم الإنسانية", category: "الكليات والعمادات", query: "Al-Salt College for Human Sciences, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية التكنولوجيا الزراعية", category: "الكليات والعمادات", query: "Faculty of Agricultural Technology, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "عمادة شؤون الطلبة", category: "الكليات والعمادات", query: "Deanship of Student Affairs, Al-Balqa Applied University, As-Salt, Jordan" },
+
+    { name: "رئاسة الجامعة", category: "الإدارة والخدمات", query: "Presidency Unit, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "وحدة التعاون والعلاقات الدولية", category: "الإدارة والخدمات", query: "Cooperation and International Relations Unit, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "وحدة الامتحانات", category: "الإدارة والخدمات", query: "Examination Unit, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "المكاتب الإدارية", category: "الإدارة والخدمات", query: "Administration Offices, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "وحدة القبول والتسجيل", category: "الإدارة والخدمات", query: "Admission and Registration Unit, Al-Balqa Applied University, As-Salt, Jordan" },
+
+    { name: "المكتبة", category: "المرافق الجامعية", query: "Library, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "مركز الحاسوب", category: "المرافق الجامعية", query: "Computer Centre, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "قاعات المحاضرات", category: "المرافق الجامعية", query: "Lecture Premises, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "مركز الابتكار والإبداع وريادة الأعمال", category: "المرافق الجامعية", query: "Innovation Creativity and Entrepreneurship Centre, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "مطعم الجامعة", category: "المرافق الجامعية", query: "University Restaurant, Al-Balqa Applied University, As-Salt, Jordan" },
+
+    { name: "الملعب الرياضي", category: "المرافق الرياضية", query: "Stadium, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "ملعب الخماسي", category: "المرافق الرياضية", query: "Futsal, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "بوابات الجامعة", category: "المداخل والبوابات", query: "University Gates, Al-Balqa Applied University, As-Salt, Jordan" }
   ];
 
   const campusCenter = "32.02448,35.71693";
-  let selectedIndex = 0;
+  let selectedIndex = -1;
   let selectedCategory = "الكل";
   let mapSearchTerm = "";
+
+  const normalizeMapSearch = value => String(value ?? "")
+    .normalize("NFKC")
+    .toLocaleLowerCase("ar")
+    .replace(/[أإآٱ]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه")
+    .replace(/[\u064B-\u065F\u0670ـ]/g, "")
+    .trim();
 
   const escapeHTML = value => String(value ?? "").replace(/[&<>"']/g, char => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
@@ -1585,44 +1660,23 @@
     const main = document.getElementById("main");
     if (!main) return;
 
-    const normalizeSearch = value => String(value || "")
-      .normalize("NFKC")
-      .toLocaleLowerCase("ar")
-      .replace(/[أإآٱ]/g, "ا")
-      .replace(/ى/g, "ي")
-      .replace(/ة/g, "ه")
-      .replace(/[٠-٩]/g, digit => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)))
-      .replace(/[\u064B-\u065F\u0670ـ]/g, "")
-      .replace(/[–—ـ،,:;.!؟?()\[\]{}\/_-]+/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
+    const categories = ["الكل", ...new Set(bauCampusPlaces.map(place => place.category))];
+    const normalizedTerm = normalizeMapSearch(mapSearchTerm);
+    let visiblePlaces = bauCampusPlaces
+      .map((place, index) => ({ ...place, index }))
+      .filter(place => selectedCategory === "الكل" || place.category === selectedCategory)
+      .filter(place => !normalizedTerm || normalizeMapSearch(`${place.name} ${place.category} ${place.query}`).includes(normalizedTerm));
 
-    const searchAliases = {
-      "ذكاء اصطناعي": "كلية الذكاء الاصطناعي",
-      "it": "تكنولوجيا المعلومات والاتصالات",
-      "تكنولوجيا المعلومات": "كلية تكنولوجيا المعلومات والاتصالات",
-      "حاسوب": "مركز الحاسوب",
-      "كمبيوتر": "مركز الحاسوب",
-      "تسجيل": "وحدة القبول والتسجيل",
-      "قبول": "وحدة القبول والتسجيل",
-      "طلاب": "عمادة شؤون الطلبة",
-      "شؤون الطلاب": "عمادة شؤون الطلبة",
-      "مطعم": "مطعم الجامعة",
-      "ملعب": "الملعب الرياضي ملعب الخماسي",
-      "بوابة": "بوابات الجامعة",
-      "هندسة 2": "كلية الهندسة مبنى 2",
-      "هندسة 3": "كلية الهندسة مبنى 3"
-    };
-    let normalizedTerm = normalizeSearch(mapSearchTerm);
-    if (searchAliases[normalizedTerm]) normalizedTerm = normalizeSearch(searchAliases[normalizedTerm]);
-    const searchWords = normalizedTerm.split(" ").filter(word => word.length > 0);
-    const visiblePlaces = bauCampusPlaces
-      .map((place, index) => ({ ...place, index, searchable: normalizeSearch(`${place.name} ${place.category} ${place.query}`) }))
-      .filter(place => !searchWords.length || searchWords.every(word => place.searchable.includes(word)));
-
-    // أثناء الكتابة يتم تحديد أول نتيجة مطابقة وتحديث الخريطة معها مباشرة.
+    // When searching, automatically select the first matching result so the map follows the search.
     if (normalizedTerm && visiblePlaces.length) selectedIndex = visiblePlaces[0].index;
-    const current = bauCampusPlaces[selectedIndex] || bauCampusPlaces[0];
+    // Keep the selected result visible after changing category/search; otherwise show a general campus map.
+    if (!visiblePlaces.some(place => place.index === selectedIndex)) {
+      selectedIndex = normalizedTerm && visiblePlaces.length ? visiblePlaces[0].index : -1;
+    }
+    const current = selectedIndex >= 0 ? bauCampusPlaces[selectedIndex] : {
+      name: "الحرم الرئيسي – جامعة البلقاء التطبيقية",
+      query: "Al-Balqa Applied University Main Campus, As-Salt, Jordan"
+    };
 
     const title = window.SAI_DEFAULTS?.services?.find(service => service[0] === "map")?.[2] || "خريطة الجامعة";
     const description = "خريطة جامعة البلقاء التطبيقية – الحرم الرئيسي في السلط. اختر المبنى لعرض موقعه وفتح الاتجاهات عبر Google Maps.";
@@ -1634,20 +1688,22 @@
       <div class="container bau-campus-page">
         ${header}
         <div class="demo-note">
-          تم التحقق من أسماء الكليات والمرافق بالرجوع إلى
-          <a href="https://www.bau.edu.jo/bauar/Units/SIR/media/BAU_Map.pdf" target="_blank" rel="noopener noreferrer">مخطط الحرم الرئيسي الرسمي لجامعة البلقاء التطبيقية في السلط</a>، وإلى
-          <a href="https://bau.edu.jo/bauar/Colleges/AI/Home.aspx" target="_blank" rel="noopener noreferrer">الصفحة الرسمية لكلية الذكاء الاصطناعي</a>.
-          كلية السلط التقنية تتبع جامعة البلقاء التطبيقية وتقع ضمن حرمها في السلط، وليست تابعة لجامعة عمان العربية. أُضيفت كلية الذكاء الاصطناعي أيضًا. المخطط الرسمي لا يوفّر إحداثيات GPS منفصلة لكل مبنى؛ لذلك تبحث روابط Google Maps باسم المبنى مع اسم الجامعة والحرم في السلط. راجع اسم النتيجة الظاهرة قبل بدء التنقّل.
+          أسماء الكليات والمرافق مستندة إلى
+          <a href="https://www.bau.edu.jo/bauar/Units/SIR/media/BAU_Map.pdf" target="_blank" rel="noopener noreferrer">مخطط الحرم الجامعي الرسمي (PDF)</a>.
+          بعض المباني قد تظهر في Google Maps كنتيجة بحث باسمها وليس كدبوس مستقل؛ تأكد من اسم النتيجة قبل بدء التنقّل.
         </div>
 
-        <div class="bau-map-search-wrap">
-          <label for="bau-map-search">🔎 ابحث عن مبنى أو كلية</label>
-          <input id="bau-map-search" type="search" value="${escapeHTML(mapSearchTerm)}" placeholder="مثال: كلية الهندسة، المكتبة، التسجيل..." autocomplete="off" aria-label="ابحث عن مبنى أو كلية" />
-          <span>يمكنك البحث بجزء من الاسم أو بكلمات مثل: هندسة 2، ذكاء اصطناعي، تسجيل، مكتبة أو مطعم.</span>
-          <span>اكتب جزءًا من الاسم وستظهر النتائج مباشرة.</span>
+        <div class="toolbar">
+          <label class="bau-map-search-label" for="bau-map-search">ابحث عن كلية أو مبنى أو مرفق</label>
+          <input id="bau-map-search" class="bau-map-search" type="search" value="${escapeHTML(mapSearchTerm)}" placeholder="مثال: كلية الهندسة، المكتبة، مركز الحاسوب" autocomplete="off" aria-label="البحث عن مبنى في خريطة الجامعة">
+          <div class="chips" aria-label="تصنيف المباني">
+            ${categories.map((category, index) => `
+              <button type="button" class="chip ${category === selectedCategory ? "selected" : ""}" data-bau-category="${index}">
+                ${escapeHTML(category)}
+              </button>
+            `).join("")}
+          </div>
         </div>
-
-        <p class="bau-map-list-intro">اكتب اسم المبنى، ثم اضغط على النتيجة لعرض موقعه.</p>
 
         <div class="bau-map-layout">
           <section class="bau-map-main">
@@ -1655,7 +1711,7 @@
               <div>
                 <span class="kicker">المبنى المحدد</span>
                 <h2>${escapeHTML(current.name)}</h2>
-                <p>اختَر مبنى من القائمة المجاورة لتحديث الخريطة وفتح الاتجاهات إليه.</p>
+                <p>${selectedIndex >= 0 ? "الموقع المحدد يتغير حسب اختيارك أو نتيجة البحث." : "الخريطة تعرض الحرم الجامعي بشكل عام. ابحث عن مبنى أو اختره من القائمة لتحديث الخريطة."}</p>
               </div>
             </div>
             <iframe
@@ -1677,14 +1733,13 @@
           <aside class="bau-map-places" aria-label="قائمة مباني ومرافق الجامعة">
             <h2>مباني ومرافق الجامعة</h2>
             <p class="bau-map-list-intro">اضغط على اسم المبنى لعرض موقعه على الخريطة.</p>
-            <div class="bau-map-result-count">${visiblePlaces.length ? `عدد النتائج: ${visiblePlaces.length}` : "ما لقينا نتيجة. جرّب اسمًا ثانيًا."}</div>
             <div class="bau-map-place-list">
               ${visiblePlaces.length ? visiblePlaces.map(place => `
                 <button type="button" class="place-card ${place.index === selectedIndex ? "selected" : ""}" data-bau-place="${place.index}" aria-pressed="${place.index === selectedIndex}">
                   <h3>${escapeHTML(place.name)}</h3>
                   <p>${escapeHTML(place.category)} · ${place.index === selectedIndex ? "محدد حاليًا" : "عرض الموقع ←"}</p>
                 </button>
-              `).join("") : `<p class="bau-map-list-intro">لا توجد نتائج مطابقة. جرّب كتابة اسم آخر.</p>`}
+              `).join("") : `<p class="bau-map-no-results">ما لقينا مبنى بهذا الاسم. جرّب كلمة أقصر مثل «الهندسة» أو «المكتبة».</p>`}
             </div>
           </aside>
         </div>
@@ -1692,12 +1747,10 @@
 
       <style id="bau-campus-map-style">
         .bau-campus-page { padding-bottom: 44px; }
-        .bau-map-search-wrap { display:grid; gap:7px; max-width:760px; margin:18px 0 14px; padding:14px; background:#fffefb; border:1px solid var(--line); border-radius:14px; }
-        .bau-map-search-wrap label { color:var(--green); font-weight:700; font-size:15px; }
-        .bau-map-search-wrap input { width:100%; min-height:48px; padding:11px 14px; border:1px solid #cbd5c9; border-radius:10px; font:inherit; font-size:15px; outline:none; background:#fff; }
-        .bau-map-search-wrap input:focus { border-color:var(--green); box-shadow:0 0 0 3px #1b6b4a18; }
-        .bau-map-search-wrap span,.bau-map-result-count { color:#78867b; font-size:12px; }
-        .bau-map-result-count { margin-bottom:10px; }
+        .bau-map-search-label { display:block; margin:0 0 7px; color:var(--green); font-size:13px; font-weight:700; }
+        .bau-map-search { display:block; width:100%; max-width:620px; min-height:46px; margin:0 0 14px; padding:11px 14px; border:1px solid var(--line); border-radius:10px; background:#fffefb; color:#173c39; font:inherit; outline-offset:2px; }
+        .bau-map-search:focus { border-color:var(--green); box-shadow:0 0 0 3px #07555018; }
+        .bau-map-no-results { margin:8px 0; padding:14px; border-radius:10px; background:#f7f4eb; color:#6d756b; font-size:13px; line-height:1.8; }
         .bau-map-layout { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(260px,.8fr); gap:22px; align-items:start; margin:18px 0 58px; }
         .bau-map-main { min-width:0; padding:18px; background:#fffefb; border:1px solid var(--line); border-radius:14px; }
         .bau-map-heading { margin-bottom:14px; }
@@ -1710,9 +1763,7 @@
         .bau-map-hint { margin:12px 0 0; }
         .bau-map-places { min-width:0; max-height:780px; overflow:auto; padding:17px; background:#fffefb; border:1px solid var(--line); border-radius:14px; }
         .bau-map-places h2 { color:var(--green); font-size:18px; margin:0 0 8px; }
-        .bau-map-place-list { display:grid; gap:8px; }
-        .bau-map-places .place-card { padding:12px 14px; border-radius:10px; }
-        .bau-map-places .place-card p { margin:4px 0 0; font-size:12px; }
+        .bau-map-place-list { display:grid; gap:9px; }
         .bau-map-places .place-card { width:100%; margin:0; cursor:pointer; text-align:right; }
         .bau-map-places .place-card h3 { line-height:1.65; }
         .bau-map-places .place-card.selected { border-color:var(--green); background:#eaf0e5; }
@@ -1721,45 +1772,46 @@
           .bau-map-places { max-height:none; overflow:visible; }
         }
         @media(max-width:700px) {
-          .bau-campus-page { padding-inline:12px; padding-bottom:28px; }
-          .bau-map-layout { grid-template-columns:minmax(0,1fr); gap:14px; margin:14px 0 32px; }
-          .bau-map-main,.bau-map-places { box-sizing:border-box; width:100%; min-width:0; padding:12px; }
-          .bau-map-heading h2 { font-size:20px; overflow-wrap:anywhere; }
-          .bau-map-heading p,.bau-map-hint,.bau-map-list-intro { font-size:14px; }
-          .bau-map-search-wrap { box-sizing:border-box; width:100%; padding:12px; }
-          .bau-map-search-wrap label { font-size:16px; }
-          .bau-map-search-wrap input { box-sizing:border-box; font-size:16px; }
-          .bau-map-result-count,.bau-map-search-wrap span { font-size:13px; }
-          .bau-google-map { height: min(62vh, 430px); min-height:300px; }
+          .bau-map-layout { gap:14px; }
+          .bau-map-main,.bau-map-places { padding:12px; }
+          .bau-google-map { height:360px; min-height:320px; }
+          .bau-map-search { max-width:none; font-size:16px; }
+          .bau-map-places { max-height:none; }
+          .bau-map-place-list { grid-template-columns:1fr; }
+          .bau-campus-page .toolbar { min-width:0; }
+          .bau-campus-page .chips { display:flex; flex-wrap:wrap; gap:7px; }
           .bau-map-actions { flex-direction:column; align-items:stretch; }
-          .bau-map-actions .button,.bau-campus-plan { box-sizing:border-box; width:100%; min-height:46px; justify-content:center; text-align:center; font-size:14px; }
-          .bau-map-places { max-height:none; overflow:visible; }
-          .bau-map-places h2 { font-size:19px; }
-          .bau-map-places .place-card { box-sizing:border-box; padding:14px 12px; min-height:64px; }
-          .bau-map-places .place-card h3 { font-size:15px; overflow-wrap:anywhere; }
-          .bau-map-places .place-card p { font-size:13px; line-height:1.7; }
-          .demo-note { font-size:14px; line-height:1.9; overflow-wrap:anywhere; }
-        }
-        @media(max-width:380px) {
-          .bau-campus-page { padding-inline:8px; }
-          .bau-map-main,.bau-map-places { padding:9px; }
-          .bau-google-map { min-height:280px; }
+          .bau-map-actions .button,.bau-campus-plan { width:100%; justify-content:center; text-align:center; }
         }
       </style>`;
 
     const searchInput = main.querySelector("#bau-map-search");
     if (searchInput) {
-      searchInput.addEventListener("input", () => {
-        const cursor = searchInput.selectionStart;
-        mapSearchTerm = searchInput.value.trim();
+      searchInput.addEventListener("input", event => {
+        mapSearchTerm = event.target.value;
+        const caret = event.target.selectionStart;
         renderBauMap();
         const refreshedInput = main.querySelector("#bau-map-search");
         if (refreshedInput) {
-          refreshedInput.focus();
-          refreshedInput.setSelectionRange(cursor, cursor);
+          refreshedInput.focus({ preventScroll: true });
+          try { refreshedInput.setSelectionRange(caret, caret); } catch (_) {}
         }
       });
     }
+
+    main.querySelectorAll("[data-bau-category]").forEach(button => {
+      button.addEventListener("click", () => {
+        selectedCategory = categories[Number(button.dataset.bauCategory)] || "الكل";
+        const normalizedTerm = normalizeMapSearch(mapSearchTerm);
+        const matching = bauCampusPlaces.map((place, index) => ({ ...place, index }))
+          .filter(place => selectedCategory === "الكل" || place.category === selectedCategory)
+          .filter(place => !normalizedTerm || normalizeMapSearch(`${place.name} ${place.category} ${place.query}`).includes(normalizedTerm));
+        if (!matching.some(place => place.index === selectedIndex)) {
+          selectedIndex = matching.length ? matching[0].index : -1;
+        }
+        renderBauMap();
+      });
+    });
 
     main.querySelectorAll("[data-bau-place]").forEach(button => {
       button.addEventListener("click", () => {
@@ -1773,8 +1825,13 @@
 
   // Override the demo diagram with the real Google Maps experience on the #map route.
   window.mapPage = renderBauMap;
-  window.mapCategory = function() {
-    selectedCategory = "الكل";
+  window.mapCategory = function(index) {
+    const categories = ["الكل", ...new Set(bauCampusPlaces.map(place => place.category))];
+    selectedCategory = categories[index] || "الكل";
+    const activeCategory = selectedCategory;
+    if (!bauCampusPlaces[selectedIndex] || (activeCategory !== "الكل" && bauCampusPlaces[selectedIndex].category !== activeCategory)) {
+      selectedIndex = bauCampusPlaces.findIndex(place => activeCategory === "الكل" || place.category === activeCategory);
+    }
     renderBauMap();
   };
 
@@ -1783,5 +1840,121 @@
 })();
 
 </script>
+
+<dialog id="saee-inquiry-dialog" aria-labelledby="saee-inquiry-title">
+  <button type="button" class="saee-inquiry-close" aria-label="إغلاق" onclick="this.closest('dialog').close()">×</button>
+  <div id="saee-inquiry-content"></div>
+</dialog>
+<script id="saee-inquiries-script">
+(() => {
+  'use strict';
+  const toggle = document.getElementById('saee-inquiries-toggle');
+  const menu = document.getElementById('saee-inquiries-menu');
+  const dialog = document.getElementById('saee-inquiry-dialog');
+  const content = document.getElementById('saee-inquiry-content');
+  if (!toggle || !menu || !dialog || !content) return;
+
+  const topics = {
+    loans: { title: 'القروض والمنح والمكارم والأسئلة الجامعية', contacts: [['عبد الرحمن', '0798245512'], ['تقى', '0790730665']] },
+    opportunities: { title: 'الفرص', contacts: [['سلمى', '0782153883']] },
+    talents: { title: 'المواهب', contacts: [['لجين', '0770368592']] },
+    expert: { title: 'اسأل خبير', contacts: [['تقى', '0790730665'], ['حمزة', '0788872569']] },
+    projects: { title: 'المشاريع', contacts: [['لين', '0771059050']] }
+  };
+  const isOpenHours = () => {
+    const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Amman', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
+    const hour = Number(parts.find(part => part.type === 'hour')?.value ?? 0);
+    return hour >= 9 && hour < 17;
+  };
+  function showDialog(key) {
+    if (!isOpenHours()) {
+      content.innerHTML = '<h2 id="saee-inquiry-title">الاستفسارات مغلقة حاليًا</h2><p>يمكنك التواصل خلال ساعات الاستفسارات من <strong>9:00 صباحًا حتى 5:00 مساءً</strong> بتوقيت الأردن.</p><p class="saee-inquiry-note">يرجى العودة خلال أوقات الدوام.</p>';
+    } else {
+      const topic = topics[key];
+      if (!topic) return;
+      const contacts = topic.contacts.map(([name, phone]) => `<div class="saee-inquiry-contact"><strong>${name}</strong><a href="tel:${phone.replace(/\s/g, '')}">${phone}</a></div>`).join('');
+      content.innerHTML = `<h2 id="saee-inquiry-title">${topic.title}</h2><p>للاستفسار، تواصل مع:</p>${contacts}<p class="saee-inquiry-note">التواصل متاح من 9:00 صباحًا حتى 5:00 مساءً بتوقيت الأردن.</p>`;
+    }
+    if (typeof dialog.showModal === 'function') dialog.showModal(); else alert(content.innerText);
+  }
+  toggle.addEventListener('click', () => { const open = menu.hidden; menu.hidden = !open; toggle.setAttribute('aria-expanded', String(open)); });
+  menu.querySelectorAll('[data-inquiry]').forEach(button => button.addEventListener('click', () => { menu.hidden = true; toggle.setAttribute('aria-expanded', 'false'); showDialog(button.dataset.inquiry); }));
+  dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
+  document.addEventListener('click', event => { if (!event.target.closest('.saee-inquiries-nav')) { menu.hidden = true; toggle.setAttribute('aria-expanded', 'false'); } });
+})();
+</script>
+
+
+<script id="saee-project-account-gate">
+(() => {
+  'use strict';
+  const SESSION_KEY = 'sai-local-session-v1';
+  const ACCOUNT_PREFIX = 'sai-local-account-v1:';
+  const AUTH_DIALOG_ID = 'sai-auth';
+
+  function hasAccountSession() {
+    try {
+      const email = localStorage.getItem(SESSION_KEY);
+      if (!email) return false;
+      const raw = localStorage.getItem(ACCOUNT_PREFIX + encodeURIComponent(email));
+      if (!raw) return false;
+      const account = JSON.parse(raw);
+      return Boolean(account && account.version === 1 && account.email === email);
+    } catch (_) { return false; }
+  }
+
+  function isAddProjectAction(el) {
+    if (!(el instanceof Element)) return false;
+    const target = el.closest('button, input[type="submit"], input[type="button"], a, [role="button"]');
+    if (!target) return false;
+    const text = [target.innerText, target.value, target.getAttribute('aria-label'), target.title, target.dataset?.action]
+      .filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+    return /إضافة\s*مشروع|اضافة\s*مشروع|أضف\s*مشروع|اضف\s*مشروع|إضافة\s*فرصة|اضافة\s*فرصة/.test(text);
+  }
+
+  function requestLogin() {
+    const dialog = document.getElementById(AUTH_DIALOG_ID);
+    const message = document.getElementById('sai-auth-message');
+    if (!dialog) {
+      alert('لإضافة مشروع، لازم تنشئ حسابًا أو تسجّل الدخول أولًا.');
+      return;
+    }
+    dialog.querySelectorAll('[data-auth-panel]').forEach(panel => {
+      panel.hidden = panel.dataset.authPanel !== 'login';
+    });
+    const title = document.getElementById('sai-auth-title');
+    const description = document.getElementById('sai-auth-description');
+    if (title) title.textContent = 'تسجيل الدخول مطلوب';
+    if (description) description.textContent = 'لإضافة مشروع، أنشئ حسابًا أو سجّل الدخول أولًا.';
+    if (message) {
+      message.textContent = 'حتى تتمكن من إضافة مشروع، سجّل الدخول أو أنشئ حسابًا جديدًا. بعد تسجيل الدخول ارجع واضغط «إضافة مشروع» مرة ثانية.';
+      message.hidden = false;
+    }
+    if (!dialog.open && typeof dialog.showModal === 'function') dialog.showModal();
+    const email = document.getElementById('sai-login-email');
+    if (email) setTimeout(() => email.focus(), 50);
+  }
+
+  document.addEventListener('click', event => {
+    if (!isAddProjectAction(event.target) || hasAccountSession()) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    requestLogin();
+  }, true);
+
+  document.addEventListener('submit', event => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || hasAccountSession()) return;
+    const text = (form.innerText || '') + ' ' + (form.getAttribute('aria-label') || '') + ' ' + (form.id || '');
+    if (!/إضافة\s*مشروع|اضافة\s*مشروع|أضف\s*مشروع|اضف\s*مشروع|إضافة\s*فرصة|اضافة\s*فرصة|project.*(add|new)|(add|new).*project/i.test(text)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    requestLogin();
+  }, true);
+})();
+</script>
+
 </body>
 </html>
