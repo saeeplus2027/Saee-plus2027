@@ -99,6 +99,15 @@ window.SiteStore = (() => {
       if (item.image && !imageSrc(item.image)) {
         throw Error("رابط الصورة غير صالح.");
       }
+
+      if (
+        item.gallery !== undefined &&
+        (!Array.isArray(item.gallery) ||
+          item.gallery.length > 10 ||
+          item.gallery.some((src) => typeof src !== "string" || (src && !imageSrc(src))))
+      ) {
+        throw Error("صور الفرصة غير صالحة. الحد الأقصى 10 صور.");
+      }
     }
 
     for (const place of data.places) {
