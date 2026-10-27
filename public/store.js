@@ -9,6 +9,7 @@ window.SiteStore = (() => {
   let canEdit = false;
   let busy = false;
   let etag = '"0"';
+  let apiAvailable = false;
 
   const clone = (value) =>
     JSON.parse(JSON.stringify(value));
@@ -189,6 +190,7 @@ window.SiteStore = (() => {
 
   async function refresh() {
     loaded = false;
+    apiAvailable = false;
     try {
       const response = await fetch('/api/content', {
         method: 'GET',
@@ -201,19 +203,34 @@ window.SiteStore = (() => {
       state.revision = Number(body.revision ?? state.revision ?? 0);
       etag = response.headers.get('ETag') || `"${state.revision}"`;
       canEdit = Boolean(body.canEdit);
+      apiAvailable = true;
       loaded = true;
       cache();
       notify();
       return state;
     } catch (error) {
-      console.error('Saee Plus: central content could not be loaded.', error);
-      throw error;
+      // Keep the public site usable if the API route is missing or temporarily down.
+      // The shared server remains the source of truth whenever the API is available.
+      console.error('Saee Plus: central content could not be loaded; using cached/default content.', error);
+      try {
+        const cached = localStorage.getItem(key);
+        if (cached) state = validate(JSON.parse(cached));
+      } catch (cacheError) {
+        console.warn('Saee Plus: cached content is unavailable or invalid.', cacheError);
+        // `state` already contains validated SAI_DEFAULTS.
+      }
+      canEdit = false;
+      apiAvailable = false;
+      loaded = true;
+      notify();
+      return state;
     }
   }
 
   async function save(next) {
     if (busy) throw Error('جاري حفظ تعديل سابق.');
-    if (!loaded || !etag) throw Error('لم يتم تحميل المحتوى المشترك بعد. أعد تحميل الصفحة ثم حاول مجددًا.');
+    if (!loaded) throw Error('المحتوى لم يجهز بعد. أعد تحميل الصفحة ثم حاول مجددًا.');
+    if (!apiAvailable) throw Error('تعذر الاتصال بخادم المحتوى (/api/content). تم عرض نسخة محفوظة للقراءة فقط؛ لا يمكن حفظ التعديلات أو مزامنتها حتى يتم إصلاح الخادم.');
     if (!canEdit) throw Error('سجّل الدخول بحساب مالك الموقع لتتمكن من حفظ التعديلات.');
     busy = true;
     try {
