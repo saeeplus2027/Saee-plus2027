@@ -4,19 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#075550">
-  <meta name="description"
-        content="سعي بلس — مساحة تجمع احتياجاتك الجامعية وفرصك المجتمعية في مكان واحد.">
+  <meta name="description" content="سعي بلس — مساحة تجمع احتياجاتك الجامعية وفرصك المجتمعية في مكان واحد.">
 
   <title>سعي بلس | من جامعتك، إلى مجتمعك</title>
 
-  <link
-    rel="icon"
-    type="image/jpeg"
-    href="https://cdn.phototourl.com/member/2026-10-25-a5e80966-a389-47e6-95e0-7d994efae181.jpg">
-
+  <link rel="icon" type="image/jpeg" href="https://cdn.phototourl.com/member/2026-10-25-a5e80966-a389-47e6-95e0-7d994efae181.jpg">
   <link rel="stylesheet" href="style.css?v=20261025-3">
   <link rel="stylesheet" href="smart.css?v=20261025-3">
   <link rel="stylesheet" href="admin.css?v=20261025-3">
+
   <style id="hide-saee-smart-on-admin">
     body.admin #saee-smart,
     body.admin .saee-smart-section,
@@ -45,7 +41,6 @@
       margin: 0 0 22px;
     }
 
-    /* إظهار أزرار الحساب على جميع الشاشات */
     header .header-actions #sai-open-auth,
     header .header-actions #sai-logout:not([hidden]) {
       display: inline-flex !important;
@@ -71,7 +66,6 @@
       display: none !important;
     }
 
-    /* توزيع الهيدر على الشاشات المتوسطة */
     @media (min-width: 701px) and (max-width: 1200px) {
       body > header {
         height: auto;
@@ -94,7 +88,6 @@
       }
     }
 
-    /* أزرار الحساب في صف مستقل على الهاتف */
     @media (max-width: 700px) {
       body > header {
         position: relative;
@@ -340,14 +333,11 @@
   </style>
 
   <style id="nav-fit-fix">
-    /* Keep every navigation item visible on medium-width screens */
     @media (min-width: 701px) and (max-width: 1200px) {
       body > header {
         display: grid !important;
         grid-template-columns: minmax(0, 1fr) auto !important;
-        grid-template-areas:
-          "brand actions"
-          "nav nav" !important;
+        grid-template-areas: "brand actions" "nav nav" !important;
         align-items: center !important;
         height: auto !important;
         min-height: 0 !important;
@@ -393,9 +383,7 @@
     }
   </style>
 
-
   <style id="saee-skill-passport-nav-fix">
-    /* Keep every navigation link visible on laptop and tablet widths. */
     @media screen and (min-width: 701px) and (max-width: 1300px) {
       body > header {
         display: grid !important;
@@ -410,12 +398,17 @@
         padding: 16px 5% !important;
         box-sizing: border-box !important;
       }
-      body > header > .brand { grid-area: brand !important; }
+
+      body > header > .brand {
+        grid-area: brand !important;
+      }
+
       body > header > .header-actions {
         grid-area: actions !important;
         margin: 0 !important;
         min-width: 0 !important;
       }
+
       body > header > nav {
         grid-area: nav !important;
         order: initial !important;
@@ -436,6 +429,7 @@
         overflow: visible !important;
         visibility: visible !important;
       }
+
       body > header > nav a {
         display: inline-flex !important;
         flex: 0 0 auto !important;
@@ -447,73 +441,462 @@
     }
   </style>
 
-
   <style id="saee-admin-header-fix">
-    /* إخفاء روابط وأزرار الهيدر من صفحة الإدارة فقط */
-    body.admin > header > nav { display: none !important; visibility: hidden !important; }
-    body.admin > header > nav a { display: none !important; }
-    body.admin header .header-actions #sai-open-auth,
-    body.admin header .header-actions #sai-logout,
-    body.admin header .header-actions > a.button.small { display: none !important; }
-  </style>
-
-
-  <style id="saee-restore-skill-passport">
-    /* Restore the Skill Passport link on the public site. */
-    body:not(.admin) > header > nav a[href="skill-passport.html"] {
-      display: inline-flex !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-      flex: 0 0 auto !important;
-      white-space: nowrap !important;
-      position: relative !important;
-      z-index: 5 !important;
+    body.admin > header > nav {
+      display: none !important;
+      visibility: hidden !important;
     }
 
-    /* On phones, show it when the menu is opened. */
+    body.admin > header > nav a {
+      display: none !important;
+    }
+
+    body.admin header .header-actions #sai-open-auth,
+    body.admin header .header-actions #sai-logout,
+    body.admin header .header-actions > a.button.small {
+      display: none !important;
+    }
+  </style>
+
+  <style id="saee-inquiries-styles">
+    .saee-inquiries-nav {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .saee-inquiries-nav > #saee-inquiries-toggle {
+      border: 0;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+      padding: 8px 10px;
+      white-space: nowrap;
+    }
+
+    .saee-inquiries-nav > #saee-inquiries-toggle:hover,
+    .saee-inquiries-nav > #saee-inquiries-toggle:focus-visible {
+      color: #075550;
+    }
+
+    .saee-inquiries-menu {
+      position: absolute;
+      z-index: 10000;
+      top: calc(100% + 10px);
+      inset-inline-start: 0;
+      width: min(385px, 88vw);
+      padding: 8px 10px;
+      background: #faf8f2;
+      color: #173c39;
+      border: 1px solid #e4e7df;
+      border-radius: 4px;
+      box-shadow: 0 12px 32px #173c3918;
+      text-align: right;
+    }
+
+    .saee-inquiries-menu[hidden] {
+      display: none !important;
+    }
+
+    .saee-inquiries-menu button {
+      display: block;
+      width: 100%;
+      min-height: 48px;
+      padding: 11px 14px;
+      border: 0;
+      border-radius: 3px;
+      background: transparent;
+      color: inherit;
+      text-align: right;
+      font: inherit;
+      font-size: 14px;
+      line-height: 1.6;
+      cursor: pointer;
+    }
+
+    .saee-inquiries-menu button:hover,
+    .saee-inquiries-menu button:focus-visible {
+      background: #edf3ee;
+      color: #075550;
+    }
+
+    @media (hover: hover) and (min-width: 701px) {
+      .saee-inquiries-nav:hover > .saee-inquiries-menu,
+      .saee-inquiries-nav:focus-within > .saee-inquiries-menu {
+        display: block;
+      }
+
+      .saee-inquiries-nav:hover > #saee-inquiries-toggle,
+      .saee-inquiries-nav:focus-within > #saee-inquiries-toggle {
+        color: #075550;
+      }
+    }
+
+    #saee-inquiry-dialog {
+      box-sizing: border-box;
+      width: min(470px, calc(100% - 28px));
+      max-height: min(80dvh, 680px);
+      overflow-y: auto;
+      margin: auto;
+      padding: 24px;
+      border: 1px solid #dce8e2;
+      border-radius: 20px;
+      background: #faf8f2;
+      color: #173c39;
+      font-family: inherit;
+      text-align: right;
+      box-shadow: 0 24px 70px #173c3926;
+    }
+
+    #saee-inquiry-dialog::backdrop {
+      background: rgb(7 55 50 / 42%);
+    }
+
+    #saee-inquiry-dialog .saee-inquiry-close {
+      display: block;
+      margin-inline-start: auto;
+      width: 36px;
+      height: 36px;
+      border: 0;
+      border-radius: 50%;
+      background: #eaf2ed;
+      color: #075550;
+      font: inherit;
+      font-size: 24px;
+      cursor: pointer;
+    }
+
+    #saee-inquiry-dialog h2 {
+      margin: 8px 0 10px;
+      color: #075550;
+      font-size: 22px;
+    }
+
+    #saee-inquiry-dialog p {
+      line-height: 1.8;
+    }
+
+    #saee-inquiry-dialog .saee-inquiry-contact {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin: 10px 0;
+      padding: 13px;
+      border: 1px solid #dce8e2;
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    #saee-inquiry-dialog .saee-inquiry-contact a {
+      color: #075550;
+      direction: ltr;
+      unicode-bidi: embed;
+      font-weight: 700;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    #saee-inquiry-dialog .saee-inquiry-note {
+      color: #62716b;
+      font-size: 13px;
+    }
+
     @media (max-width: 700px) {
-      body:not(.admin) > header > nav.open a[href="skill-passport.html"] {
-        display: flex !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        width: 100% !important;
-        white-space: nowrap !important;
+      .saee-inquiries-nav {
+        display: block;
+        width: 100%;
+      }
+
+      .saee-inquiries-nav > #saee-inquiries-toggle {
+        width: 100%;
+        text-align: right;
+      }
+
+      .saee-inquiries-menu {
+        position: static;
+        width: 100%;
+        margin-top: 4px;
+        box-shadow: none;
+      }
+
+      #saee-inquiry-dialog {
+        padding: 18px;
+      }
+
+      #saee-inquiry-dialog .saee-inquiry-contact {
+        align-items: flex-start;
+        flex-direction: column;
       }
     }
   </style>
 
+  <style id="saee-header-button-size-fix">
+    @media (min-width: 1201px) {
+      body > header {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 18px !important;
+        height: auto !important;
+        min-height: 88px !important;
+        padding: 14px 28px !important;
+        box-sizing: border-box !important;
+        overflow: visible !important;
+      }
 
-  <style id="saee-start-journey-button-fix">
-    /* Keep "ابدأ رحلتك" on one line and match the header button height. */
-    body > header > .header-actions > a.button.small[href="#services"] {
-      display: inline-flex !important;
-      flex-direction: row !important;
-      align-items: center !important;
-      justify-content: center !important;
-      flex: 0 0 auto !important;
-      width: max-content !important;
-      min-width: max-content !important;
-      max-width: none !important;
-      height: 60px !important;
-      min-height: 60px !important;
-      max-height: 60px !important;
-      padding: 11px 19px !important;
-      gap: 12px !important;
-      box-sizing: border-box !important;
-      white-space: nowrap !important;
-      word-break: keep-all !important;
-      overflow-wrap: normal !important;
-      line-height: 1.2 !important;
+      body > header > .brand {
+        flex: 0 0 auto !important;
+      }
+
+      body > header > nav {
+        position: static !important;
+        display: flex !important;
+        flex: 1 1 auto !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex-wrap: nowrap !important;
+        gap: clamp(8px, 1.15vw, 18px) !important;
+        width: auto !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+      }
+
+      body > header > nav > a,
+      body > header > nav .saee-inquiries-nav > #saee-inquiries-toggle {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-height: 42px !important;
+        padding: 8px 5px !important;
+        font-size: 14px !important;
+        line-height: 1.35 !important;
+        white-space: nowrap !important;
+        text-align: center !important;
+      }
+
+      body > header > .header-actions {
+        display: flex !important;
+        flex: 0 0 auto !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        gap: 10px !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+      }
+
+      body > header > .header-actions .button.small {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-sizing: border-box !important;
+        min-height: 48px !important;
+        height: 48px !important;
+        padding: 0 16px !important;
+        margin: 0 !important;
+        font-size: 14px !important;
+        line-height: 1.2 !important;
+        white-space: nowrap !important;
+        flex: 0 0 auto !important;
+      }
+
+      body > header > .header-actions > a.button.small {
+        min-width: 132px !important;
+      }
+
+      body > header > .header-actions #sai-open-auth {
+        max-width: 190px !important;
+      }
+
+      body > header > .header-actions > .icon-btn {
+        flex: 0 0 42px !important;
+        width: 42px !important;
+        height: 42px !important;
+        min-width: 42px !important;
+        padding: 0 !important;
+      }
+
+      body > header > .header-actions #menu {
+        display: none !important;
+      }
     }
 
-    body > header > .header-actions > a.button.small[href="#services"] span {
-      display: inline-block !important;
-      flex: 0 0 auto !important;
-      white-space: nowrap !important;
-      line-height: 1 !important;
+    @media (min-width: 701px) and (max-width: 1200px) {
+      body > header > .header-actions .button.small {
+        min-height: 44px !important;
+        height: 44px !important;
+        padding: 0 13px !important;
+        font-size: 13px !important;
+        white-space: nowrap !important;
+      }
+
+      body > header > .header-actions > a.button.small {
+        min-width: 120px !important;
+      }
+
+      body > header > nav > a,
+      body > header > nav .saee-inquiries-nav > #saee-inquiries-toggle {
+        min-height: 38px !important;
+        padding: 7px 5px !important;
+        font-size: 13px !important;
+        line-height: 1.35 !important;
+      }
+    }
+
+    @media (max-width: 700px) {
+      body > header > .header-actions .button.small {
+        min-height: 42px !important;
+        height: 42px !important;
+        padding: 0 12px !important;
+        font-size: 12px !important;
+        white-space: nowrap !important;
+      }
+
+      body > header > .header-actions > a.button.small {
+        display: none !important;
+      }
     }
   </style>
 
+  <style id="saee-show-skills-passport-final-fix">
+    @media (min-width: 701px) {
+      body > header {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        height: auto !important;
+        min-height: 0 !important;
+        gap: 12px 20px !important;
+        padding-top: 14px !important;
+        padding-bottom: 14px !important;
+        overflow: visible !important;
+      }
+
+      body > header > .brand {
+        order: 1 !important;
+        flex: 0 0 auto !important;
+      }
+
+      body > header > .header-actions {
+        order: 2 !important;
+        margin-inline-start: auto !important;
+        flex: 0 0 auto !important;
+      }
+
+      body > header > nav {
+        order: 3 !important;
+        display: flex !important;
+        flex: 1 0 100% !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 10px 22px !important;
+        overflow: visible !important;
+        visibility: visible !important;
+      }
+
+      body > header > nav a,
+      body > header > nav .saee-inquiries-nav {
+        display: inline-flex !important;
+        flex: 0 0 auto !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        white-space: nowrap !important;
+      }
+
+      body > header > nav a[href="skill-passport.html"] {
+        display: inline-flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        order: 3 !important;
+      }
+    }
+  </style>
+
+  <style id="saee-mobile-navigation-visibility-fix">
+    @media (max-width: 700px) {
+      body > header {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: 12px !important;
+        overflow: visible !important;
+      }
+
+      body > header > .brand {
+        order: 1 !important;
+      }
+
+      body > header > .header-actions {
+        order: 2 !important;
+        flex: 1 0 100% !important;
+        width: 100% !important;
+      }
+
+      body > header > nav {
+        order: 3 !important;
+        display: none !important;
+        position: static !important;
+        inset: auto !important;
+        flex: 1 0 100% !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 10px !important;
+        box-sizing: border-box !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        justify-content: flex-start !important;
+        gap: 4px !important;
+        background: #faf8f2 !important;
+        border: 1px solid #dce8e2 !important;
+        border-radius: 14px !important;
+        overflow: visible !important;
+      }
+
+      body > header > nav.open {
+        display: flex !important;
+      }
+
+      body > header > nav > a,
+      body > header > nav > a[href="skill-passport.html"],
+      body > header > nav .saee-inquiries-nav > #saee-inquiries-toggle {
+        display: flex !important;
+        width: 100% !important;
+        min-height: 44px !important;
+        box-sizing: border-box !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        padding: 10px 12px !important;
+        white-space: normal !important;
+        text-align: right !important;
+        font-size: 14px !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+      }
+
+      body > header > nav .saee-inquiries-nav {
+        display: block !important;
+        width: 100% !important;
+      }
+
+      body > header > nav .saee-inquiries-menu {
+        position: static !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-top: 4px !important;
+        box-sizing: border-box !important;
+      }
+    }
+  </style>
 </head>
 
 <body>
@@ -534,33 +917,28 @@
     <a href="#discounts">خصومات سعي</a>
     <a href="#market">السوق المحلي</a>
     <a href="#projects">فرص المشاريع</a>
+
+    <div class="saee-inquiries-nav">
+      <button type="button" id="saee-inquiries-toggle" aria-expanded="false" aria-controls="saee-inquiries-menu" aria-haspopup="true">استفسارات</button>
+
+      <div id="saee-inquiries-menu" class="saee-inquiries-menu" hidden>
+        <button type="button" data-inquiry="loans">قروض ومنح ومكارم وأسئلة جامعية</button>
+        <button type="button" data-inquiry="opportunities">الفرص</button>
+        <button type="button" data-inquiry="talents">المواهب</button>
+        <button type="button" data-inquiry="expert">اسأل خبير</button>
+        <button type="button" data-inquiry="projects">المشاريع</button>
+      </div>
+    </div>
   </nav>
 
   <div class="header-actions">
-    <button
-      type="button"
-      class="icon-btn"
-      onclick="showFavorites()"
-      aria-label="المفضلة"
-      data-icon="heart">
-    </button>
+    <button type="button" class="icon-btn" onclick="showFavorites()" aria-label="المفضلة" data-icon="heart"></button>
 
-    <button
-      type="button"
-      class="button small"
-      id="sai-open-auth"
-      aria-haspopup="dialog"
-      aria-controls="sai-auth">
+    <button type="button" class="button small" id="sai-open-auth" aria-haspopup="dialog" aria-controls="sai-auth">
       <span class="account-label">تسجيل الدخول</span>
     </button>
 
-    <button
-      type="button"
-      class="button small"
-      id="sai-logout"
-      hidden>
-      تسجيل الخروج
-    </button>
+    <button type="button" class="button small" id="sai-logout" hidden>تسجيل الخروج</button>
 
     <a class="button small" href="#services">
       ابدأ رحلتك <span>↖</span>
@@ -580,11 +958,7 @@
 
 <main id="main"></main>
 
-<section
-  id="saee-smart"
-  class="saee-smart-section"
-  aria-labelledby="saee-smart-heading">
-
+<section id="saee-smart" class="saee-smart-section" aria-labelledby="saee-smart-heading">
   <div class="saee-smart-container">
     <h2 id="saee-smart-heading">سعي الذكي</h2>
     <p>اكتشف فرصًا وخدمات وتوصيات تناسب اهتماماتك.</p>
@@ -623,236 +997,89 @@
     <div>
       <a href="#admin">إدارة الموقع</a>
       ·
-      <button
-        type="button"
-        class="text-btn"
-        onclick="aboutPrivacy()">
-        الخصوصية
-      </button>
+      <button type="button" class="text-btn" onclick="aboutPrivacy()">الخصوصية</button>
     </div>
   </div>
 </footer>
 
 <dialog id="dialog">
-  <button
-    type="button"
-    class="close"
-    aria-label="إغلاق"
-    onclick="this.closest('dialog').close()">
-    ×
-  </button>
+  <button type="button" class="close" aria-label="إغلاق" onclick="this.closest('dialog').close()">×</button>
   <div id="dialog-content"></div>
 </dialog>
 
-<dialog
-  id="sai-auth"
-  aria-labelledby="sai-auth-title"
-  aria-describedby="sai-auth-description">
-
-  <button
-    type="button"
-    class="auth-close"
-    aria-label="إغلاق نافذة الحساب"
-    data-auth-close>
-    ×
-  </button>
+<dialog id="sai-auth" aria-labelledby="sai-auth-title" aria-describedby="sai-auth-description">
+  <button type="button" class="auth-close" aria-label="إغلاق نافذة الحساب" data-auth-close>×</button>
 
   <div class="auth-heading">
-    <img
-      class="auth-logo"
-      src="assets/brand.jpg"
-      alt="سعي بلس">
-
+    <img class="auth-logo" src="assets/brand.jpg" alt="سعي بلس">
     <h2 id="sai-auth-title">تسجيل الدخول</h2>
-
-    <p class="auth-description" id="sai-auth-description">
-      سجّل دخولك بحسابك المحلي على هذا المتصفح.
-    </p>
+    <p class="auth-description" id="sai-auth-description">سجّل دخولك بحسابك المحلي على هذا المتصفح.</p>
   </div>
 
   <section data-auth-panel="login">
     <form id="sai-login-form">
       <label for="sai-login-email">البريد الإلكتروني</label>
-
-      <input
-        id="sai-login-email"
-        name="email"
-        type="email"
-        dir="ltr"
-        placeholder="example@email.com"
-        autocomplete="username"
-        maxlength="254"
-        required>
+      <input id="sai-login-email" name="email" type="email" dir="ltr" placeholder="example@email.com" autocomplete="username" maxlength="254" required>
 
       <label for="sai-login-password">كلمة المرور</label>
+      <input id="sai-login-password" name="password" type="password" autocomplete="current-password" required>
 
-      <input
-        id="sai-login-password"
-        name="password"
-        type="password"
-        autocomplete="current-password"
-        required>
-
-      <button type="submit" class="auth-submit">
-        تسجيل الدخول
-      </button>
+      <button type="submit" class="auth-submit">تسجيل الدخول</button>
     </form>
 
     <div class="auth-links">
-      <button
-        type="button"
-        class="auth-link"
-        data-auth-go="forgot">
-        نسيت كلمة المرور؟
-      </button>
-
-      <button
-        type="button"
-        class="auth-link"
-        data-auth-go="register">
-        إنشاء حساب
-      </button>
+      <button type="button" class="auth-link" data-auth-go="forgot">نسيت كلمة المرور؟</button>
+      <button type="button" class="auth-link" data-auth-go="register">إنشاء حساب</button>
     </div>
   </section>
 
   <section data-auth-panel="register" hidden>
     <form id="sai-register-form">
       <label for="sai-register-name">الاسم</label>
-
-      <input
-        id="sai-register-name"
-        name="name"
-        type="text"
-        autocomplete="name"
-        maxlength="100"
-        required>
+      <input id="sai-register-name" name="name" type="text" autocomplete="name" maxlength="100" required>
 
       <label for="sai-register-email">البريد الإلكتروني</label>
+      <input id="sai-register-email" name="email" type="email" dir="ltr" placeholder="example@email.com" autocomplete="email" maxlength="254" required>
 
-      <input
-        id="sai-register-email"
-        name="email"
-        type="email"
-        dir="ltr"
-        placeholder="example@email.com"
-        autocomplete="email"
-        maxlength="254"
-        required>
-
-      <label for="sai-register-password">
-        كلمة المرور — 15 حرفًا على الأقل
-      </label>
-
-      <input
-        id="sai-register-password"
-        name="password"
-        type="password"
-        autocomplete="new-password"
-        minlength="15"
-        required>
+      <label for="sai-register-password">كلمة المرور — 15 حرفًا على الأقل</label>
+      <input id="sai-register-password" name="password" type="password" autocomplete="new-password" minlength="15" required>
 
       <label for="sai-register-confirm">تأكيد كلمة المرور</label>
+      <input id="sai-register-confirm" name="password_confirmation" type="password" autocomplete="new-password" required>
 
-      <input
-        id="sai-register-confirm"
-        name="password_confirmation"
-        type="password"
-        autocomplete="new-password"
-        required>
-
-      <button type="submit" class="auth-submit">
-        إنشاء حساب
-      </button>
+      <button type="submit" class="auth-submit">إنشاء حساب</button>
     </form>
 
     <div class="auth-links">
-      <button
-        type="button"
-        class="auth-link"
-        data-auth-go="login">
-        عندك حساب؟ سجّل دخولك
-      </button>
+      <button type="button" class="auth-link" data-auth-go="login">عندك حساب؟ سجّل دخولك</button>
     </div>
   </section>
 
   <section data-auth-panel="forgot" hidden>
     <form id="sai-forgot-form">
       <label for="sai-forgot-email">البريد الإلكتروني</label>
-
-      <input
-        id="sai-forgot-email"
-        name="email"
-        type="email"
-        dir="ltr"
-        placeholder="example@email.com"
-        autocomplete="email"
-        maxlength="254"
-        required>
+      <input id="sai-forgot-email" name="email" type="email" dir="ltr" placeholder="example@email.com" autocomplete="email" maxlength="254" required>
 
       <label for="sai-recovery-code">رمز الاسترداد</label>
+      <input id="sai-recovery-code" name="recovery_code" type="text" dir="ltr" autocomplete="off" autocapitalize="none" spellcheck="false" required>
 
-      <input
-        id="sai-recovery-code"
-        name="recovery_code"
-        type="text"
-        dir="ltr"
-        autocomplete="off"
-        autocapitalize="none"
-        spellcheck="false"
-        required>
+      <label for="sai-reset-password">كلمة المرور الجديدة — 15 حرفًا على الأقل</label>
+      <input id="sai-reset-password" name="new_password" type="password" autocomplete="new-password" minlength="15" required>
 
-      <label for="sai-reset-password">
-        كلمة المرور الجديدة — 15 حرفًا على الأقل
-      </label>
+      <label for="sai-reset-confirm">تأكيد كلمة المرور الجديدة</label>
+      <input id="sai-reset-confirm" name="new_password_confirmation" type="password" autocomplete="new-password" required>
 
-      <input
-        id="sai-reset-password"
-        name="new_password"
-        type="password"
-        autocomplete="new-password"
-        minlength="15"
-        required>
-
-      <label for="sai-reset-confirm">
-        تأكيد كلمة المرور الجديدة
-      </label>
-
-      <input
-        id="sai-reset-confirm"
-        name="new_password_confirmation"
-        type="password"
-        autocomplete="new-password"
-        required>
-
-      <button type="submit" class="auth-submit">
-        تغيير كلمة المرور
-      </button>
+      <button type="submit" class="auth-submit">تغيير كلمة المرور</button>
     </form>
 
     <div class="auth-links">
-      <button
-        type="button"
-        class="auth-link"
-        data-auth-go="login">
-        العودة لتسجيل الدخول
-      </button>
+      <button type="button" class="auth-link" data-auth-go="login">العودة لتسجيل الدخول</button>
     </div>
   </section>
 
-  <p
-    id="sai-auth-message"
-    class="auth-message"
-    role="status"
-    aria-live="polite"
-    hidden>
-  </p>
+  <p id="sai-auth-message" class="auth-message" role="status" aria-live="polite" hidden></p>
 
-  <button
-    type="button"
-    class="auth-guest"
-    data-auth-close>
-    متابعة التصفح بدون حساب
-  </button>
+  <button type="button" class="auth-guest" data-auth-close>متابعة التصفح بدون حساب</button>
 
   <p class="auth-note">
     الحسابات محفوظة على هذا المتصفح فقط.
@@ -874,7 +1101,6 @@
   'use strict';
 
   const $ = id => document.getElementById(id);
-
   const authDialog = $('sai-auth');
   const message = $('sai-auth-message');
   const accountButton = $('sai-open-auth');
@@ -912,7 +1138,6 @@
 
   function readAccount(email) {
     const raw = localStorage.getItem(accountKey(email));
-
     if (!raw) return null;
 
     const account = JSON.parse(raw);
@@ -936,10 +1161,7 @@
   }
 
   function saveAccount(account) {
-    localStorage.setItem(
-      accountKey(account.email),
-      JSON.stringify(account)
-    );
+    localStorage.setItem(accountKey(account.email), JSON.stringify(account));
   }
 
   function showMessage(text) {
@@ -953,10 +1175,7 @@
   }
 
   function resetForms() {
-    authDialog.querySelectorAll('form').forEach(form => {
-      form.reset();
-    });
-
+    authDialog.querySelectorAll('form').forEach(form => form.reset());
     $('sai-register-confirm').setCustomValidity('');
     $('sai-reset-confirm').setCustomValidity('');
   }
@@ -975,9 +1194,7 @@
     $('sai-auth-description').textContent = pages[page].description;
 
     if (focus && authDialog.open) {
-      authDialog.querySelector(
-        '[data-auth-panel="' + page + '"] input'
-      ).focus();
+      authDialog.querySelector('[data-auth-panel="' + page + '"] input').focus();
     }
   }
 
@@ -985,23 +1202,17 @@
     try {
       const email = localStorage.getItem(SESSION_KEY);
       const account = email ? readAccount(email) : null;
-
-      const label = account
-        ? 'مرحبًا، ' + account.name
-        : 'تسجيل الدخول';
+      const label = account ? 'مرحبًا، ' + account.name : 'تسجيل الدخول';
 
       accountLabel.textContent = label;
       accountButton.setAttribute('aria-label', label);
-
       accountButton.title = account
         ? 'حساب محلي على هذا المتصفح: ' + account.name
         : 'تسجيل الدخول';
 
       logoutButton.hidden = !account;
 
-      if (email && !account) {
-        localStorage.removeItem(SESSION_KEY);
-      }
+      if (email && !account) localStorage.removeItem(SESSION_KEY);
     } catch {
       accountLabel.textContent = 'تسجيل الدخول';
       accountButton.title = 'تسجيل الدخول';
@@ -1015,22 +1226,15 @@
   }
 
   function toHex(bytes) {
-    return Array.from(
-      bytes,
-      byte => byte.toString(16).padStart(2, '0')
-    ).join('');
+    return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
   }
 
   function randomHex(byteCount) {
-    return toHex(
-      crypto.getRandomValues(new Uint8Array(byteCount))
-    );
+    return toHex(crypto.getRandomValues(new Uint8Array(byteCount)));
   }
 
   function saltBytes(hex) {
-    if (!/^[a-f0-9]{32}$/.test(hex)) {
-      throw new Error('INVALID_SALT');
-    }
+    if (!/^[a-f0-9]{32}$/.test(hex)) throw new Error('INVALID_SALT');
 
     return Uint8Array.from(
       hex.match(/.{2}/g),
@@ -1062,16 +1266,8 @@
   }
 
   async function hashRecovery(code) {
-    const normalized = code
-      .trim()
-      .replace(/[\s-]/g, '')
-      .toLowerCase();
-
-    const bits = await crypto.subtle.digest(
-      'SHA-256',
-      new TextEncoder().encode(normalized)
-    );
-
+    const normalized = code.trim().replace(/[\s-]/g, '').toLowerCase();
+    const bits = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalized));
     return toHex(new Uint8Array(bits));
   }
 
@@ -1081,8 +1277,7 @@
 
     function validate() {
       confirmation.setCustomValidity(
-        confirmation.value &&
-        confirmation.value !== password.value
+        confirmation.value && confirmation.value !== password.value
           ? 'كلمتا المرور غير متطابقتين.'
           : ''
       );
@@ -1090,27 +1285,17 @@
 
     password.addEventListener('input', validate);
     confirmation.addEventListener('input', validate);
-
     return validate;
   }
 
-  const validateRegistration = bindConfirmation(
-    'sai-register-password',
-    'sai-register-confirm'
-  );
-
-  const validateReset = bindConfirmation(
-    'sai-reset-password',
-    'sai-reset-confirm'
-  );
+  const validateRegistration = bindConfirmation('sai-register-password', 'sai-register-confirm');
+  const validateReset = bindConfirmation('sai-reset-password', 'sai-reset-confirm');
 
   async function run(form, action) {
     if (busy) return;
 
     if (!window.isSecureContext || !window.crypto?.subtle) {
-      showMessage(
-        'افتح الموقع عبر HTTPS، مثل رابط GitHub Pages، لتفعيل الحسابات المحلية.'
-      );
+      showMessage('افتح الموقع عبر HTTPS، مثل رابط GitHub Pages، لتفعيل الحسابات المحلية.');
       return;
     }
 
@@ -1126,9 +1311,7 @@
     try {
       await action();
     } catch {
-      showMessage(
-        'تعذّرت العملية. تأكد من السماح بحفظ بيانات الموقع وعدم تلف البيانات المحلية.'
-      );
+      showMessage('تعذّرت العملية. تأكد من السماح بحفظ بيانات الموقع وعدم تلف البيانات المحلية.');
     } finally {
       busy = false;
       submit.disabled = false;
@@ -1140,10 +1323,7 @@
     if (busy) return;
 
     showPage('login', false);
-
-    if (!authDialog.open) {
-      authDialog.showModal();
-    }
+    if (!authDialog.open) authDialog.showModal();
 
     try {
       const email = localStorage.getItem(SESSION_KEY);
@@ -1151,10 +1331,8 @@
 
       if (account) {
         $('sai-login-email').value = account.email;
-
         showMessage(
-          'أنت مسجّل الدخول محليًا باسم ' +
-          account.name +
+          'أنت مسجّل الدخول محليًا باسم ' + account.name +
           '. يمكنك متابعة التصفح أو تسجيل الخروج من أعلى الصفحة.'
         );
       }
@@ -1166,9 +1344,7 @@
   });
 
   authDialog.querySelectorAll('[data-auth-go]').forEach(button => {
-    button.addEventListener('click', () => {
-      showPage(button.dataset.authGo);
-    });
+    button.addEventListener('click', () => showPage(button.dataset.authGo));
   });
 
   authDialog.querySelectorAll('[data-auth-close]').forEach(button => {
@@ -1190,7 +1366,6 @@
     event.preventDefault();
 
     const form = event.currentTarget;
-
     validateRegistration();
 
     if (!form.reportValidity()) return;
@@ -1211,15 +1386,12 @@
 
     run(form, async () => {
       if (readAccount(email)) {
-        showMessage(
-          'يوجد حساب بهذا البريد على هذا المتصفح. انتقل إلى تسجيل الدخول.'
-        );
+        showMessage('يوجد حساب بهذا البريد على هذا المتصفح. انتقل إلى تسجيل الدخول.');
         return;
       }
 
       const salt = randomHex(16);
       const recoveryCode = randomHex(20);
-
       const passwordHash = await hashPassword(secret, salt);
       const recoveryHash = await hashRecovery(recoveryCode);
 
@@ -1244,8 +1416,7 @@
         'تم إنشاء حسابك بنجاح.\n\n' +
         'احفظ رمز الاسترداد الآن في مكان خاص؛ لن يظهر مجددًا:\n\n' +
         recoveryCode +
-        '\n\nتحتاج هذا الرمز إذا نسيت كلمة المرور. ' +
-        'يمكنك الآن الانتقال إلى تسجيل الدخول.'
+        '\n\nتحتاج هذا الرمز إذا نسيت كلمة المرور. يمكنك الآن الانتقال إلى تسجيل الدخول.'
       );
     });
   });
@@ -1254,7 +1425,6 @@
     event.preventDefault();
 
     const form = event.currentTarget;
-
     if (!form.reportValidity()) return;
 
     const email = normalizeEmail($('sai-login-email').value);
@@ -1287,7 +1457,6 @@
       }
 
       localStorage.setItem(SESSION_KEY, email);
-
       updateHeader();
       authDialog.close();
     });
@@ -1297,7 +1466,6 @@
     event.preventDefault();
 
     const form = event.currentTarget;
-
     validateReset();
 
     if (!form.reportValidity()) return;
@@ -1324,7 +1492,6 @@
       const passwordHash = await hashPassword(secret, salt);
       const newRecoveryCode = randomHex(20);
       const newRecoveryHash = await hashRecovery(newRecoveryCode);
-
       const latest = readAccount(email);
 
       if (
@@ -1393,7 +1560,6 @@
   });
 
   $('year').textContent = new Date().getFullYear();
-
   updateHeader();
 })();
 </script>
@@ -1402,44 +1568,72 @@
 <script src="smart-ui.js"></script>
 
 <script id="bau-campus-google-map-inline">
-/* Saee Plus — BAU Salt campus Google Maps */
 (() => {
   "use strict";
 
   const bauCampusPlaces = [
-    { name: "كلية السلط التقنية – جامعة البلقاء التطبيقية، السلط", category: "الكليات والعمادات", query: "Al-Salt Technical College, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية الذكاء الاصطناعي – جامعة البلقاء التطبيقية، السلط", category: "الكليات والعمادات", query: "Faculty of Artificial Intelligence, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية الهندسة – المباني 2 و3", category: "الكليات والعمادات", query: "Faculty of Engineering Buildings 2 and 3, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية الأمير عبدالله بن غازي للاتصالات وتكنولوجيا المعلومات", category: "الكليات والعمادات", query: "Prince Abdullah Bin Ghazi Faculty for Information and Communication Technology, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية العلوم", category: "الكليات والعمادات", query: "Faculty of Science, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية التمريض", category: "الكليات والعمادات", query: "Faculty of Nursing, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية الأعمال", category: "الكليات والعمادات", query: "Faculty of Business, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية الحقوق والدراسات العليا وعمادة البحث العلمي", category: "الكليات والعمادات", query: "Faculty of Law Graduate Studies Scientific Research Deanship, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية السلط للعلوم الإنسانية", category: "الكليات والعمادات", query: "Al-Salt College for Human Sciences, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "كلية التكنولوجيا الزراعية", category: "الكليات والعمادات", query: "Faculty of Agricultural Technology, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "عمادة شؤون الطلبة", category: "الكليات والعمادات", query: "Deanship of Student Affairs, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "رئاسة الجامعة", category: "الإدارة والخدمات", query: "Presidency Unit, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "وحدة التعاون والعلاقات الدولية", category: "الإدارة والخدمات", query: "Cooperation and International Relations Unit, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "وحدة الامتحانات", category: "الإدارة والخدمات", query: "Examination Unit, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "المكاتب الإدارية", category: "الإدارة والخدمات", query: "Administration Offices, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "وحدة القبول والتسجيل", category: "الإدارة والخدمات", query: "Admission and Registration Unit, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "المكتبة", category: "المرافق الجامعية", query: "Library, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "مركز الحاسوب", category: "المرافق الجامعية", query: "Computer Centre, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "مباني المحاضرات", category: "المرافق الجامعية", query: "Lecture Premises, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "مركز الابتكار والإبداع وريادة الأعمال", category: "المرافق الجامعية", query: "Innovation Creativity and Entrepreneurship Centre, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "مطعم الجامعة", category: "المرافق الجامعية", query: "University Restaurant, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "الملعب الرياضي", category: "المرافق الرياضية", query: "Stadium, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "ملعب الخماسي", category: "المرافق الرياضية", query: "Futsal Court, Al-Balqa Applied University Main Campus, As-Salt, Jordan" },
-    { name: "بوابات الجامعة", category: "المداخل والبوابات", query: "University Gates, Al-Balqa Applied University Main Campus, As-Salt, Jordan" }
+    { name: "كلية السلط التقنية", category: "الكليات والعمادات", query: "Al-Salt Technical College, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية الهندسة – مبنى 2", category: "الكليات والعمادات", query: "Engineering Building 2, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية الهندسة – مبنى 3", category: "الكليات والعمادات", query: "Engineering Building 3, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية تكنولوجيا المعلومات والاتصالات", category: "الكليات والعمادات", query: "Information and Communication Technology, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية العلوم", category: "الكليات والعمادات", query: "Faculty of Science, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية التمريض", category: "الكليات والعمادات", query: "Faculty of Nursing, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية الأعمال", category: "الكليات والعمادات", query: "Faculty of Business, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية الحقوق والدراسات العليا والبحث العلمي", category: "الكليات والعمادات", query: "Faculty of Law Graduate Studies Deanship of Scientific Research, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية السلط للعلوم الإنسانية", category: "الكليات والعمادات", query: "Al-Salt College for Human Sciences, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية التكنولوجيا الزراعية", category: "الكليات والعمادات", query: "Faculty of Agricultural Technology, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "عمادة شؤون الطلبة", category: "الكليات والعمادات", query: "Deanship of Student Affairs, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "رئاسة الجامعة", category: "الإدارة والخدمات", query: "Presidency Unit, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "وحدة التعاون والعلاقات الدولية", category: "الإدارة والخدمات", query: "Cooperation and International Relations Unit, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "وحدة الامتحانات", category: "الإدارة والخدمات", query: "Examination Unit, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "المكاتب الإدارية", category: "الإدارة والخدمات", query: "Administration Offices, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "وحدة القبول والتسجيل", category: "الإدارة والخدمات", query: "Admission and Registration Unit, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "المكتبة", category: "المرافق الجامعية", query: "Library, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "مركز الحاسوب", category: "المرافق الجامعية", query: "Computer Centre, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "قاعات المحاضرات", category: "المرافق الجامعية", query: "Lecture Premises, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "مركز الابتكار والإبداع وريادة الأعمال", category: "المرافق الجامعية", query: "Innovation Creativity and Entrepreneurship Centre, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "مطعم الجامعة", category: "المرافق الجامعية", query: "University Restaurant, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "الملعب الرياضي", category: "المرافق الرياضية", query: "Stadium, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "ملعب الخماسي", category: "المرافق الرياضية", query: "Futsal, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "بوابات الجامعة", category: "المداخل والبوابات", query: "University Gates, Al-Balqa Applied University, As-Salt, Jordan" }
   ];
 
-  const campusCenter = "32.02448,35.71693";
-  let selectedIndex = 0;
+  let selectedIndex = -1;
   let selectedCategory = "الكل";
+  let mapSearchTerm = "";
+
+  const normalizeMapSearch = value => String(value ?? "")
+    .normalize("NFKC")
+    .toLocaleLowerCase("ar")
+    .replace(/[أإآٱ]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه")
+    .replace(/[\u064B-\u065F\u0670ـ]/g, "")
+    .trim();
 
   const escapeHTML = value => String(value ?? "").replace(/[&<>"']/g, char => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
   }[char]));
+
+  const campusQualifier = "Al-Balqa Applied University Main Campus, As-Salt, Jordan";
+
+  const precisePlaceQuery = place => {
+    if (!place || !place.query) return campusQualifier;
+
+    const building = String(place.query)
+      .replace(/Al-Balqa Applied University( Main Campus)?/ig, "")
+      .replace(/As-Salt,?\s*Jordan/ig, "")
+      .replace(/Jordan/ig, "")
+      .replace(/,+/g, ",")
+      .replace(/^,|,$/g, "")
+      .trim();
+
+    return building ? `${building}, ${campusQualifier}` : campusQualifier;
+  };
 
   const googleSearch = query =>
     "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(query);
@@ -1448,20 +1642,37 @@
     "https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(query);
 
   const mapEmbed = query =>
-    "https://maps.google.com/maps?q=" + encodeURIComponent(query) + "&z=17&output=embed";
+    "https://maps.google.com/maps?q=" + encodeURIComponent(query) + "&z=19&output=embed";
 
   function renderBauMap() {
     const main = document.getElementById("main");
     if (!main) return;
 
-    const current = bauCampusPlaces[selectedIndex] || bauCampusPlaces[0];
     const categories = ["الكل", ...new Set(bauCampusPlaces.map(place => place.category))];
-    const visiblePlaces = bauCampusPlaces
-      .map((place, index) => ({ ...place, index }))
-      .filter(place => selectedCategory === "الكل" || place.category === selectedCategory);
+    const normalizedTerm = normalizeMapSearch(mapSearchTerm);
 
+    let visiblePlaces = bauCampusPlaces
+      .map((place, index) => ({ ...place, index }))
+      .filter(place => selectedCategory === "الكل" || place.category === selectedCategory)
+      .filter(place => !normalizedTerm || normalizeMapSearch(`${place.name} ${place.category} ${place.query}`).includes(normalizedTerm));
+
+    if (normalizedTerm && visiblePlaces.length) {
+      selectedIndex = visiblePlaces[0].index;
+    }
+
+    if (!visiblePlaces.some(place => place.index === selectedIndex)) {
+      selectedIndex = normalizedTerm && visiblePlaces.length ? visiblePlaces[0].index : -1;
+    }
+
+    const current = selectedIndex >= 0 ? bauCampusPlaces[selectedIndex] : {
+      name: "الحرم الرئيسي – جامعة البلقاء التطبيقية",
+      query: campusQualifier
+    };
+
+    const currentQuery = precisePlaceQuery(current);
     const title = window.SAI_DEFAULTS?.services?.find(service => service[0] === "map")?.[2] || "خريطة الجامعة";
     const description = "خريطة جامعة البلقاء التطبيقية – الحرم الرئيسي في السلط. اختر المبنى لعرض موقعه وفتح الاتجاهات عبر Google Maps.";
+
     const header = typeof window.headerPage === "function"
       ? window.headerPage(title, description)
       : `<div class="page-head"><h1>${escapeHTML(title)}</h1><p>${escapeHTML(description)}</p></div>`;
@@ -1469,14 +1680,17 @@
     main.innerHTML = `
       <div class="container bau-campus-page">
         ${header}
+
         <div class="demo-note">
-          تم التحقق من أسماء الكليات والمرافق بالرجوع إلى
-          <a href="https://www.bau.edu.jo/bauar/Units/SIR/media/BAU_Map.pdf" target="_blank" rel="noopener noreferrer">مخطط الحرم الرئيسي الرسمي لجامعة البلقاء التطبيقية في السلط</a>، وإلى
-          <a href="https://bau.edu.jo/bauar/Colleges/AI/Home.aspx" target="_blank" rel="noopener noreferrer">الصفحة الرسمية لكلية الذكاء الاصطناعي</a>.
-          كلية السلط التقنية تتبع جامعة البلقاء التطبيقية وتقع ضمن حرمها في السلط، وليست تابعة لجامعة عمان العربية. أُضيفت كلية الذكاء الاصطناعي أيضًا. المخطط الرسمي لا يوفّر إحداثيات GPS منفصلة لكل مبنى؛ لذلك تبحث روابط Google Maps باسم المبنى مع اسم الجامعة والحرم في السلط. راجع اسم النتيجة الظاهرة قبل بدء التنقّل.
+          أسماء الكليات والمرافق مستندة إلى
+          <a href="https://www.bau.edu.jo/bauar/Units/SIR/media/BAU_Map.pdf" target="_blank" rel="noopener noreferrer">مخطط الحرم الجامعي الرسمي (PDF)</a>.
+          البحث يقيّد النتائج بحرم السلط ويقرّب الخريطة أكثر. دقة الدبوس النهائي تعتمد على بيانات Google Maps؛ بعض المباني لا تملك دبوسًا مستقلًا، لذلك راجع اسم الموقع والمخطط الرسمي قبل التنقّل.
         </div>
 
         <div class="toolbar">
+          <label class="bau-map-search-label" for="bau-map-search">ابحث عن كلية أو مبنى أو مرفق</label>
+          <input id="bau-map-search" class="bau-map-search" type="search" value="${escapeHTML(mapSearchTerm)}" placeholder="مثال: كلية الهندسة، المكتبة، مركز الحاسوب" autocomplete="off" aria-label="البحث عن مبنى في خريطة الجامعة">
+
           <div class="chips" aria-label="تصنيف المباني">
             ${categories.map((category, index) => `
               <button type="button" class="chip ${category === selectedCategory ? "selected" : ""}" data-bau-category="${index}">
@@ -1492,35 +1706,39 @@
               <div>
                 <span class="kicker">المبنى المحدد</span>
                 <h2>${escapeHTML(current.name)}</h2>
-                <p>اختَر مبنى من القائمة المجاورة لتحديث الخريطة وفتح الاتجاهات إليه.</p>
+                <p>${selectedIndex >= 0 ? "الموقع المحدد يتغير حسب اختيارك أو نتيجة البحث." : "الخريطة تعرض الحرم الجامعي بشكل عام. ابحث عن مبنى أو اختره من القائمة لتحديث الخريطة."}</p>
               </div>
             </div>
+
             <iframe
               class="bau-google-map"
               title="خريطة Google Maps: ${escapeHTML(current.name)}"
-              src="${mapEmbed(current.query)}"
+              src="${mapEmbed(currentQuery)}"
               loading="lazy"
               allowfullscreen
               referrerpolicy="no-referrer-when-downgrade">
             </iframe>
+
             <div class="bau-map-actions">
-              <a class="button small" href="${googleSearch(current.query)}" target="_blank" rel="noopener noreferrer">عرض الموقع على Google Maps ↗</a>
-              <a class="button small light" href="${googleDirections(current.query)}" target="_blank" rel="noopener noreferrer">كيف أوصل؟ ↗</a>
+              <a class="button small" href="${googleSearch(currentQuery)}" target="_blank" rel="noopener noreferrer">عرض الموقع على Google Maps ↗</a>
+              <a class="button small light" href="${googleDirections(currentQuery)}" target="_blank" rel="noopener noreferrer">كيف أوصل؟ ↗</a>
               <a class="bau-campus-plan" href="https://www.bau.edu.jo/bauar/Units/SIR/media/BAU_Map.pdf" target="_blank" rel="noopener noreferrer">المخطط الرسمي للحرم الجامعي</a>
             </div>
+
             <p class="bau-map-hint">زر «كيف أوصل؟» يفتح Google Maps لتحديد نقطة الانطلاق تلقائيًا من هاتفك أو إدخالها يدويًا.</p>
           </section>
 
           <aside class="bau-map-places" aria-label="قائمة مباني ومرافق الجامعة">
             <h2>مباني ومرافق الجامعة</h2>
             <p class="bau-map-list-intro">اضغط على اسم المبنى لعرض موقعه على الخريطة.</p>
+
             <div class="bau-map-place-list">
-              ${visiblePlaces.map(place => `
+              ${visiblePlaces.length ? visiblePlaces.map(place => `
                 <button type="button" class="place-card ${place.index === selectedIndex ? "selected" : ""}" data-bau-place="${place.index}" aria-pressed="${place.index === selectedIndex}">
                   <h3>${escapeHTML(place.name)}</h3>
                   <p>${escapeHTML(place.category)} · ${place.index === selectedIndex ? "محدد حاليًا" : "عرض الموقع ←"}</p>
                 </button>
-              `).join("")}
+              `).join("") : `<p class="bau-map-no-results">ما لقينا مبنى بهذا الاسم. جرّب كلمة أقصر مثل «الهندسة» أو «المكتبة».</p>`}
             </div>
           </aside>
         </div>
@@ -1528,6 +1746,10 @@
 
       <style id="bau-campus-map-style">
         .bau-campus-page { padding-bottom: 44px; }
+        .bau-map-search-label { display:block; margin:0 0 7px; color:var(--green); font-size:13px; font-weight:700; }
+        .bau-map-search { display:block; width:100%; max-width:620px; min-height:46px; margin:0 0 14px; padding:11px 14px; border:1px solid var(--line); border-radius:10px; background:#fffefb; color:#173c39; font:inherit; outline-offset:2px; }
+        .bau-map-search:focus { border-color:var(--green); box-shadow:0 0 0 3px #07555018; }
+        .bau-map-no-results { margin:8px 0; padding:14px; border-radius:10px; background:#f7f4eb; color:#6d756b; font-size:13px; line-height:1.8; }
         .bau-map-layout { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(260px,.8fr); gap:22px; align-items:start; margin:18px 0 58px; }
         .bau-map-main { min-width:0; padding:18px; background:#fffefb; border:1px solid var(--line); border-radius:14px; }
         .bau-map-heading { margin-bottom:14px; }
@@ -1551,21 +1773,50 @@
         @media(max-width:700px) {
           .bau-map-layout { gap:14px; }
           .bau-map-main,.bau-map-places { padding:12px; }
-          .bau-google-map { height:360px; }
+          .bau-google-map { height:360px; min-height:320px; }
+          .bau-map-search { max-width:none; font-size:16px; }
+          .bau-map-places { max-height:none; }
+          .bau-map-place-list { grid-template-columns:1fr; }
+          .bau-campus-page .toolbar { min-width:0; }
+          .bau-campus-page .chips { display:flex; flex-wrap:wrap; gap:7px; }
           .bau-map-actions { flex-direction:column; align-items:stretch; }
           .bau-map-actions .button,.bau-campus-plan { width:100%; justify-content:center; text-align:center; }
         }
       </style>`;
 
+    const searchInput = main.querySelector("#bau-map-search");
+
+    if (searchInput) {
+      searchInput.addEventListener("input", event => {
+        mapSearchTerm = event.target.value;
+        const caret = event.target.selectionStart;
+        renderBauMap();
+
+        const refreshedInput = main.querySelector("#bau-map-search");
+
+        if (refreshedInput) {
+          refreshedInput.focus({ preventScroll: true });
+          try {
+            refreshedInput.setSelectionRange(caret, caret);
+          } catch (_) {}
+        }
+      });
+    }
+
     main.querySelectorAll("[data-bau-category]").forEach(button => {
       button.addEventListener("click", () => {
         selectedCategory = categories[Number(button.dataset.bauCategory)] || "الكل";
-        const stillVisible = bauCampusPlaces.findIndex((place, index) =>
-          index === selectedIndex && (selectedCategory === "الكل" || place.category === selectedCategory)
-        );
-        if (stillVisible < 0) {
-          selectedIndex = bauCampusPlaces.findIndex(place => selectedCategory === "الكل" || place.category === selectedCategory);
+        const normalizedTerm = normalizeMapSearch(mapSearchTerm);
+
+        const matching = bauCampusPlaces
+          .map((place, index) => ({ ...place, index }))
+          .filter(place => selectedCategory === "الكل" || place.category === selectedCategory)
+          .filter(place => !normalizedTerm || normalizeMapSearch(`${place.name} ${place.category} ${place.query}`).includes(normalizedTerm));
+
+        if (!matching.some(place => place.index === selectedIndex)) {
+          selectedIndex = matching.length ? matching[0].index : -1;
         }
+
         renderBauMap();
       });
     });
@@ -1574,28 +1825,376 @@
       button.addEventListener("click", () => {
         selectedIndex = Number(button.dataset.bauPlace);
         renderBauMap();
+
         const map = main.querySelector(".bau-google-map");
         if (map) map.scrollIntoView({ behavior: "smooth", block: "center" });
       });
     });
   }
 
-  // Override the demo diagram with the real Google Maps experience on the #map route.
   window.mapPage = renderBauMap;
+
   window.mapCategory = function(index) {
     const categories = ["الكل", ...new Set(bauCampusPlaces.map(place => place.category))];
     selectedCategory = categories[index] || "الكل";
-    const activeCategory = selectedCategory;
-    if (!bauCampusPlaces[selectedIndex] || (activeCategory !== "الكل" && bauCampusPlaces[selectedIndex].category !== activeCategory)) {
-      selectedIndex = bauCampusPlaces.findIndex(place => activeCategory === "الكل" || place.category === activeCategory);
+
+    if (
+      !bauCampusPlaces[selectedIndex] ||
+      (selectedCategory !== "الكل" && bauCampusPlaces[selectedIndex].category !== selectedCategory)
+    ) {
+      selectedIndex = bauCampusPlaces.findIndex(
+        place => selectedCategory === "الكل" || place.category === selectedCategory
+      );
     }
+
     renderBauMap();
   };
 
-  // If the visitor opened the map page directly, refresh the already-rendered demo.
   if (location.hash === "#map") renderBauMap();
 })();
-
 </script>
+
+<dialog id="saee-inquiry-dialog" aria-labelledby="saee-inquiry-title">
+  <button type="button" class="saee-inquiry-close" aria-label="إغلاق" onclick="this.closest('dialog').close()">×</button>
+  <div id="saee-inquiry-content"></div>
+</dialog>
+
+<script id="saee-inquiries-script">
+(() => {
+  'use strict';
+
+  const toggle = document.getElementById('saee-inquiries-toggle');
+  const menu = document.getElementById('saee-inquiries-menu');
+  const dialog = document.getElementById('saee-inquiry-dialog');
+  const content = document.getElementById('saee-inquiry-content');
+
+  if (!toggle || !menu || !dialog || !content) return;
+
+  const topics = {
+    loans: {
+      title: 'القروض والمنح والمكارم والأسئلة الجامعية',
+      contacts: [['عبد الرحمن', '0798245512'], ['محمد', '0786633026']]
+    },
+    opportunities: {
+      title: 'الفرص',
+      contacts: [['سلمى', '0782153883']]
+    },
+    talents: {
+      title: 'المواهب',
+      contacts: [['لجين', '0770368592']]
+    },
+    expert: {
+      title: 'اسأل خبير',
+      contacts: [['تقى', '0790730665'], ['حمزة', '0788872569']]
+    },
+    projects: {
+      title: 'المشاريع',
+      contacts: [['لين', '0771059050']]
+    }
+  };
+
+  const isOpenHours = () => {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Amman',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23'
+    }).formatToParts(new Date());
+
+    const hour = Number(parts.find(part => part.type === 'hour')?.value ?? 0);
+    return hour >= 9 && hour < 17;
+  };
+
+  function showDialog(key) {
+    if (!isOpenHours()) {
+      content.innerHTML =
+        '<h2 id="saee-inquiry-title">الاستفسارات مغلقة حاليًا</h2>' +
+        '<p>يمكنك التواصل خلال ساعات الاستفسارات من <strong>9:00 صباحًا حتى 5:00 مساءً</strong> بتوقيت الأردن.</p>' +
+        '<p class="saee-inquiry-note">يرجى العودة خلال أوقات الدوام.</p>';
+    } else {
+      const topic = topics[key];
+      if (!topic) return;
+
+      const contacts = topic.contacts.map(([name, phone]) =>
+        `<div class="saee-inquiry-contact"><strong>${name}</strong><a href="tel:${phone.replace(/\s/g, '')}">${phone}</a></div>`
+      ).join('');
+
+      content.innerHTML =
+        `<h2 id="saee-inquiry-title">${topic.title}</h2>` +
+        `<p>للاستفسار، تواصل مع:</p>${contacts}` +
+        `<p class="saee-inquiry-note">التواصل متاح من 9:00 صباحًا حتى 5:00 مساءً بتوقيت الأردن.</p>`;
+    }
+
+    if (typeof dialog.showModal === 'function') {
+      dialog.showModal();
+    } else {
+      alert(content.innerText);
+    }
+  }
+
+  toggle.addEventListener('click', () => {
+    const open = menu.hidden;
+    menu.hidden = !open;
+    toggle.setAttribute('aria-expanded', String(open));
+  });
+
+  menu.querySelectorAll('[data-inquiry]').forEach(button => {
+    button.addEventListener('click', () => {
+      menu.hidden = true;
+      toggle.setAttribute('aria-expanded', 'false');
+      showDialog(button.dataset.inquiry);
+    });
+  });
+
+  dialog.addEventListener('click', event => {
+    if (event.target === dialog) dialog.close();
+  });
+
+  document.addEventListener('click', event => {
+    if (!event.target.closest('.saee-inquiries-nav')) {
+      menu.hidden = true;
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+  });
+})();
+</script>
+
+<!-- حماية إضافة المنتجات والكتب والمشاريع والفرص -->
+<script id="saee-project-account-gate">
+(() => {
+  'use strict';
+
+  const SESSION_KEY = 'sai-local-session-v1';
+  const ACCOUNT_PREFIX = 'sai-local-account-v1:';
+  const AUTH_DIALOG_ID = 'sai-auth';
+
+  function hasAccountSession() {
+    try {
+      const email = localStorage.getItem(SESSION_KEY);
+      if (!email) return false;
+
+      const raw = localStorage.getItem(
+        ACCOUNT_PREFIX + encodeURIComponent(email)
+      );
+
+      if (!raw) return false;
+
+      const account = JSON.parse(raw);
+
+      return Boolean(
+        account &&
+        account.version === 1 &&
+        account.email === email
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function normalizeText(value) {
+    return String(value || '')
+      .normalize('NFKC')
+      .toLowerCase()
+      .replace(/[أإآٱ]/g, 'ا')
+      .replace(/ى/g, 'ي')
+      .replace(/ة/g, 'ه')
+      .replace(/[\u064B-\u065F\u0670ـ]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function getActionElement(element) {
+    if (!(element instanceof Element)) return null;
+
+    return element.closest(
+      'button, input[type="submit"], input[type="button"], a, [role="button"]'
+    );
+  }
+
+  function getElementText(element) {
+    if (!element) return '';
+
+    return normalizeText([
+      element.innerText,
+      element.textContent,
+      element.value,
+      element.getAttribute('aria-label'),
+      element.getAttribute('title'),
+      element.dataset?.action,
+      element.dataset?.type,
+      element.dataset?.target
+    ].filter(Boolean).join(' '));
+  }
+
+  function getProtectedType(text) {
+    const patterns = [
+      {
+        type: 'كتابك',
+        regex: /كتابك|اضاف.{0,10}كتاب|اضف.{0,10}كتاب|book.{0,20}(add|new)|(add|new).{0,20}book/
+      },
+      {
+        type: 'منتجك',
+        regex: /منتجك|اضاف.{0,10}منتج|اضف.{0,10}منتج|product.{0,20}(add|new)|(add|new).{0,20}product/
+      },
+      {
+        type: 'فرصتك',
+        regex: /اضاف.{0,10}فرص|اضف.{0,10}فرص|فرص.{0,10}(جديد|جديده)|opportunit.{0,20}(add|new)|(add|new).{0,20}opportunit/
+      },
+      {
+        type: 'مشروعك',
+        regex: /اضاف.{0,10}مشروع|اضف.{0,10}مشروع|مشروع.{0,10}جديد|project.{0,20}(add|new)|(add|new).{0,20}project/
+      },
+      {
+        type: 'مشاركتك',
+        regex: /شارك.{0,15}خبرتك|شارك.{0,15}تجربتك|مشاركة.{0,15}(خبرة|تجربة)|share.{0,15}(your )?experience|experience.{0,15}(share|submit|add)/i
+      }
+    ];
+
+    for (const item of patterns) {
+      if (item.regex.test(text)) return item.type;
+    }
+
+    return null;
+  }
+
+  function isProtectedAction(element) {
+    const target = getActionElement(element);
+    if (!target) return null;
+
+    const text = getElementText(target);
+    const type = getProtectedType(text);
+
+    if (type) return { target, type };
+
+    /*
+     * دعم أزرار الإضافة التي تحمل بيانات صريحة في HTML.
+     * لا يشمل الأزرار العادية أو أزرار التنقل.
+     */
+    const action = normalizeText([
+      target.dataset?.action,
+      target.dataset?.type,
+      target.dataset?.target
+    ].filter(Boolean).join(' '));
+
+    if (/add.?product|product.?add/.test(action)) {
+      return { target, type: 'منتجك' };
+    }
+
+    if (/add.?book|book.?add/.test(action)) {
+      return { target, type: 'كتابك' };
+    }
+
+    if (/add.?project|project.?add/.test(action)) {
+      return { target, type: 'مشروعك' };
+    }
+
+    if (/add.?opportunit|opportunit.?add/.test(action)) {
+      return { target, type: 'فرصتك' };
+    }
+
+    if (/share.?experience|experience.?share|submit.?experience/.test(action)) {
+      return { target, type: 'مشاركتك' };
+    }
+
+    return null;
+  }
+
+  function isProtectedForm(form) {
+    const description = normalizeText([
+      form.innerText,
+      form.textContent,
+      form.getAttribute('aria-label'),
+      form.getAttribute('name'),
+      form.getAttribute('action'),
+      form.id,
+      form.className
+    ].filter(Boolean).join(' '));
+
+    if (getProtectedType(description)) return true;
+
+    return /add.?product|product.?add|add.?book|book.?add|add.?project|project.?add|add.?opportunit|opportunit.?add|share.?experience|experience.?share|submit.?experience/i.test(description);
+  }
+
+  function requestLogin(actionName) {
+    const dialog = document.getElementById(AUTH_DIALOG_ID);
+    const message = document.getElementById('sai-auth-message');
+    const title = document.getElementById('sai-auth-title');
+    const description = document.getElementById('sai-auth-description');
+
+    const text =
+      'لإضافة ' + (actionName || 'المحتوى') +
+      ' إلى سعي بلس، يجب تسجيل الدخول أو إنشاء حساب جديد أولًا.';
+
+    if (!dialog) {
+      alert(text);
+      return;
+    }
+
+    dialog.querySelectorAll('[data-auth-panel]').forEach(panel => {
+      panel.hidden = panel.dataset.authPanel !== 'login';
+    });
+
+    if (title) title.textContent = 'تسجيل الدخول مطلوب';
+    if (description) description.textContent = text;
+
+    if (message) {
+      message.textContent =
+        text +
+        '\nبعد تسجيل الدخول، ارجع إلى القسم المطلوب واضغط زر الإضافة مرة أخرى.';
+      message.hidden = false;
+    }
+
+    if (!dialog.open && typeof dialog.showModal === 'function') {
+      dialog.showModal();
+    }
+
+    const email = document.getElementById('sai-login-email');
+    if (email) setTimeout(() => email.focus(), 50);
+  }
+
+  /*
+   * التقاط النقر قبل وصوله إلى سكربتات الموقع الأخرى.
+   * المستخدم غير المسجل لا يستطيع تشغيل زر الإضافة.
+   */
+  document.addEventListener('click', event => {
+    if (hasAccountSession()) return;
+
+    const protectedAction = isProtectedAction(event.target);
+    if (!protectedAction) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
+    requestLogin(protectedAction.type);
+  }, true);
+
+  /*
+   * حماية إرسال نموذج الإضافة أيضًا، وليس الضغط على الزر فقط.
+   */
+  document.addEventListener('submit', event => {
+    const form = event.target;
+
+    if (!(form instanceof HTMLFormElement)) return;
+    if (hasAccountSession()) return;
+    if (!isProtectedForm(form)) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
+    const type = getProtectedType(normalizeText([
+      form.innerText,
+      form.textContent,
+      form.id,
+      form.getAttribute('aria-label')
+    ].filter(Boolean).join(' '))) || 'المحتوى';
+
+    requestLogin(type);
+  }, true);
+
+})();
+</script>
+
 </body>
 </html>
