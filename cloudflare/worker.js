@@ -481,7 +481,7 @@ export default {
         const str = JSON.stringify(content);
 
         if (str.length > 950000) {
-          return fail('المحتوى كبير جداً', 413);
+          return fail('حجم المحتوى والصور تجاوز حد الحفظ الحالي. احذف صورًا إضافية أو اختصر النصوص ثم أعد المحاولة.', 413);
         }
 
         const headerRevision = Number(
