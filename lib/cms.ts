@@ -41,13 +41,7 @@ export async function contentRequest(request:Request,env:Cloudflare.Env,user:Use
     const key=hash+'.'+m[1];await env.BUCKET.put('media/'+key,bytes,{httpMetadata:{contentType:'image/'+m[1]}});return '/api/media/'+key;
    })();uploads.set(value,promise);return promise;
   }
-  for(const item of state.items){
-   for(const key of ['image','shopImage1','shopImage2'] as const){const value=item[key];if(value)item[key]=await image(value);}
-   if(Array.isArray(item.gallery)){
-    if(item.gallery.length>10)return response({error:'الحد الأقصى 10 صور لكل مشروع.'},400);
-    item.gallery=await Promise.all(item.gallery.map((value:string)=>value?image(value):''));
-   }
-  }
+  for(const item of state.items){for(const key of ['image','shopImage1','shopImage2'] as const){const value=item[key];if(value)item[key]=await image(value);}if(Array.isArray(item.shopImages)){item.shopImages=await Promise.all(item.shopImages.filter(Boolean).map((value:string)=>image(value)));}}
   for(const key of Object.keys(state.images))state.images[key]=await image(state.images[key]);
   const revision=Math.max(Date.now(),expectedRevision+1);state.revision=revision;
   const payload=JSON.stringify(state);
