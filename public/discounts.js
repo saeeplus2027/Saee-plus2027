@@ -331,7 +331,96 @@
      9. تحديث الأزرار عند فتح التفاصيل أو إعادة تحميل الصفحة
      --------------------------------------------------------- */
 
+  /* ---------------------------------------------------------
+     إضافة زر «تم الخصم» تلقائيًا داخل تفاصيل أي خصم (قديم أو جديد)
+     --------------------------------------------------------- */
+
+  let lastDetailId = '';
+
+  document.addEventListener('click', function (event) {
+    const opener = event.target.closest
+      ? event.target.closest('[data-detail-id]')
+      : null;
+
+    if (opener) {
+      lastDetailId = opener.getAttribute('data-detail-id') || '';
+    }
+  }, true);
+
+  function findOpenDiscount(content) {
+    const store = window.SiteStore;
+    const items = (store && store.state && store.state.items) || [];
+    const heading = content.querySelector('h2');
+    const title = heading ? heading.textContent.trim() : '';
+
+    if (!title) {
+      return null;
+    }
+
+    const same = function (item) {
+      return item.type === 'discounts' && String(item.title).trim() === title;
+    };
+
+    return (
+      items.find(function (item) {
+        return item.id === lastDetailId && same(item);
+      }) ||
+      items.find(same) ||
+      null
+    );
+  }
+
+  function ensureButton() {
+    const dialog = document.getElementById('dialog');
+    const content = document.getElementById('dialog-content');
+
+    if (!dialog || !content || !dialog.open) {
+      return;
+    }
+
+    if (content.querySelector(BUTTON_SELECTOR)) {
+      return;
+    }
+
+    const item = findOpenDiscount(content);
+
+    if (!item) {
+      return;
+    }
+
+    const box = document.createElement('div');
+    box.className = 'discount-use-box';
+    box.style.cssText =
+      'margin:14px 0 10px;padding:14px;border:1px dashed #b9cdb6;' +
+      'border-radius:14px;background:#f6faf4;text-align:center';
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'button saee-discount-use';
+    button.setAttribute('data-discount-id', String(item.id));
+    button.style.cssText = 'width:100%;justify-content:center';
+    button.textContent = 'تم الخصم';
+
+    const note = document.createElement('small');
+    note.style.cssText = 'display:block;margin-top:8px;color:#788675';
+    note.textContent =
+      'اضغط الزر بعد استخدام الخصم. يتفعّل من جديد مرة كل 24 ساعة.';
+
+    box.appendChild(button);
+    box.appendChild(note);
+
+    const favorite = content.querySelector('button[onclick*="saveFavorite"]');
+
+    if (favorite && favorite.parentNode) {
+      favorite.parentNode.insertBefore(box, favorite);
+    } else {
+      content.appendChild(box);
+    }
+  }
+
   function refreshButtons() {
+    ensureButton();
+
     document.querySelectorAll(BUTTON_SELECTOR).forEach(
       function (button) {
         updateButton(button);
