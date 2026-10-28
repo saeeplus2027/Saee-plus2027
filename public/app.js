@@ -41,10 +41,19 @@ function paintDiscountButton(id,button,data){
   button.classList.toggle('discount-used',remaining>0);
 }
 async function updateDiscountButton(id){
-  const button=document.querySelector(`[data-discount-use="${CSS.escape(String(id))}"]`);if(!button)return;
-  button.disabled=true;button.textContent='جارٍ التحقق…';
-  try{const data=await getDiscountUsage(id);paintDiscountButton(id,button,data)}
-  catch(error){button.disabled=true;button.textContent='تعذر التحقق';button.title=error.message;}
+  const button=document.querySelector(`[data-discount-use="${CSS.escape(String(id))}"]`);
+  if(!button)return;
+  button.disabled=true;
+  button.textContent='✓ تم الخصم';
+  try{
+    const data=await getDiscountUsage(id);
+    paintDiscountButton(id,button,data);
+  }catch(error){
+    // Keep the requested label, but fail closed: never allow use without server verification.
+    button.disabled=true;
+    button.textContent='✓ تم الخصم';
+    button.title='تعذر التحقق من حالة الخصم المشتركة. تأكد من نشر API وربط قاعدة بيانات D1.';
+  }
 }
 async function markDiscountUsed(id){
   const button=document.querySelector(`[data-discount-use="${CSS.escape(String(id))}"]`);if(!button||button.dataset.saving==='1')return;
