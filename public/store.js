@@ -95,7 +95,7 @@ window.SiteStore = (() => {
 
       for (const field of [
         "image", "badge", "meta", "extra",
-        "price", "contact", "emoji"
+        "price", "contact", "emoji", "socialLink"
       ]) {
         if (
           item[field] !== undefined &&
