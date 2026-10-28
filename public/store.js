@@ -95,7 +95,7 @@ window.SiteStore = (() => {
 
       for (const field of [
         "image", "badge", "meta", "extra",
-        "price", "contact", "emoji", "socialLink"
+        "price", "contact", "emoji"
       ]) {
         if (
           item[field] !== undefined &&
@@ -261,7 +261,7 @@ window.SiteStore = (() => {
           'Accept': 'application/json',
           'If-Match': etag
         },
-        body: JSON.stringify({ content: checked, state: checked })
+        body: JSON.stringify({ content: checked })
       });
       const body = await readResponse(response);
       state = validate(body.state ?? body.content);
