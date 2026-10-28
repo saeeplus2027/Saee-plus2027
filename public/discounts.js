@@ -9,97 +9,15 @@
 
   const DAY = 24 * 60 * 60 * 1000;
 
-  const STORAGE_PREFIX = 'saee_discount_used_v5:';
-  const GUEST_KEY = 'saee_discount_guest_id_v5';
 
   const BUTTON_SELECTOR = '.saee-discount-use';
-
   /* ---------------------------------------------------------
-     1. إنشاء معرّف ثابت للزائر أو الحساب
+     Server-only shared usage state. No localStorage fallback is allowed.
      --------------------------------------------------------- */
-
-  function getAccountScope() {
-    try {
-      const session = localStorage.getItem('sai-local-session-v1');
-
-      if (session) {
-        try {
-          const parsed = JSON.parse(session);
-
-          const email =
-            parsed.email ||
-            parsed.user?.email ||
-            parsed.account?.email;
-
-          if (email) {
-            return 'account:' + String(email).trim().toLowerCase();
-          }
-        } catch (error) {
-          // الجلسة مخزنة كنص عادي (البريد الإلكتروني مباشرة).
-          const plain = String(session).trim().toLowerCase();
-
-          if (plain.includes('@')) {
-            return 'account:' + plain;
-          }
-        }
-      }
-
-      let guestId = localStorage.getItem(GUEST_KEY);
-
-      if (!guestId) {
-        guestId =
-          'guest-' +
-          Date.now().toString(36) +
-          '-' +
-          Math.random().toString(36).slice(2);
-
-        localStorage.setItem(GUEST_KEY, guestId);
-      }
-
-      return guestId;
-
-    } catch (error) {
-      return 'browser';
-    }
-  }
-
-  /* ---------------------------------------------------------
-     2. إنشاء مفتاح تخزين مستقل لكل خصم
-     --------------------------------------------------------- */
-
-  function getStorageKey(discountId) {
-    return (
-      STORAGE_PREFIX +
-      encodeURIComponent(getAccountScope()) +
-      ':' +
-      encodeURIComponent(String(discountId))
-    );
-  }
-
-  /* ---------------------------------------------------------
-     3. قراءة وقت انتهاء الحظر
-     --------------------------------------------------------- */
-
-  function getExpiry(discountId) {
-    try {
-      const key = getStorageKey(discountId);
-      const expiry = Number(localStorage.getItem(key) || 0);
-
-      if (!Number.isFinite(expiry) || expiry <= 0) {
-        return 0;
-      }
-
-      if (Date.now() >= expiry) {
-        localStorage.removeItem(key);
-        return 0;
-      }
-
-      return expiry;
-
-    } catch (error) {
-      return 0;
-    }
-  }
+  const serverExpiries = Object.create(null);
+  let usageLoadInProgress = false;
+  let usageReady = false;
+  let usageLoadFailed = false;
 
   /* ---------------------------------------------------------
      4. حساب الوقت المتبقي
@@ -178,19 +96,13 @@
      6. تحديث شكل الزر بحسب حالة الخصم
      --------------------------------------------------------- */
 
-  function setText(element, text) {
-    if (element.textContent !== text) {
-      element.textContent = text;
-    }
-  }
-
   function updateButton(button) {
     if (!button || !button.dataset.discountId) {
       return;
     }
 
     const discountId = button.dataset.discountId;
-    const expiry = getExpiry(discountId);
+    const expiry = Number(serverExpiries[discountId] || 0);
 
     let timer = button.parentElement.querySelector(
       '.saee-discount-use-timer'
@@ -212,6 +124,19 @@
       button.insertAdjacentElement('afterend', timer);
     }
 
+    if (!usageReady) {
+      button.disabled = true;
+      setText(button, usageLoadFailed ? 'تعذر الاتصال' : 'جارٍ التحقق من الخصم…');
+      button.title = usageLoadFailed
+        ? 'الخادم غير متاح؛ لم يتم تأكيد حالة الخصم. ستتم إعادة المحاولة تلقائيًا.'
+        : 'يتم تحميل حالة الخصم المشتركة من الخادم.';
+      timer.hidden = false;
+      setText(timer, usageLoadFailed
+        ? 'تأكد من نشر Worker وربطه بقاعدة D1.'
+        : 'انتظر حتى يكتمل التحقق من الخادم.');
+      return;
+    }
+
     if (expiry > Date.now()) {
       button.disabled = true;
       setText(button, 'تم الخصم ✓');
@@ -226,11 +151,9 @@
 
       timer.hidden = false;
 
-      setText(
-        timer,
+      setText(timer,
         'إعادة التفعيل بعد ' +
-        formatRemaining(expiry - Date.now())
-      );
+        formatRemaining(expiry - Date.now()));
 
     } else {
       button.disabled = false;
@@ -249,49 +172,88 @@
     }
   }
 
+  // Avoid replacing text nodes when nothing changed. This also prevents the
+  // modal MutationObserver from repeatedly reacting to its own UI updates.
+  function setText(element, value) {
+    if (element && element.textContent !== value) element.textContent = value;
+  }
+
   /* ---------------------------------------------------------
      7. تسجيل الاستخدام لمدة 24 ساعة
      --------------------------------------------------------- */
 
-  function useDiscount(button) {
+  async function useDiscount(button) {
     const discountId = button.dataset.discountId;
-
     if (!discountId) {
       showMessage('تعذّر تحديد الخصم.');
       return;
     }
 
-    const currentExpiry = getExpiry(discountId);
-
-    if (currentExpiry > Date.now()) {
-      updateButton(button);
-
-      showMessage(
-        'سبق استخدام هذا الخصم. يرجع يتفعّل بعد ' +
-        formatRemaining(currentExpiry - Date.now())
-      );
-
+    if (!usageReady) {
+      showMessage('انتظر حتى يتم التحقق من حالة الخصم المشتركة.');
       return;
     }
 
-    try {
-      const expiry = Date.now() + DAY;
-
-      localStorage.setItem(
-        getStorageKey(discountId),
-        String(expiry)
-      );
-
+    const currentExpiry = Number(serverExpiries[discountId] || 0);
+    if (currentExpiry > Date.now()) {
       updateButton(button);
+      showMessage('سبق تسجيل هذا الخصم. يرجع يتفعّل بعد ' + formatRemaining(currentExpiry - Date.now()));
+      return;
+    }
 
-      showMessage(
-        'تم تسجيل الخصم ✓ سيُعاد تفعيله بعد 24 ساعة.'
-      );
+    button.disabled = true;
+    const oldText = button.textContent;
+    button.textContent = 'جاري تسجيل الخصم…';
 
+    try {
+      if (!window.SiteStore || typeof window.SiteStore.useDiscount !== 'function') {
+        throw Error('خدمة تسجيل الخصم المشتركة غير متاحة.');
+      }
+
+      const result = await window.SiteStore.useDiscount(discountId);
+      if (!result || result.success !== true) {
+        throw Error('لم يؤكد الخادم تسجيل الخصم. حاول مرة أخرى.');
+      }
+
+      serverExpiries[discountId] = Number(result.expiresAt || (Date.now() + DAY));
+      updateButton(button);
+      showMessage('تم تسجيل الخصم ✓ سيُعاد تفعيله بعد 24 ساعة على جميع الأجهزة.');
     } catch (error) {
-      showMessage(
-        'تعذّر حفظ الاستخدام. تأكد من إعدادات المتصفح.'
-      );
+      if (error && (error.alreadyUsed || (error.status === 409 && error.body && error.body.alreadyUsed))) {
+        const expiry = Number(error.body && error.body.expiresAt || Date.now() + DAY);
+        serverExpiries[discountId] = expiry;
+        updateButton(button);
+        showMessage('تم تسجيل هذا الخصم بالفعل. يرجع يتفعّل بعد ' + formatRemaining(Math.max(0, expiry - Date.now())));
+      } else {
+        button.disabled = true;
+        button.textContent = 'تعذر الاتصال';
+        button.title = (error && error.message) || 'تعذر الاتصال بخادم الخصومات.';
+        showMessage((error && error.message) || 'تعذّر تسجيل الخصم المشترك. حاول مرة أخرى.');
+      }
+    }
+  }
+
+  async function loadServerUsage() {
+    if (usageLoadInProgress || !window.SiteStore || typeof window.SiteStore.getDiscountUsage !== 'function') return;
+    usageLoadInProgress = true;
+    try {
+      const usages = await window.SiteStore.getDiscountUsage();
+      for (const id of Object.keys(serverExpiries)) delete serverExpiries[id];
+      const now = Date.now();
+      for (const [id, usage] of Object.entries(usages || {})) {
+        const expiry = Number(usage && usage.expiresAt || 0);
+        if (expiry > now) serverExpiries[id] = expiry;
+      }
+      usageReady = true;
+      usageLoadFailed = false;
+      refreshButtons();
+    } catch (error) {
+      usageReady = false;
+      usageLoadFailed = true;
+      refreshButtons();
+      console.warn('Saee Plus: تعذر تحميل سجل الخصومات المشترك من الخادم.', error);
+    } finally {
+      usageLoadInProgress = false;
     }
   }
 
@@ -322,7 +284,7 @@
         return;
       }
 
-      useDiscount(button);
+      void useDiscount(button);
     },
     true
   );
@@ -331,96 +293,7 @@
      9. تحديث الأزرار عند فتح التفاصيل أو إعادة تحميل الصفحة
      --------------------------------------------------------- */
 
-  /* ---------------------------------------------------------
-     إضافة زر «تم الخصم» تلقائيًا داخل تفاصيل أي خصم (قديم أو جديد)
-     --------------------------------------------------------- */
-
-  let lastDetailId = '';
-
-  document.addEventListener('click', function (event) {
-    const opener = event.target.closest
-      ? event.target.closest('[data-detail-id]')
-      : null;
-
-    if (opener) {
-      lastDetailId = opener.getAttribute('data-detail-id') || '';
-    }
-  }, true);
-
-  function findOpenDiscount(content) {
-    const store = window.SiteStore;
-    const items = (store && store.state && store.state.items) || [];
-    const heading = content.querySelector('h2');
-    const title = heading ? heading.textContent.trim() : '';
-
-    if (!title) {
-      return null;
-    }
-
-    const same = function (item) {
-      return item.type === 'discounts' && String(item.title).trim() === title;
-    };
-
-    return (
-      items.find(function (item) {
-        return item.id === lastDetailId && same(item);
-      }) ||
-      items.find(same) ||
-      null
-    );
-  }
-
-  function ensureButton() {
-    const dialog = document.getElementById('dialog');
-    const content = document.getElementById('dialog-content');
-
-    if (!dialog || !content || !dialog.open) {
-      return;
-    }
-
-    if (content.querySelector(BUTTON_SELECTOR)) {
-      return;
-    }
-
-    const item = findOpenDiscount(content);
-
-    if (!item) {
-      return;
-    }
-
-    const box = document.createElement('div');
-    box.className = 'discount-use-box';
-    box.style.cssText =
-      'margin:14px 0 10px;padding:14px;border:1px dashed #b9cdb6;' +
-      'border-radius:14px;background:#f6faf4;text-align:center';
-
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'button saee-discount-use';
-    button.setAttribute('data-discount-id', String(item.id));
-    button.style.cssText = 'width:100%;justify-content:center';
-    button.textContent = 'تم الخصم';
-
-    const note = document.createElement('small');
-    note.style.cssText = 'display:block;margin-top:8px;color:#788675';
-    note.textContent =
-      'اضغط الزر بعد استخدام الخصم. يتفعّل من جديد مرة كل 24 ساعة.';
-
-    box.appendChild(button);
-    box.appendChild(note);
-
-    const favorite = content.querySelector('button[onclick*="saveFavorite"]');
-
-    if (favorite && favorite.parentNode) {
-      favorite.parentNode.insertBefore(box, favorite);
-    } else {
-      content.appendChild(box);
-    }
-  }
-
   function refreshButtons() {
-    ensureButton();
-
     document.querySelectorAll(BUTTON_SELECTOR).forEach(
       function (button) {
         updateButton(button);
@@ -430,6 +303,7 @@
 
   function start() {
     refreshButtons();
+    void loadServerUsage();
 
     /*
      * نافذة التفاصيل قد تُنشأ من جديد عند فتح خصم آخر.
@@ -440,19 +314,25 @@
       document.getElementById('dialog-content');
 
     if (modalContent) {
-      let scheduled = false;
+      let syncTimer = 0;
+      const observer = new MutationObserver(function (records) {
+        refreshButtons();
 
-      const observer = new MutationObserver(function () {
-        if (scheduled) {
-          return;
-        }
-
-        scheduled = true;
-
-        window.requestAnimationFrame(function () {
-          scheduled = false;
-          refreshButtons();
+        // Fetch the shared status immediately when a new discount detail
+        // button is inserted, rather than waiting for the next poll.
+        const discountButtonAdded = records.some(function (record) {
+          return Array.from(record.addedNodes || []).some(function (node) {
+            return node instanceof Element && (
+              node.matches(BUTTON_SELECTOR) || node.querySelector(BUTTON_SELECTOR)
+            );
+          });
         });
+        if (discountButtonAdded) {
+          clearTimeout(syncTimer);
+          syncTimer = window.setTimeout(function () {
+            void loadServerUsage();
+          }, 60);
+        }
       });
 
       observer.observe(modalContent, {
@@ -461,28 +341,30 @@
       });
     }
 
-    /*
-     * تحديث الوقت المتبقي كل ثانية.
-     */
+    // The displayed countdown updates every second without hitting the API.
+    window.setInterval(refreshButtons, 1000);
 
+    // Re-query shared state every 5 seconds so an already-open second device
+    // reflects a click made elsewhere quickly. The state itself lives in D1.
     window.setInterval(function () {
+      if (!document.hidden) void loadServerUsage();
+    }, 5000);
+
+    // Always re-check shared status when the visitor returns to this tab/page.
+    window.addEventListener('pageshow', function () {
+      void loadServerUsage();
       refreshButtons();
-    }, 1000);
+    });
+    window.addEventListener('focus', function () {
+      void loadServerUsage();
+    });
 
-    /*
-     * إعادة التحقق عند العودة إلى الصفحة.
-     */
-
-    window.addEventListener('pageshow', refreshButtons);
-
-    document.addEventListener(
-      'visibilitychange',
-      function () {
-        if (!document.hidden) {
-          refreshButtons();
-        }
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) {
+        void loadServerUsage();
+        refreshButtons();
       }
-    );
+    });
   }
 
   if (document.readyState === 'loading') {
