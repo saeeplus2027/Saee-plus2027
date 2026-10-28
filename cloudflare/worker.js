@@ -59,14 +59,14 @@ const error = (message, status = 400) =>
 async function readBody(req) {
   const size = Number(req.headers.get('content-length') || 0);
 
-  if (size > 1200000) {
-    throw Error('حجم الطلب كبير');
+  if (size > 16 * 1024 * 1024) {
+    throw Error('حجم الطلب أكبر من 16 ميغابايت. قلّل عدد الصور في عملية واحدة.');
   }
 
   const text = await req.text();
 
-  if (text.length > 1200000) {
-    throw Error('حجم الطلب كبير');
+  if (new TextEncoder().encode(text).byteLength > 16 * 1024 * 1024) {
+    throw Error('حجم الطلب أكبر من 16 ميغابايت. قلّل عدد الصور في عملية واحدة.');
   }
 
   return JSON.parse(text);
@@ -160,6 +160,25 @@ export default {
     }
 
     try {
+      // =========================================
+      // SERVE MEDIA FROM R2
+      // =========================================
+      const mediaMatch = path.match(/^\/api\/media\/([a-f0-9]{64}\.(?:png|jpeg|webp|gif))$/);
+      if (mediaMatch && req.method === 'GET') {
+        const bucket = env.BUCKET || env.Bucket;
+        if (!bucket) return fail('تخزين الصور غير مهيأ على الخادم.', 503);
+        const object = await bucket.get('media/' + mediaMatch[1]);
+        if (!object) return fail('الصورة غير موجودة.', 404);
+        const headers = new Headers({
+          'cache-control': 'public, max-age=31536000, immutable',
+          'x-content-type-options': 'nosniff',
+          'etag': object.httpEtag
+        });
+        object.writeHttpMetadata(headers);
+        if (req.headers.get('if-none-match') === object.httpEtag) return new Response(null, { status: 304, headers });
+        return new Response(object.body, { status: 200, headers });
+      }
+
       // =========================================
       // GET SITE CONTENT
       // =========================================
@@ -478,10 +497,42 @@ export default {
           return fail('محتوى غير صالح');
         }
 
+        // Move embedded image data to R2 before writing the JSON to D1.
+        // This keeps the database row small even when the admin uploads many images.
+        const bucket = env.BUCKET || env.Bucket;
+        const uploadedImages = new Map();
+        async function externalizeImage(value) {
+          if (typeof value !== 'string' || !value.startsWith('data:image/')) return value;
+          if (!bucket) throw Error('تخزين الصور غير مهيأ. اربط R2 بالـ Worker باسم BUCKET أو Bucket.');
+          if (uploadedImages.has(value)) return uploadedImages.get(value);
+          const promise = (async () => {
+            const match = /^data:image\/(png|jpeg|webp|gif);base64,([a-zA-Z0-9+/=]+)$/.exec(value);
+            if (!match) throw Error('صيغة إحدى الصور غير صالحة.');
+            const binary = atob(match[2]);
+            if (binary.length > 8 * 1024 * 1024) throw Error('إحدى الصور أكبر من 8 ميغابايت بعد المعالجة.');
+            const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+            const digest = await crypto.subtle.digest('SHA-256', bytes);
+            const key = hex(digest) + '.' + match[1];
+            await bucket.put('media/' + key, bytes, { httpMetadata: { contentType: 'image/' + match[1], cacheControl: 'public, max-age=31536000, immutable' } });
+            return new URL('/api/media/' + key, req.url).href;
+          })();
+          uploadedImages.set(value, promise);
+          return promise;
+        }
+        for (const item of content.items) {
+          for (const key of ['image', 'shopImage1', 'shopImage2']) {
+            if (item && item[key]) item[key] = await externalizeImage(item[key]);
+          }
+          if (item && Array.isArray(item.shopImages)) {
+            item.shopImages = await Promise.all(item.shopImages.map(externalizeImage));
+          }
+        }
+        if (content.images && typeof content.images === 'object') {
+          for (const key of Object.keys(content.images)) content.images[key] = await externalizeImage(content.images[key]);
+        }
         const str = JSON.stringify(content);
-
-        if (str.length > 950000) {
-          return fail('حجم المحتوى والصور تجاوز حد الحفظ الحالي. احذف صورًا إضافية أو اختصر النصوص ثم أعد المحاولة.', 413);
+        if (new TextEncoder().encode(str).byteLength > 1500000) {
+          return fail('حجم النصوص والبيانات المتبقية كبير جدًا بعد فصل الصور. اختصر بعض النصوص أو احفظ عددًا أقل من العناصر في المرة الواحدة.', 413);
         }
 
         const headerRevision = Number(
