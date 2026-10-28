@@ -5,3 +5,8 @@ export const siteContent = sqliteTable('site_content', {
   payload: text('payload').notNull(),
   updatedBy: text('updated_by').notNull(),
 });
+
+export const discountUsage = sqliteTable('discount_usage', {
+  discountId: text('discount_id').primaryKey(),
+  usedAt: integer('used_at').notNull(),
+});
