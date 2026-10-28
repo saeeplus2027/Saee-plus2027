@@ -97,79 +97,74 @@
      --------------------------------------------------------- */
 
   function updateButton(button) {
-    if (!button || !button.dataset.discountId) {
-      return;
-    }
+    if (!button || !button.dataset.discountId) return;
 
     const discountId = button.dataset.discountId;
     const expiry = Number(serverExpiries[discountId] || 0);
-
-    let timer = button.parentElement.querySelector(
-      '.saee-discount-use-timer'
-    );
+    let timer = button.parentElement.querySelector('.saee-discount-use-timer');
 
     if (!timer) {
       timer = document.createElement('small');
-
       timer.className = 'saee-discount-use-timer';
-
       timer.style.cssText = [
-        'display:block',
-        'text-align:center',
-        'margin-top:8px',
-        'font-size:13px',
-        'color:#788675'
+        'display:block', 'text-align:center', 'margin-top:8px',
+        'font-size:13px', 'color:#788675'
       ].join(';');
-
       button.insertAdjacentElement('afterend', timer);
     }
 
-    if (!usageReady) {
+    // Once this client has received a confirmed expiry from the server,
+    // keep the button locked even if a later status refresh fails.
+    if (expiry > Date.now()) {
       button.disabled = true;
-      button.textContent = usageLoadFailed ? 'تعذر الاتصال' : 'جارٍ التحقق من الخصم…';
-      button.title = usageLoadFailed
-        ? 'الخادم غير متاح؛ لم يتم تسجيل الخصم. ستتم إعادة المحاولة تلقائيًا.'
-        : 'يتم تحميل حالة الخصم المشتركة من الخادم.';
+      setText(button, 'تم الخصم ✓');
+      button.setAttribute('aria-label', 'تم استخدام هذا الخصم');
+      button.title = 'تم تسجيل الخصم على الخادم؛ لن يتاح قبل انتهاء 24 ساعة.';
+      button.style.opacity = '0.7';
+      button.style.cursor = 'not-allowed';
       timer.hidden = false;
-      timer.textContent = usageLoadFailed
-        ? 'تأكد من نشر Worker وربطه بقاعدة D1.'
-        : 'انتظر حتى يكتمل التحقق من الخادم.';
+      setText(timer, 'إعادة التفعيل بعد ' + formatRemaining(expiry - Date.now()));
       return;
     }
 
-    if (expiry > Date.now()) {
-      button.disabled = true;
-      button.textContent = 'تم الخصم ✓';
-
-      button.setAttribute(
-        'aria-label',
-        'تم استخدام هذا الخصم'
-      );
-
-      button.style.opacity = '0.7';
-      button.style.cursor = 'not-allowed';
-
-      timer.hidden = false;
-
-      timer.textContent =
-        'إعادة التفعيل بعد ' +
-        formatRemaining(expiry - Date.now());
-
-    } else {
-      button.disabled = false;
-      button.textContent = 'تم الخصم';
-
-      button.setAttribute(
-        'aria-label',
-        'تسجيل استخدام الخصم'
-      );
-
-      button.style.opacity = '1';
-      button.style.cursor = 'pointer';
-
-      timer.hidden = true;
-      timer.textContent = '';
+    if (!usageReady) {
+      if (usageLoadFailed) {
+        // Keep the button clickable after a failed GET. Clicking still POSTs to
+        // the server, and only a confirmed server response counts as a use.
+        // This avoids trapping the visitor behind a failed status read while
+        // keeping the shared 24-hour rule enforced by Cloudflare/D1.
+        button.disabled = false;
+        setText(button, 'تم الخصم');
+        button.setAttribute('aria-label', 'تسجيل استخدام الخصم والتحقق من الخادم');
+        button.title = 'تعذر تحميل الحالة الحالية؛ عند الضغط سيتحقق الخادم من إمكانية تسجيل الخصم.';
+        button.style.opacity = '1';
+        button.style.cursor = 'pointer';
+        timer.hidden = false;
+        setText(timer, 'سيتم تأكيد الاستخدام من الخادم قبل تسجيله.');
+      } else {
+        button.disabled = true;
+        setText(button, 'جارٍ التحقق من الخصم…');
+        button.title = 'يتم تحميل حالة الخصم المشتركة من الخادم.';
+        timer.hidden = false;
+        setText(timer, 'انتظر حتى يكتمل التحقق من الخادم.');
+      }
+      return;
     }
+
+    button.disabled = false;
+    setText(button, 'تم الخصم');
+    button.setAttribute('aria-label', 'تسجيل استخدام الخصم');
+    button.title = 'اضغط بعد الاستفادة من الخصم لتسجيله؛ يتاح الاستخدام مرة واحدة كل 24 ساعة.';
+    button.style.opacity = '1';
+    button.style.cursor = 'pointer';
+    timer.hidden = true;
+    setText(timer, '');
+  }
+
+  // Avoid replacing text nodes when nothing changed. This also prevents the
+  // modal MutationObserver from repeatedly reacting to its own UI updates.
+  function setText(element, value) {
+    if (element && element.textContent !== value) element.textContent = value;
   }
 
   /* ---------------------------------------------------------
@@ -183,8 +178,8 @@
       return;
     }
 
-    if (!usageReady) {
-      showMessage('انتظر حتى يتم التحقق من حالة الخصم المشتركة.');
+    if (!usageReady && !usageLoadFailed) {
+      showMessage('انتظر حتى يكتمل التحقق من حالة الخصم.');
       return;
     }
 
@@ -213,7 +208,7 @@
       updateButton(button);
       showMessage('تم تسجيل الخصم ✓ سيُعاد تفعيله بعد 24 ساعة على جميع الأجهزة.');
     } catch (error) {
-      if (error && error.alreadyUsed) {
+      if (error && (error.alreadyUsed || (error.status === 409 && error.body && error.body.alreadyUsed))) {
         const expiry = Number(error.body && error.body.expiresAt || Date.now() + DAY);
         serverExpiries[discountId] = expiry;
         updateButton(button);
@@ -308,8 +303,25 @@
       document.getElementById('dialog-content');
 
     if (modalContent) {
-      const observer = new MutationObserver(function () {
+      let syncTimer = 0;
+      const observer = new MutationObserver(function (records) {
         refreshButtons();
+
+        // Fetch the shared status immediately when a new discount detail
+        // button is inserted, rather than waiting for the next poll.
+        const discountButtonAdded = records.some(function (record) {
+          return Array.from(record.addedNodes || []).some(function (node) {
+            return node instanceof Element && (
+              node.matches(BUTTON_SELECTOR) || node.querySelector(BUTTON_SELECTOR)
+            );
+          });
+        });
+        if (discountButtonAdded) {
+          clearTimeout(syncTimer);
+          syncTimer = window.setTimeout(function () {
+            void loadServerUsage();
+          }, 60);
+        }
       });
 
       observer.observe(modalContent, {
@@ -318,33 +330,30 @@
       });
     }
 
-    /*
-     * تحديث الوقت المتبقي كل ثانية.
-     */
+    // The displayed countdown updates every second without hitting the API.
+    window.setInterval(refreshButtons, 1000);
 
-    window.setInterval(function () {
-      refreshButtons();
-    }, 1000);
-
-    // Pull shared usage every 15 seconds so already-open pages update too.
+    // Re-query shared state every 5 seconds so an already-open second device
+    // reflects a click made elsewhere quickly. The state itself lives in D1.
     window.setInterval(function () {
       if (!document.hidden) void loadServerUsage();
-    }, 15000);
+    }, 5000);
 
-    /*
-     * إعادة التحقق عند العودة إلى الصفحة.
-     */
+    // Always re-check shared status when the visitor returns to this tab/page.
+    window.addEventListener('pageshow', function () {
+      void loadServerUsage();
+      refreshButtons();
+    });
+    window.addEventListener('focus', function () {
+      void loadServerUsage();
+    });
 
-    window.addEventListener('pageshow', refreshButtons);
-
-    document.addEventListener(
-      'visibilitychange',
-      function () {
-        if (!document.hidden) {
-          refreshButtons();
-        }
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) {
+        void loadServerUsage();
+        refreshButtons();
       }
-    );
+    });
   }
 
   if (document.readyState === 'loading') {
