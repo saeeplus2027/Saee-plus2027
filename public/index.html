@@ -1089,11 +1089,11 @@
 
 <div id="toast" role="status"></div>
 
-<script src="remote-config.js"></script>
-<script src="content-data.js"></script>
-<script src="store.js"></script>
-<script src="app.js"></script>
-<script src="admin.js"></script>
+<script src="remote-config.js?v=20261028-shared-api-fix"></script>
+<script src="content-data.js?v=20261028-shared-api-fix"></script>
+<script src="store.js?v=20261028-shared-api-fix"></script>
+<script src="app.js?v=20261028-shared-api-fix"></script>
+<script src="admin.js?v=20261028-shared-api-fix"></script>
 
 <script>
 (() => {
@@ -1586,8 +1586,8 @@
 })();
 </script>
 
-<script src="smart-engine.js"></script>
-<script src="smart-ui.js"></script>
+<script src="smart-engine.js?v=20261027-finalfix"></script>
+<script src="smart-ui.js?v=20261027-finalfix"></script>
 
 <script id="bau-campus-google-map-inline">
 (() => {
@@ -2106,4 +2106,118 @@
       return { target, type: 'كتابك' };
     }
 
-    if (/add.?pr
+    if (/add.?project|project.?add/.test(action)) {
+      return { target, type: 'مشروعك' };
+    }
+
+    if (/add.?opportunit|opportunit.?add/.test(action)) {
+      return { target, type: 'فرصتك' };
+    }
+
+    if (/share.?experience|experience.?share|submit.?experience/.test(action)) {
+      return { target, type: 'مشاركتك' };
+    }
+
+    return null;
+  }
+
+  function isProtectedForm(form) {
+    const description = normalizeText([
+      form.innerText,
+      form.textContent,
+      form.getAttribute('aria-label'),
+      form.getAttribute('name'),
+      form.getAttribute('action'),
+      form.id,
+      form.className
+    ].filter(Boolean).join(' '));
+
+    if (getProtectedType(description)) return true;
+
+    return /add.?product|product.?add|add.?book|book.?add|add.?project|project.?add|add.?opportunit|opportunit.?add|share.?experience|experience.?share|submit.?experience/i.test(description);
+  }
+
+  function requestLogin(actionName) {
+    const dialog = document.getElementById(AUTH_DIALOG_ID);
+    const message = document.getElementById('sai-auth-message');
+    const title = document.getElementById('sai-auth-title');
+    const description = document.getElementById('sai-auth-description');
+
+    const text =
+      'لإضافة ' + (actionName || 'المحتوى') +
+      ' إلى سعي بلس، يجب تسجيل الدخول أو إنشاء حساب جديد أولًا.';
+
+    if (!dialog) {
+      alert(text);
+      return;
+    }
+
+    dialog.querySelectorAll('[data-auth-panel]').forEach(panel => {
+      panel.hidden = panel.dataset.authPanel !== 'login';
+    });
+
+    if (title) title.textContent = 'تسجيل الدخول مطلوب';
+    if (description) description.textContent = text;
+
+    if (message) {
+      message.textContent =
+        text +
+        '\nبعد تسجيل الدخول، ارجع إلى القسم المطلوب واضغط زر الإضافة مرة أخرى.';
+      message.hidden = false;
+    }
+
+    if (!dialog.open && typeof dialog.showModal === 'function') {
+      dialog.showModal();
+    }
+
+    const email = document.getElementById('sai-login-email');
+    if (email) setTimeout(() => email.focus(), 50);
+  }
+
+  /*
+   * التقاط النقر قبل وصوله إلى سكربتات الموقع الأخرى.
+   * المستخدم غير المسجل لا يستطيع تشغيل زر الإضافة.
+   */
+  document.addEventListener('click', event => {
+    if (hasAccountSession()) return;
+
+    const protectedAction = isProtectedAction(event.target);
+    if (!protectedAction) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
+    requestLogin(protectedAction.type);
+  }, true);
+
+  /*
+   * حماية إرسال نموذج الإضافة أيضًا، وليس الضغط على الزر فقط.
+   */
+  document.addEventListener('submit', event => {
+    const form = event.target;
+
+    if (!(form instanceof HTMLFormElement)) return;
+    if (hasAccountSession()) return;
+    if (!isProtectedForm(form)) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
+    const type = getProtectedType(normalizeText([
+      form.innerText,
+      form.textContent,
+      form.id,
+      form.getAttribute('aria-label')
+    ].filter(Boolean).join(' '))) || 'المحتوى';
+
+    requestLogin(type);
+  }, true);
+
+})();
+</script>
+
+  <script src="discounts.js?v=20261028-shared-api-fix"></script>
+</body>
+</html>
