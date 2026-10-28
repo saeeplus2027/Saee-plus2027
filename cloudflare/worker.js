@@ -72,22 +72,9 @@ async function readBody(req) {
   return JSON.parse(text);
 }
 
-// Session token: HttpOnly cookie first, then "Authorization: Bearer <token>".
-// The Bearer fallback keeps the admin working in browsers that block
-// third-party cookies (Safari / iOS / private tabs), because the site on
-// GitHub Pages and the Worker live on different domains.
-function sessionToken(req) {
-  return (
-    (req.headers.get('cookie') || '')
-      .match(/(?:^|;\s*)saee_session=([a-f0-9]{64})/)?.[1] ||
-    (req.headers.get('authorization') || '')
-      .match(/^Bearer ([a-f0-9]{64})$/)?.[1] ||
-    null
-  );
-}
-
 async function identity(req, env) {
-  const token = sessionToken(req);
+  const token = (req.headers.get('cookie') || '')
+    .match(/(?:^|;\s*)saee_session=([a-f0-9]{64})/)?.[1];
 
   if (!token) return null;
 
@@ -119,40 +106,6 @@ async function throttle(env, key, limit = 10) {
   return row.count <= limit;
 }
 
-// ---------------------------------------------------------------
-// Image storage (D1). Keeps big Base64 images out of the main content
-// JSON so the site content stays far below the save limit.
-// ---------------------------------------------------------------
-const MEDIA_MIME = {
-  png: 'image/png',
-  jpeg: 'image/jpeg',
-  webp: 'image/webp',
-  gif: 'image/gif'
-};
-
-function sniffImage(b) {
-  if (b.length < 12) return null;
-  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'png';
-  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'jpeg';
-  if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38) return 'gif';
-  if (
-    b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
-    b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50
-  ) return 'webp';
-  return null;
-}
-
-async function ensureMedia(env) {
-  await env.DB.prepare(`
-    CREATE TABLE IF NOT EXISTS media (
-      hash TEXT PRIMARY KEY,
-      ext TEXT NOT NULL,
-      data TEXT NOT NULL,
-      created_at INTEGER NOT NULL
-    )
-  `).run();
-}
-
 export default {
   async fetch(req, env) {
     const origin = req.headers.get('origin') || '';
@@ -166,7 +119,7 @@ export default {
       ? {
           'access-control-allow-origin': origin,
           'access-control-allow-credentials': 'true',
-          'access-control-allow-headers': 'Content-Type, If-Match, Authorization',
+          'access-control-allow-headers': 'Content-Type, If-Match',
           'vary': 'Origin'
         }
       : {};
@@ -183,7 +136,7 @@ export default {
         headers: {
           ...cors,
           'access-control-allow-methods': 'GET,POST,PUT,OPTIONS',
-          'access-control-allow-headers': 'Content-Type, If-Match, Authorization',
+          'access-control-allow-headers': 'Content-Type, If-Match',
           'access-control-max-age': '600'
         }
       });
@@ -367,8 +320,7 @@ export default {
         return reply(
           {
             message: 'تم تسجيل دخول الإدارة',
-            needsPasswordSetup: !credential,
-            token
+            needsPasswordSetup: !credential
           },
           200,
           { 'set-cookie': cookie(token, 604800) }
@@ -505,81 +457,6 @@ export default {
 
       const user = await identity(req, env);
 
-      // =========================================
-      // MEDIA: PUBLIC READ
-      // =========================================
-      const mediaMatch = path.match(
-        /^\/api\/media\/([a-f0-9]{64})\.(png|jpeg|webp|gif)$/
-      );
-
-      if (mediaMatch && req.method === 'GET') {
-        await ensureMedia(env);
-
-        const row = await env.DB.prepare(
-          'SELECT ext, data FROM media WHERE hash = ?'
-        ).bind(mediaMatch[1]).first();
-
-        if (!row || row.ext !== mediaMatch[2]) {
-          return fail('Not found', 404);
-        }
-
-        const raw = atob(row.data);
-        const bytes = new Uint8Array(raw.length);
-        for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-
-        return new Response(bytes, {
-          status: 200,
-          headers: {
-            ...cors,
-            'content-type': MEDIA_MIME[row.ext],
-            'cache-control': 'public, max-age=31536000, immutable',
-            'cross-origin-resource-policy': 'cross-site',
-            'x-content-type-options': 'nosniff'
-          }
-        });
-      }
-
-      // =========================================
-      // MEDIA: ADMIN UPLOAD
-      // =========================================
-      if (path === '/api/media' && req.method === 'POST') {
-        if (!user?.is_admin) {
-          return fail('يجب تسجيل الدخول إلى الإدارة أولاً', 401);
-        }
-
-        const b = await readBody(req);
-        const m = String(b.dataUrl || '').match(
-          /^data:image\/(png|jpeg|webp|gif);base64,([A-Za-z0-9+/=]+)$/
-        );
-
-        if (!m) return fail('صيغة الصورة غير مدعومة');
-
-        let raw;
-        try { raw = atob(m[2]); } catch (_) { return fail('الصورة تالفة'); }
-
-        if (raw.length > 900000) {
-          return fail('الصورة كبيرة جداً بعد الضغط', 413);
-        }
-
-        const bytes = new Uint8Array(raw.length);
-        for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-
-        if (sniffImage(bytes) !== m[1]) {
-          return fail('محتوى الملف لا يطابق نوع الصورة');
-        }
-
-        const id = hex(await crypto.subtle.digest('SHA-256', bytes));
-
-        await ensureMedia(env);
-
-        await env.DB.prepare(
-          `INSERT OR IGNORE INTO media (hash, ext, data, created_at)
-           VALUES (?, ?, ?, ?)`
-        ).bind(id, m[1], m[2], Date.now()).run();
-
-        return reply({ url: `/api/media/${id}.${m[1]}` });
-      }
-
       if (path === '/api/content' && req.method === 'PUT') {
         if (!user?.is_admin) {
           return fail(
@@ -650,80 +527,83 @@ export default {
 
 
       // =========================================
-      // PER-ACCOUNT DISCOUNT USAGE (24 HOURS)
+      // GLOBAL DISCOUNT USAGE (24 HOURS)
+      // One shared lock per discount ID, across all users and devices.
+      // This endpoint is intentionally public because the button is available
+      // without requiring each visitor to create an account.
       // =========================================
       if (
         path === '/api/discount-usage' &&
         (req.method === 'GET' || req.method === 'POST')
       ) {
-        if (!user) {
-          return fail('سجّل الدخول أولاً لاستخدام الخصم', 401);
-        }
-
         await env.DB.prepare(`
-          CREATE TABLE IF NOT EXISTS discount_usage (
-            user_id TEXT NOT NULL,
-            discount_id TEXT NOT NULL,
+          CREATE TABLE IF NOT EXISTS discount_usage_global (
+            discount_id TEXT PRIMARY KEY,
             used_at INTEGER NOT NULL,
-            expires_at INTEGER NOT NULL,
-            PRIMARY KEY (user_id, discount_id),
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            expires_at INTEGER NOT NULL
           )
         `).run();
 
         if (req.method === 'GET') {
+          const now = Date.now();
           const rows = await env.DB.prepare(`
             SELECT discount_id, used_at, expires_at
-            FROM discount_usage
-            WHERE user_id = ? AND expires_at > ?
-          `).bind(user.id, Date.now()).all();
-
+            FROM discount_usage_global
+            WHERE expires_at > ?
+          `).bind(now).all();
           const usages = {};
           for (const row of (rows.results || [])) {
             usages[row.discount_id] = {
-              usedAt: row.used_at,
-              expiresAt: row.expires_at
+              usedAt: Number(row.used_at),
+              expiresAt: Number(row.expires_at)
             };
           }
           return reply({ usages });
         }
 
+        const ip = req.headers.get('cf-connecting-ip') || 'unknown';
+        if (!await throttle(env, ip + ':discount-use', 40)) {
+          return fail('تم تجاوز عدد المحاولات. حاول لاحقاً.', 429);
+        }
+
         const body = await readBody(req);
         const discountId = String(body.discountId || '').trim();
-        if (!discountId || discountId.length > 200) {
-          return fail('معرّف الخصم غير صالح');
+        if (!/^[a-zA-Z0-9_-]{1,200}$/.test(discountId)) {
+          return fail('معرّف الخصم غير صالح.');
         }
 
         const now = Date.now();
         const expiresAt = now + 24 * 60 * 60 * 1000;
         const result = await env.DB.prepare(`
-          INSERT INTO discount_usage (user_id, discount_id, used_at, expires_at)
-          VALUES (?, ?, ?, ?)
-          ON CONFLICT(user_id, discount_id) DO UPDATE SET
+          INSERT INTO discount_usage_global (discount_id, used_at, expires_at)
+          VALUES (?, ?, ?)
+          ON CONFLICT(discount_id) DO UPDATE SET
             used_at = excluded.used_at,
             expires_at = excluded.expires_at
-          WHERE discount_usage.expires_at <= ?
-        `).bind(user.id, discountId, now, expiresAt, now).run();
+          WHERE discount_usage_global.expires_at <= ?
+        `).bind(discountId, now, expiresAt, now).run();
 
         const row = await env.DB.prepare(`
           SELECT used_at, expires_at
-          FROM discount_usage
-          WHERE user_id = ? AND discount_id = ?
-        `).bind(user.id, discountId).first();
+          FROM discount_usage_global
+          WHERE discount_id = ?
+        `).bind(discountId).first();
 
-        if (!result.meta.changes && row && row.expires_at > now) {
+        if (!result.meta.changes && row && Number(row.expires_at) > now) {
           return reply({
             success: false,
             alreadyUsed: true,
-            usedAt: row.used_at,
-            expiresAt: row.expires_at
+            usedAt: Number(row.used_at),
+            expiresAt: Number(row.expires_at),
+            remainingMs: Number(row.expires_at) - now
           }, 409);
         }
 
         return reply({
           success: true,
-          usedAt: row.used_at,
-          expiresAt: row.expires_at
+          usedAt: Number(row.used_at),
+          expiresAt: Number(row.expires_at),
+          remainingMs: Math.max(0, Number(row.expires_at) - now)
         });
       }
 
@@ -732,7 +612,8 @@ export default {
       // =========================================
 
       if (path === '/api/logout' && req.method === 'POST') {
-        const token = sessionToken(req);
+        const token = (req.headers.get('cookie') || '')
+          .match(/saee_session=([a-f0-9]{64})/)?.[1];
 
         if (token) {
           await env.DB.prepare(
