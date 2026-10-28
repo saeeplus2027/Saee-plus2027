@@ -1,4 +1,3 @@
-
 const paths={pin:'M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z M15 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0',book:'M12 5v16 M12 5C8 2 4 3 2 4v16c4-2 7-1 10 1 3-2 6-3 10-1V4c-3-1-6-2-10 1',percent:'M5 20 19 4 M9 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0 M21 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0',users:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M18 3a4 4 0 0 1 0 8 M22 21v-2a4 4 0 0 0-3-3.87',store:'M3 10v11h18V10 M2 10l3-7h14l3 7 M2 10c1 4 5 4 5 0 1 4 5 4 5 0 1 4 5 4 5 0 1 4 5 4 5 0 M9 21v-7h6v7',bulb:'M9 18h6 M9 22h6 M8 14a7 7 0 1 1 8 0l-1 4H9l-1-4 M12 1v-1 M2 6 0 5 M24 5l-2 1',heart:'M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z',search:'M21 21l-5-5 M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0',menu:'M3 6h18 M3 12h18 M3 18h18',leaf:'M20 3C8 1 2 7 5 15s17 4 15-12Z M4 22 16 8',coffee:'M5 3h12v12a6 6 0 0 1-12 0V3 M17 5h2a3 3 0 0 1 0 6h-2 M3 22h16',check:'M5 12l4 4L20 5',grad:'M1 8l11-5 11 5-11 5L1 8 M5 10v7c4 3 10 3 14 0v-7 M23 8v9'};
 function icon(name){return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="${paths[name]||paths.leaf}"/></svg>`}function hydrate(){document.querySelectorAll('[data-icon]').forEach(e=>e.innerHTML=icon(e.dataset.icon))}
 let services=SiteStore.state.services;
@@ -24,50 +23,74 @@ function toast(t){const e=document.getElementById('toast');e.textContent=t;e.cla
 function saveFavorite(id,b){favorites=favorites.includes(id)?favorites.filter(x=>x!==id):[...favorites,id];localStorage.setItem('sai-favorites',JSON.stringify(favorites));if(b){b.classList.toggle('saved',favorites.includes(id));b.setAttribute('aria-pressed',favorites.includes(id))}toast(favorites.includes(id)?'أُضيفت إلى مفضلتك':'أُزيلت من المفضلة')}
 function modal(html){document.getElementById('dialog-content').innerHTML=html;const d=document.getElementById('dialog');if(!d.open)d.showModal()}
 const DISCOUNT_COOLDOWN_MS=24*60*60*1000;
-const discountUsageCache=new Map();
-function formatDiscountRemaining(ms){const total=Math.ceil(ms/1000),h=Math.floor(total/3600),m=Math.floor((total%3600)/60);return `متاح بعد ${h} ساعة و${m} دقيقة`}
-async function getDiscountUsage(id){
-  if(!SiteStore.remote) throw Error('زر تم الخصم المشترك يحتاج نشر نسخة الموقع مع خدمة API وقاعدة بيانات D1.');
-  const response=await fetch(`/api/discount-usage?id=${encodeURIComponent(String(id))}`,{credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}});
-  const body=await response.json().catch(()=>({}));
-  if(!response.ok)throw Error(body.error||'تعذر تحميل حالة الخصم المشتركة.');
-  discountUsageCache.set(String(id),body);return body;
+const DISCOUNT_API=String(window.SAI_API_BASE||'https://saee-plus-api.ligagym.workers.dev').replace(/\/$/,'');
+const discountExpiries=Object.create(null);
+let discountAccountEmail='',discountAccountHash='',discountLastSync=0,discountSyncing=false;
+function discountEmail(){try{return String(localStorage.getItem('sai-local-session-v1')||'').trim().toLowerCase()}catch(_){return ''}}
+async function discountAccount(){
+  const email=discountEmail();
+  if(!email)return '';
+  if(email===discountAccountEmail&&discountAccountHash)return discountAccountHash;
+  if(!(window.crypto&&crypto.subtle))return '';
+  const bytes=new TextEncoder().encode('saee-plus-account:'+email);
+  const digest=await crypto.subtle.digest('SHA-256',bytes);
+  discountAccountHash=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
+  discountAccountEmail=email;
+  for(const k of Object.keys(discountExpiries))delete discountExpiries[k];
+  try{const saved=JSON.parse(localStorage.getItem('saee-discount-cache-v7:'+discountAccountHash)||'{}');for(const [id,e] of Object.entries(saved))if(Number(e)>Date.now())discountExpiries[id]=Number(e)}catch(_){}
+  return discountAccountHash;
 }
-function paintDiscountButton(id,button,data){
-  const remaining=Math.max(0,Number(data.remainingMs||0));
-  button.disabled=remaining>0||button.dataset.saving==='1';
-  button.textContent=button.dataset.saving==='1'?'جارٍ التسجيل…':remaining>0?`✓ تم الخصم · ${formatDiscountRemaining(remaining)}`:'✓ تم الخصم';
-  button.title=remaining>0?'تم تسجيل استخدام هذا الخصم على الموقع؛ لا يمكن استخدامه مجددًا قبل مرور 24 ساعة':'اضغط بعد الاستفادة من الخصم لتسجيل استخدامه لجميع الأجهزة';
+function discountSaveCache(){try{if(discountAccountHash)localStorage.setItem('saee-discount-cache-v7:'+discountAccountHash,JSON.stringify(discountExpiries))}catch(_){}}
+function discountExpiry(id){const e=Number(discountExpiries[String(id)]||0);return e>Date.now()?e:0}
+function formatDiscountRemaining(ms){const total=Math.ceil(ms/1000),h=Math.floor(total/3600),m=Math.floor((total%3600)/60);return `يتفعّل بعد ${h} ساعة و${m} دقيقة`}
+function paintDiscountButton(id,button){
+  const remaining=Math.max(0,discountExpiry(id)-Date.now());
+  if(button.dataset.saving==='1')return;
+  button.disabled=remaining>0;
+  button.textContent=remaining>0?`✓ تم الخصم · ${formatDiscountRemaining(remaining)}`:'✓ تم الخصم';
+  button.title=remaining>0?'سجّلت هذا الخصم على حسابك؛ يرجع يتفعّل بعد 24 ساعة على كل أجهزتك':'اضغط بعد الاستفادة من الخصم لتسجيله على حسابك (مرة كل 24 ساعة)';
   button.classList.toggle('discount-used',remaining>0);
 }
-async function updateDiscountButton(id){
-  const button=document.querySelector(`[data-discount-use="${CSS.escape(String(id))}"]`);
-  if(!button)return;
-  button.disabled=true;
-  button.textContent='✓ تم الخصم';
+function paintAllDiscountButtons(){document.querySelectorAll('[data-discount-use]').forEach(b=>paintDiscountButton(b.dataset.discountUse,b))}
+async function syncDiscountUsage(force){
+  if(discountSyncing||(!force&&Date.now()-discountLastSync<4000))return;
+  discountSyncing=true;
   try{
-    const data=await getDiscountUsage(id);
-    paintDiscountButton(id,button,data);
-  }catch(error){
-    // Keep the requested label, but fail closed: never allow use without server verification.
-    button.disabled=true;
-    button.textContent='✓ تم الخصم';
-    button.title='تعذر التحقق من حالة الخصم المشتركة. تأكد من نشر API وربط قاعدة بيانات D1.';
-  }
+    const account=await discountAccount();
+    if(!account)return;
+    const response=await fetch(`${DISCOUNT_API}/api/account-discount-usage?account=${account}`,{cache:'no-store',headers:{Accept:'application/json'}});
+    const body=await response.json().catch(()=>({}));
+    if(!response.ok)throw Error(body.error||'sync failed');
+    for(const k of Object.keys(discountExpiries))delete discountExpiries[k];
+    for(const [id,u] of Object.entries(body.usages||{}))if(Number(u.expiresAt)>Date.now())discountExpiries[id]=Number(u.expiresAt);
+    discountSaveCache();discountLastSync=Date.now();
+  }catch(_){/* keep the last known state; the server still decides on click */}
+  finally{discountSyncing=false;paintAllDiscountButtons()}
+}
+async function updateDiscountButton(id){
+  await discountAccount().catch(()=>'');
+  const button=document.querySelector(`[data-discount-use="${CSS.escape(String(id))}"]`);
+  if(button)paintDiscountButton(id,button);
+  syncDiscountUsage(false);
 }
 async function markDiscountUsed(id){
-  const button=document.querySelector(`[data-discount-use="${CSS.escape(String(id))}"]`);if(!button||button.dataset.saving==='1')return;
+  id=String(id);
+  const button=document.querySelector(`[data-discount-use="${CSS.escape(id)}"]`);
+  if(!button||button.dataset.saving==='1')return;
   button.dataset.saving='1';button.disabled=true;button.textContent='جارٍ التسجيل…';
   try{
-    if(!SiteStore.remote)throw Error('زر تم الخصم المشترك يحتاج نشر نسخة الموقع مع خدمة API وقاعدة بيانات D1.');
-    const response=await fetch('/api/discount-usage',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({id:String(id)})});
+    const account=await discountAccount();
+    if(!account)throw Error('سجّل الدخول بحسابك أولاً حتى يُسجَّل الخصم على حسابك.');
+    const response=await fetch(`${DISCOUNT_API}/api/account-discount-usage`,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({account,discountId:id})});
     const body=await response.json().catch(()=>({}));
-    if(!response.ok){if(response.status===409){discountUsageCache.set(String(id),body);paintDiscountButton(id,button,body);throw Error(body.error||'تم استخدام هذا الخصم خلال آخر 24 ساعة.')}throw Error(body.error||'تعذر تسجيل استخدام الخصم على الخادم.')}
-    discountUsageCache.set(String(id),body);toast('تم تسجيل استخدام الخصم على جميع الأجهزة لمدة 24 ساعة.');
-  }catch(error){toast(error.message);if(!discountUsageCache.has(String(id)))button.title=error.message;}
-  finally{delete button.dataset.saving;await updateDiscountButton(String(id));}
+    if(response.status===409&&body.expiresAt){discountExpiries[id]=Number(body.expiresAt);discountSaveCache();toast('هذا الخصم مسجّل على حسابك بالفعل؛ يرجع يتفعّل بعد 24 ساعة')}
+    else if(!response.ok||body.success!==true)throw Error(body.error||'تعذر تسجيل الخصم على الخادم.');
+    else{discountExpiries[id]=Number(body.expiresAt);discountSaveCache();toast('تم تسجيل الخصم ✓ يرجع يتفعّل بعد 24 ساعة على كل أجهزتك')}
+  }catch(error){toast(error&&error.message&&!/Failed to fetch|NetworkError/i.test(error.message)?error.message:'تعذر الاتصال بالخادم. حاول مرة أخرى.')}
+  finally{delete button.dataset.saving;paintDiscountButton(id,button);syncDiscountUsage(true)}
 }
-setInterval(()=>{const button=document.querySelector('[data-discount-use]');if(button)updateDiscountButton(button.dataset.discountUse)},60000)
+setInterval(()=>{const button=document.querySelector('[data-discount-use]');if(button)updateDiscountButton(button.dataset.discountUse)},15000)
+window.addEventListener('focus',()=>syncDiscountUsage(false));
 function details(id){let x=items.find(x=>x.id===id);if(!x)return;const isDiscount=x.type==='discounts';const locationUrl=String(x.shopLocation||'').trim();const safeLocation=/^https?:\/\//i.test(locationUrl)?locationUrl:'';const shopPhotos=(Array.isArray(x.shopImages)&&x.shopImages.length?x.shopImages:[x.shopImage1,x.shopImage2]).filter(Boolean);modal(`<span class="kicker">${titles[x.type]} · التفاصيل</span><h2>${escapeHtml(x.title)}</h2>${x.image?`<img src="${escapeHtml(SiteStore.imageSrc(x.image))}" alt="${escapeHtml(x.title)}" style="width:100%;height:180px;object-fit:cover;border-radius:12px;margin-bottom:12px">`:''}<p>${escapeHtml(x.extra||x.desc)}</p>${isDiscount&&shopPhotos.length?`<div class="discount-shop-photos" style="display:grid;grid-template-columns:repeat(${shopPhotos.length===1?1:2},minmax(0,1fr));gap:10px;margin:14px 0">${shopPhotos.map((src,i)=>`<img src="${escapeHtml(SiteStore.imageSrc(src))}" alt="صورة ${i+1} من ${escapeHtml(x.title)}" style="width:100%;height:160px;object-fit:cover;border-radius:12px;border:1px solid #e1e8df">`).join('')}</div>`:''}${isDiscount?`<p><button type="button" class="button light shop-location-btn" onclick="openShopLocation('${escapeHtml(String(id))}')" ${safeLocation?'':'title="لم يضف المضيف رابط الموقع بعد"'}>📍 ${safeLocation?'عرض موقع المحل':'موقع المحل غير مضاف'}</button></p>`:''}${x.price?`<p class="price">السعر التوضيحي: ${escapeHtml(x.price)}</p>`:''}<p>${escapeHtml(x.contact||"لم تُضف بيانات تواصل لهذا الإعلان بعد.")}</p>${isDiscount?`<button type="button" class="button discount-use-btn" data-discount-use="${escapeHtml(String(id))}" onclick="markDiscountUsed(this.dataset.discountUse)">✓ تم الخصم</button>`:''}<button class="button" onclick="saveFavorite('${id}');this.textContent=favorites.includes('${id}')?'محفوظ في المفضلة ✓':'حفظ في المفضلة'">${favorites.includes(id)?'محفوظ في المفضلة ✓':'حفظ في المفضلة ♡'}</button>`);if(isDiscount)updateDiscountButton(String(id))}
 function openShopLocation(id){const x=items.find(item=>String(item.id)===String(id));const url=String(x?.shopLocation||'').trim();if(!/^https?:\/\//i.test(url)){toast('لم يضف المضيف موقع هذا المحل بعد.');return;}window.open(url,'_blank','noopener,noreferrer')}
 function showFavorites(){favorites=favorites.filter(id=>items.some(x=>x.id===id));modal(`<span class="kicker">اختياراتك، في مكان واحد</span><h2>المفضلة</h2>${favorites.length?favorites.map(id=>items.find(x=>x.id===id)).filter(Boolean).map(x=>`<button class="place-card" onclick="details('${x.id}')"><h3>${escapeHtml(x.title)}</h3><p>${titles[x.type]} ←</p></button>`).join(''):'<p>مفضلتك فارغة حتى الآن. اضغط على القلب بجانب أي عرض أو كتاب أو منتج لحفظه هنا.</p>'}`)}
