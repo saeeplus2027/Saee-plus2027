@@ -1,59 +1,34 @@
 
-/* Saee Plus - shared content store backed by /api/content */
- 
+/* Saee Plus - GitHub Pages local content store */
+
 window.SiteStore = (() => {
   const key = "sai-plus-cms-v1";
-  const remote = true;
-  // The static GitHub Pages frontend talks to the separately deployed Cloudflare Worker.
-  const API_BASE = "https://saee-plus-api.ligagym.workers.dev";
-  const apiUrl = (path) => `${API_BASE}${path}`;
- 
-  // Admin session token. The cookie alone is not enough on browsers that block
-  // third-party cookies (the site and the API are on different domains), so the
-  // token is also sent as a Bearer header.
-  const TOKEN_KEY = 'saee-admin-token-v1';
-  const getToken = () => {
-    try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch (_) { return ''; }
-  };
-  const setToken = (value) => {
-    try {
-      if (value) sessionStorage.setItem(TOKEN_KEY, value);
-      else sessionStorage.removeItem(TOKEN_KEY);
-    } catch (_) { /* Token storage is optional; the cookie may still work. */ }
-  };
-  const authHeaders = (extra = {}) => {
-    const token = getToken();
-    return token ? { ...extra, Authorization: `Bearer ${token}` } : extra;
-  };
- 
-  let loaded = false;
-  let canEdit = false;
+  const remote = false;
+
+  let loaded = true;
+  let canEdit = true;
   let busy = false;
-  let etag = '"0"';
-  let apiAvailable = false;
- 
+
   const clone = (value) =>
     JSON.parse(JSON.stringify(value));
- 
+
   const imageSrc = (value) => {
     value = String(value || "");
- 
+
     if (
       /^data:image\/(png|jpeg|webp|gif);base64,[a-zA-Z0-9+/=]+$/.test(value) ||
       /^https:\/\/[^\s<>"']+$/.test(value)
     ) return value;
- 
-    if (/^\/api\/media\/[a-f0-9]{64}\.(png|jpeg|webp|gif)$/.test(value)) return apiUrl(value);
- 
+
     if (/^[a-zA-Z0-9_-]+$/.test(value))
       return "assets/" + value + ".jpg";
- 
+
     if (/^assets\/[a-zA-Z0-9_.-]+$/.test(value))
       return value;
- 
+
     return "";
   };
- 
+
   function validate(data) {
     if (
       !data ||
@@ -66,7 +41,7 @@ window.SiteStore = (() => {
     ) {
       throw Error("بيانات سعي بلس غير صالحة.");
     }
- 
+
     if (
       data.services.length > 50 ||
       data.items.length > 2000 ||
@@ -74,9 +49,9 @@ window.SiteStore = (() => {
     ) {
       throw Error("حجم البيانات أكبر من المسموح.");
     }
- 
+
     const ids = new Set();
- 
+
     for (const service of data.services) {
       if (
         !Array.isArray(service) ||
@@ -88,12 +63,12 @@ window.SiteStore = (() => {
       ) {
         throw Error("يوجد قسم غير صالح أو مكرر.");
       }
- 
+
       ids.add(service[0]);
     }
- 
+
     const itemIds = new Set();
- 
+
     for (const item of data.items) {
       if (
         !item ||
@@ -106,9 +81,9 @@ window.SiteStore = (() => {
       ) {
         throw Error("يوجد محتوى غير صالح أو مكرر.");
       }
- 
+
       itemIds.add(item.id);
- 
+
       for (const field of [
         "image", "badge", "meta", "extra",
         "price", "contact", "emoji"
@@ -120,12 +95,18 @@ window.SiteStore = (() => {
           throw Error("يوجد حقل غير صالح.");
         }
       }
- 
+
       if (item.image && !imageSrc(item.image)) {
         throw Error("رابط الصورة غير صالح.");
       }
+
+      if (item.shopImages !== undefined) {
+        if (!Array.isArray(item.shopImages) || item.shopImages.some(v => typeof v !== "string" || !imageSrc(v))) {
+          throw Error("صور التفاصيل غير صالحة.");
+        }
+      }
     }
- 
+
     for (const place of data.places) {
       if (
         !place ||
@@ -140,23 +121,23 @@ window.SiteStore = (() => {
         throw Error("بيانات أحد الأماكن غير صالحة.");
       }
     }
- 
+
     for (const value of Object.values(data.texts)) {
       if (typeof value !== "string") {
         throw Error("تعديل النص غير صالح.");
       }
     }
- 
+
     if (!data.images || typeof data.images !== "object") {
       data.images = {};
     }
- 
+
     for (const value of Object.values(data.images)) {
       if (value && !imageSrc(value)) {
         throw Error("رابط صورة غير صالح.");
       }
     }
- 
+
     if (
       !data.theme ||
       !/^#[0-9a-f]{6}$/i.test(data.theme.green) ||
@@ -164,7 +145,7 @@ window.SiteStore = (() => {
     ) {
       throw Error("ألوان الموقع غير صالحة.");
     }
- 
+
     if (
       typeof data.siteName !== "string" ||
       !data.siteName.trim() ||
@@ -175,237 +156,133 @@ window.SiteStore = (() => {
     ) {
       throw Error("إعدادات الموقع غير صالحة.");
     }
- 
+
     for (const value of Object.values(data.descriptions)) {
       if (typeof value !== "string") {
         throw Error("وصف القسم غير صالح.");
       }
     }
- 
+
     data.notice = String(data.notice ?? "");
     data.mapNotice = String(data.mapNotice ?? "");
- 
+
     return clone(data);
   }
- 
+
   if (!window.SAI_DEFAULTS) {
-    throw Error("ملف content-data.js غير محمّل أو لا يحتوي على SAI_DEFAULTS.");
+    throw Error(
+      "ملف content-data.js غير محمّل أو لا يحتوي على SAI_DEFAULTS."
+    );
   }
- 
+
   let state = validate(clone(window.SAI_DEFAULTS));
- 
+
+  try {
+    const saved = JSON.parse(
+      localStorage.getItem(key) || "null"
+    );
+
+    if (
+      saved &&
+      Number(saved.revision) >= Number(state.revision)
+    ) {
+      state = validate(saved);
+    }
+  } catch (error) {
+    console.warn(
+      "Saee Plus: using default content.",
+      error
+    );
+  }
+
   function notify() {
-    window.dispatchEvent(new Event("sai-content-changed"));
+    window.dispatchEvent(
+      new Event("sai-content-changed")
+    );
   }
- 
+
   function cache() {
-    try { localStorage.setItem(key, JSON.stringify(state)); } catch (_) { /* Cache is optional. */ }
-  }
- 
-  async function readResponse(response) {
-    let body = {};
-    try { body = await response.json(); } catch (_) {}
-    if (!response.ok) throw Error(body.error || `تعذر تحميل المحتوى (HTTP ${response.status}).`);
-    return body;
-  }
- 
-  async function refresh(silent = false) {
-    const previousRevision = Number(state.revision || 0);
-    if (!silent) {
-      loaded = false;
-      apiAvailable = false;
-    }
     try {
-      const response = await fetch(apiUrl('/api/content'), {
-        method: 'GET',
-        cache: 'no-store',
-        headers: authHeaders({ 'Accept': 'application/json' }),
-        credentials: 'include'
-      });
-      const body = await readResponse(response);
-      state = validate(body.state ?? body.content);
-      state.revision = Number(body.revision ?? state.revision ?? 0);
-      etag = response.headers.get('ETag') || `"${state.revision}"`;
-      canEdit = Boolean(body.canEdit ?? body.admin ?? body.user?.admin);
-      apiAvailable = true;
-      loaded = true;
-      cache();
-      if (!silent || Number(state.revision || 0) !== previousRevision) notify();
-      return state;
+      localStorage.setItem(
+        key,
+        JSON.stringify(state)
+      );
     } catch (error) {
-      // Keep the public site usable if the API route is missing or temporarily down.
-      // The shared server remains the source of truth whenever the API is available.
-      if (silent) {
-        console.warn('Saee Plus: background refresh failed; keeping the current content.', error);
-        return state;
-      }
-      console.error('Saee Plus: central content could not be loaded; using cached/default content.', error);
-      try {
-        const cached = localStorage.getItem(key);
-        if (cached) state = validate(JSON.parse(cached));
-      } catch (cacheError) {
-        console.warn('Saee Plus: cached content is unavailable or invalid.', cacheError);
-        // `state` already contains validated SAI_DEFAULTS.
-      }
-      canEdit = false;
-      apiAvailable = false;
-      loaded = true;
-      notify();
-      return state;
+      throw Error(
+        "تعذر حفظ المحتوى في المتصفح. قد تكون مساحة التخزين ممتلئة."
+      );
     }
   }
- 
-  // Moves Base64 images out of the content JSON into the server's image store,
-  // so saving stays fast and never hits the content size limit.
-  async function uploadEmbeddedImages(data) {
-    const uploaded = new Map();
- 
-    async function toUrl(value) {
-      if (typeof value !== 'string' || !value.startsWith('data:image/')) return value;
-      if (!uploaded.has(value)) {
-        uploaded.set(value, (async () => {
-          const response = await fetch(apiUrl('/api/media'), {
-            method: 'POST',
-            credentials: 'include',
-            cache: 'no-store',
-            headers: authHeaders({
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            }),
-            body: JSON.stringify({ dataUrl: value })
-          });
-          const body = await readResponse(response);
-          if (!/^\/api\/media\/[a-f0-9]{64}\.(png|jpeg|webp|gif)$/.test(body.url || '')) {
-            throw Error('تعذر رفع إحدى الصور.');
-          }
-          return body.url;
-        })());
-      }
-      return uploaded.get(value);
-    }
- 
-    for (const item of data.items) {
-      for (const field of ['image', 'shopImage1', 'shopImage2']) {
-        if (item[field]) item[field] = await toUrl(item[field]);
-      }
-      if (Array.isArray(item.gallery)) {
-        item.gallery = await Promise.all(item.gallery.map(toUrl));
-      }
-    }
- 
-    for (const key of Object.keys(data.images)) {
-      if (data.images[key]) data.images[key] = await toUrl(data.images[key]);
-    }
- 
-    return data;
-  }
- 
-  async function loginAdmin(password) {
-    const response = await fetch(apiUrl('/api/admin-login'), {
-      method: 'POST',
-      credentials: 'include',
-      cache: 'no-store',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({ password: String(password || '') })
-    });
-    const body = await readResponse(response);
-    setToken(body.token || '');
-    await refresh(true);
-    if (!canEdit) throw Error('تعذر تفعيل جلسة الإدارة. أعد المحاولة.');
-    return true;
-  }
- 
-  async function logoutAdmin() {
-    try {
-      await fetch(apiUrl('/api/logout'), {
-        method: 'POST',
-        credentials: 'include',
-        cache: 'no-store',
-        headers: authHeaders({ 'Accept': 'application/json' })
-      });
-    } finally {
-      setToken('');
-      canEdit = false;
-      await refresh(true).catch(() => {});
-    }
-  }
- 
+
   async function save(next) {
-    if (busy) throw Error('جاري حفظ تعديل سابق.');
-    if (!loaded) throw Error('المحتوى لم يجهز بعد. أعد تحميل الصفحة ثم حاول مجددًا.');
-    if (!apiAvailable) throw Error('تعذر الاتصال بخادم المحتوى. تم عرض نسخة محفوظة للقراءة فقط؛ لا يمكن حفظ التعديلات أو مزامنتها حتى يتم إصلاح الخادم.');
-    if (!canEdit) throw Error('سجّل الدخول بحساب مالك الموقع لتتمكن من حفظ التعديلات.');
+    if (busy) {
+      throw Error("جاري حفظ تعديل سابق.");
+    }
+
     busy = true;
+
     try {
-      const checked = await uploadEmbeddedImages(validate(next));
-      const response = await fetch(apiUrl('/api/content'), {
-        method: 'PUT',
-        credentials: 'include',
-        cache: 'no-store',
-        headers: authHeaders({
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'If-Match': etag
-        }),
-        body: JSON.stringify({ content: checked, state: checked })
-      });
-      const body = await readResponse(response);
-      state = validate(body.state ?? body.content);
-      state.revision = Number(body.revision ?? state.revision ?? Date.now());
-      etag = response.headers.get('ETag') || `"${state.revision}"`;
-      canEdit = Boolean(body.canEdit ?? body.admin ?? body.user?.admin);
-      cache();
+      const checked = validate(next);
+
+      checked.revision = Date.now();
+
+      const previous = state;
+      state = checked;
+
+      try {
+        cache();
+      } catch (error) {
+        state = previous;
+        throw error;
+      }
+
       notify();
-      try { channel?.postMessage({ revision: state.revision }); } catch (_) { /* Optional. */ }
       return state;
     } finally {
       busy = false;
     }
   }
- 
-  const ready = refresh();
- 
-  // Instant sync between tabs of the same browser (admin tab -> site tab).
-  let channel = null;
-  try { channel = new BroadcastChannel('saee-plus-content'); } catch (_) { /* Optional. */ }
-  if (channel) {
-    channel.onmessage = () => {
-      if (!busy && location.hash !== '#admin') refresh(true).catch(() => {});
-    };
-  }
- 
-  // Remote mode always fetches the central source. Local storage is only a cache,
-  // never the authority for shared site content.
-  window.addEventListener('focus', () => {
-    if (location.hash !== '#admin') refresh().catch(() => {});
-  });
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && location.hash !== '#admin') refresh(true).catch(() => {});
-  });
- 
-  // Keep public pages in sync with admin changes without requiring visitors to refresh.
-  // Poll only while visible, and don't overwrite an in-progress admin edit.
-  window.setInterval(() => {
-    if (!document.hidden && location.hash !== '#admin' && !busy) {
-      refresh(true).catch(() => {});
+
+  async function refresh() {
+    try {
+      const saved = JSON.parse(
+        localStorage.getItem(key) || "null"
+      );
+
+      state = saved
+        ? validate(saved)
+        : validate(clone(window.SAI_DEFAULTS));
+
+      notify();
+    } catch (error) {
+      console.warn(error);
+      state = validate(clone(window.SAI_DEFAULTS));
+      notify();
     }
-  }, 2000);
- 
+
+    return state;
+  }
+
+  window.addEventListener("storage", (event) => {
+    if (
+      event.key === key &&
+      location.hash !== "#admin"
+    ) {
+      refresh();
+    }
+  });
+
   return {
     get state() { return state; },
     get loaded() { return loaded; },
     get canEdit() { return canEdit; },
     remote,
-    ready,
+    ready: Promise.resolve(),
     clone,
     save,
     validate,
     imageSrc,
     key,
-    apiUrl,
-    loginAdmin,
-    logoutAdmin,
-    reload: refresh
+    reload: () => refresh()
   };
 })();
- 
