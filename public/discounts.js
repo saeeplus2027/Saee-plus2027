@@ -126,20 +126,20 @@
 
     if (!usageReady) {
       button.disabled = true;
-      setText(button, usageLoadFailed ? 'تعذر الاتصال' : 'جارٍ التحقق من الخصم…');
+      button.textContent = usageLoadFailed ? 'تعذر الاتصال' : 'جارٍ التحقق من الخصم…';
       button.title = usageLoadFailed
-        ? 'الخادم غير متاح؛ لم يتم تأكيد حالة الخصم. ستتم إعادة المحاولة تلقائيًا.'
+        ? 'الخادم غير متاح؛ لم يتم تسجيل الخصم. ستتم إعادة المحاولة تلقائيًا.'
         : 'يتم تحميل حالة الخصم المشتركة من الخادم.';
       timer.hidden = false;
-      setText(timer, usageLoadFailed
+      timer.textContent = usageLoadFailed
         ? 'تأكد من نشر Worker وربطه بقاعدة D1.'
-        : 'انتظر حتى يكتمل التحقق من الخادم.');
+        : 'انتظر حتى يكتمل التحقق من الخادم.';
       return;
     }
 
     if (expiry > Date.now()) {
       button.disabled = true;
-      setText(button, 'تم الخصم ✓');
+      button.textContent = 'تم الخصم ✓';
 
       button.setAttribute(
         'aria-label',
@@ -151,13 +151,13 @@
 
       timer.hidden = false;
 
-      setText(timer,
+      timer.textContent =
         'إعادة التفعيل بعد ' +
-        formatRemaining(expiry - Date.now()));
+        formatRemaining(expiry - Date.now());
 
     } else {
       button.disabled = false;
-      setText(button, 'تم الخصم');
+      button.textContent = 'تم الخصم';
 
       button.setAttribute(
         'aria-label',
@@ -168,14 +168,8 @@
       button.style.cursor = 'pointer';
 
       timer.hidden = true;
-      setText(timer, '');
+      timer.textContent = '';
     }
-  }
-
-  // Avoid replacing text nodes when nothing changed. This also prevents the
-  // modal MutationObserver from repeatedly reacting to its own UI updates.
-  function setText(element, value) {
-    if (element && element.textContent !== value) element.textContent = value;
   }
 
   /* ---------------------------------------------------------
@@ -219,7 +213,7 @@
       updateButton(button);
       showMessage('تم تسجيل الخصم ✓ سيُعاد تفعيله بعد 24 ساعة على جميع الأجهزة.');
     } catch (error) {
-      if (error && (error.alreadyUsed || (error.status === 409 && error.body && error.body.alreadyUsed))) {
+      if (error && error.alreadyUsed) {
         const expiry = Number(error.body && error.body.expiresAt || Date.now() + DAY);
         serverExpiries[discountId] = expiry;
         updateButton(button);
@@ -314,25 +308,8 @@
       document.getElementById('dialog-content');
 
     if (modalContent) {
-      let syncTimer = 0;
-      const observer = new MutationObserver(function (records) {
+      const observer = new MutationObserver(function () {
         refreshButtons();
-
-        // Fetch the shared status immediately when a new discount detail
-        // button is inserted, rather than waiting for the next poll.
-        const discountButtonAdded = records.some(function (record) {
-          return Array.from(record.addedNodes || []).some(function (node) {
-            return node instanceof Element && (
-              node.matches(BUTTON_SELECTOR) || node.querySelector(BUTTON_SELECTOR)
-            );
-          });
-        });
-        if (discountButtonAdded) {
-          clearTimeout(syncTimer);
-          syncTimer = window.setTimeout(function () {
-            void loadServerUsage();
-          }, 60);
-        }
       });
 
       observer.observe(modalContent, {
@@ -341,30 +318,33 @@
       });
     }
 
-    // The displayed countdown updates every second without hitting the API.
-    window.setInterval(refreshButtons, 1000);
+    /*
+     * تحديث الوقت المتبقي كل ثانية.
+     */
 
-    // Re-query shared state every 5 seconds so an already-open second device
-    // reflects a click made elsewhere quickly. The state itself lives in D1.
+    window.setInterval(function () {
+      refreshButtons();
+    }, 1000);
+
+    // Pull shared usage every 15 seconds so already-open pages update too.
     window.setInterval(function () {
       if (!document.hidden) void loadServerUsage();
-    }, 5000);
+    }, 15000);
 
-    // Always re-check shared status when the visitor returns to this tab/page.
-    window.addEventListener('pageshow', function () {
-      void loadServerUsage();
-      refreshButtons();
-    });
-    window.addEventListener('focus', function () {
-      void loadServerUsage();
-    });
+    /*
+     * إعادة التحقق عند العودة إلى الصفحة.
+     */
 
-    document.addEventListener('visibilitychange', function () {
-      if (!document.hidden) {
-        void loadServerUsage();
-        refreshButtons();
+    window.addEventListener('pageshow', refreshButtons);
+
+    document.addEventListener(
+      'visibilitychange',
+      function () {
+        if (!document.hidden) {
+          refreshButtons();
+        }
       }
-    });
+    );
   }
 
   if (document.readyState === 'loading') {
