@@ -1793,6 +1793,32 @@
 })();
 </script>
 
+  <script>
+  // إزالة بطاقة "السوق المحلي" من الواجهة الرئيسية فقط، دون حذف بياناتها من قاعدة البيانات.
+  (() => {
+    const norm = value => String(value || '').replace(/\s+/g, ' ').trim();
+    function removeLocalMarketCard() {
+      const root = document.getElementById('main');
+      if (!root) return;
+
+      // إذا كانت البطاقة مرتبطة مباشرةً بالمسار #market.
+      root.querySelectorAll('a[href="#market"], [data-page="market"], [data-section="market"]').forEach(el => {
+        const card = el.closest('article, .card, [class*="card"], [class*="tile"], [class*="service"]') || el;
+        card.remove();
+      });
+
+      // إزالة البطاقة بحسب عنوانها حتى لو كانت تُنشأ ديناميكيًا من بيانات الموقع.
+      root.querySelectorAll('h1, h2, h3, h4, a, button, [role="link"]').forEach(el => {
+        if (norm(el.textContent) !== 'السوق المحلي') return;
+        const card = el.closest('a, article, .card, [class*="card"], [class*="tile"], [class*="service"]');
+        (card || el).remove();
+      });
+    }
+    removeLocalMarketCard();
+    const root = document.getElementById('main');
+    if (root) new MutationObserver(removeLocalMarketCard).observe(root, { childList: true, subtree: true });
+  })();
+  </script>
   <script src="discounts.js?v=20261028-active-24h-button-fix"></script>
 </body>
 </html>
