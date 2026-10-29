@@ -897,6 +897,11 @@
       }
     }
   </style>
+<style id="saee-auth-interaction-lock">
+  html.sai-auth-checking body { pointer-events: none; }
+  html.sai-auth-checking #sai-auth,
+  html.sai-auth-checking #sai-auth * { pointer-events: auto; }
+</style>
 </head>
 
 <body>
@@ -1132,8 +1137,8 @@
   const validateRegister=bindConfirm('sai-register-password','sai-register-confirm');
   const validateReset=bindConfirm('sai-reset-password','sai-reset-confirm');
   async function run(form, action){if(busy)return;busy=true;clearMessage();const submit=form.querySelector('[type="submit"]'),old=submit.textContent;submit.disabled=true;submit.textContent='جارٍ التنفيذ…';try{await action();}catch(e){showMessage(e.message||'تعذّرت العملية. حاول مرة أخرى.');}finally{busy=false;submit.disabled=false;submit.textContent=old;}}
-  async function updateHeader(){let user=null;try{const d=await api('/api/me');user=d.user||null;}catch(_){}if(user){try{localStorage.setItem(SESSION_KEY,user.email);}catch(_){}accountLabel.textContent='مرحبًا، '+user.email;accountButton.setAttribute('aria-label','حساب '+user.email);accountButton.title='حساب سعي بلس: '+user.email;logoutButton.hidden=false;}else{try{localStorage.removeItem(SESSION_KEY);localStorage.removeItem(TOKEN_KEY);}catch(_){}accountLabel.textContent='تسجيل الدخول';accountButton.setAttribute('aria-label','تسجيل الدخول');accountButton.title='تسجيل الدخول';logoutButton.hidden=true;}window.dispatchEvent(new Event('sai-account-changed'));return user;}
-  async function login(email,password){const d=await api('/api/login',{method:'POST',body:JSON.stringify({email,password})});if(!d.token)throw new Error('الخادم لم يُرجع جلسة. انشر تحديث Cloudflare Worker أولًا.');localStorage.setItem(TOKEN_KEY,d.token);localStorage.setItem(SESSION_KEY,email);await updateHeader();}
+  async function updateHeader(){let user=null;try{const d=await api('/api/me');user=d.user||null;}catch(_){}window.SAI_AUTH_USER=user;window.SAI_AUTH_READY=true;if(user){try{localStorage.setItem(SESSION_KEY,user.email);}catch(_){}accountLabel.textContent='مرحبًا، '+user.email;accountButton.setAttribute('aria-label','حساب '+user.email);accountButton.title='حساب سعي بلس: '+user.email;logoutButton.hidden=false;}else{try{localStorage.removeItem(SESSION_KEY);localStorage.removeItem(TOKEN_KEY);}catch(_){}accountLabel.textContent='تسجيل الدخول';accountButton.setAttribute('aria-label','تسجيل الدخول');accountButton.title='تسجيل الدخول';logoutButton.hidden=true;}window.dispatchEvent(new Event('sai-account-changed'));window.dispatchEvent(new Event('sai-auth-ready'));return user;}
+  async function login(email,password){const d=await api('/api/login',{method:'POST',body:JSON.stringify({email,password})});if(!d.token)throw new Error('الخادم لم يُرجع جلسة. انشر تحديث Cloudflare Worker أولًا.');localStorage.setItem(TOKEN_KEY,d.token);localStorage.setItem(SESSION_KEY,email);window.SAI_AUTH_READY=false;await updateHeader();if(!window.SAI_AUTH_USER)throw new Error('تعذّر التحقق من الجلسة. حاول تسجيل الدخول مرة أخرى.');}
   accountButton.addEventListener('click',async()=>{if(busy)return;showPage('login',false);if(!authDialog.open)authDialog.showModal();const user=await updateHeader();if(user){$('sai-login-email').value=user.email;showMessage('أنت مسجّل الدخول. يمكنك استخدام الحساب نفسه على أي جهاز.');}$('sai-login-email').focus();});
   authDialog.querySelectorAll('[data-auth-go]').forEach(b=>b.addEventListener('click',()=>showPage(b.dataset.authGo)));
   authDialog.querySelectorAll('[data-auth-close]').forEach(b=>b.addEventListener('click',()=>{if(!busy&&getToken())authDialog.close();else if(!busy)showMessage('سجّل الدخول أو أنشئ حسابًا للمتابعة.');}));
@@ -1145,7 +1150,24 @@
   $('sai-reset-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;validateReset();if(!f.reportValidity())return;const password=$('sai-reset-password').value,resetToken=new URLSearchParams(location.search).get('reset_token')||'';if(password.length<15){showMessage('استخدم كلمة مرور من 15 حرفًا على الأقل.');return;}if(!resetToken){showMessage('رابط الاستعادة غير صالح أو منتهي. اطلب رابطًا جديدًا.');return;}run(f,async()=>{await api('/api/reset-confirm',{method:'POST',body:JSON.stringify({token:resetToken,password})});history.replaceState(null,'',location.pathname+location.hash);showPage('login',false);showMessage('تم تغيير كلمة المرور. سجّل الدخول من جديد.');});});
   logoutButton.addEventListener('click',async()=>{if(busy)return;logoutButton.disabled=true;try{await api('/api/logout',{method:'POST',body:JSON.stringify({})});}catch(_){}try{localStorage.removeItem(TOKEN_KEY);localStorage.removeItem(SESSION_KEY);}catch(_){}logoutButton.disabled=false;await updateHeader();showPage('login',false);if(!authDialog.open)authDialog.showModal();showMessage('تم تسجيل الخروج.');});
   window.addEventListener('storage',e=>{if(e.key===TOKEN_KEY||e.key===SESSION_KEY)updateHeader();});
-  updateHeader();if(new URLSearchParams(location.search).has('reset_token')){showPage('reset',false);authDialog.showModal();}
+  // Validate every saved session against the shared server before allowing site use.
+  window.SAI_AUTH_READY=false;
+  window.SAI_AUTH_USER=null;
+  document.documentElement.classList.add('sai-auth-checking');
+  updateHeader().then(user=>{
+    document.documentElement.classList.remove('sai-auth-checking');
+    if(new URLSearchParams(location.search).has('reset_token')){
+      showPage('reset',false);
+      if(!authDialog.open)authDialog.showModal();
+      return;
+    }
+    if(!user){
+      showPage('login',false);
+      if(!authDialog.open)authDialog.showModal();
+      showMessage('سجّل الدخول أولًا لاستخدام جميع أقسام الموقع.');
+    }
+  });
+  if(new URLSearchParams(location.search).has('reset_token')){showPage('reset',false);if(!authDialog.open)authDialog.showModal();}
 })();
 </script>
 
@@ -1554,11 +1576,8 @@
   const AUTH_DIALOG_ID = 'sai-auth';
 
   function hasAccountSession() {
-    try {
-      return Boolean(localStorage.getItem('saee-auth-token-v1'));
-    } catch (_) {
-      return false;
-    }
+    // Only a session validated by the shared API is accepted.
+    return window.SAI_AUTH_READY === true && Boolean(window.SAI_AUTH_USER);
   }
 
   function normalizeText(value) {
