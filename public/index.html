@@ -1150,14 +1150,14 @@
   const validateReset=bindConfirm('sai-reset-password','sai-reset-confirm');
   const validateChange=bindConfirm('sai-change-password','sai-change-confirm');
   async function run(form, action){if(busy)return;busy=true;clearMessage();const submit=form.querySelector('[type="submit"]'),old=submit.textContent;submit.disabled=true;submit.textContent='جارٍ التنفيذ…';try{await action();}catch(e){showMessage(e.message||'تعذّرت العملية. حاول مرة أخرى.');}finally{busy=false;submit.disabled=false;submit.textContent=old;}}
-  async function updateHeader(){let user=null;try{const d=await api('/api/me');user=d.user||null;}catch(_){}if(user){try{localStorage.setItem(SESSION_KEY,user.email);}catch(_){}accountLabel.textContent='مرحبًا، '+user.email;accountButton.setAttribute('aria-label','حساب '+user.email);accountButton.title='حساب سعي بلس: '+user.email;logoutButton.hidden=false;}else{try{localStorage.removeItem(SESSION_KEY);localStorage.removeItem(TOKEN_KEY);}catch(_){}accountLabel.textContent='تسجيل الدخول';accountButton.setAttribute('aria-label','تسجيل الدخول');accountButton.title='تسجيل الدخول';logoutButton.hidden=true;}window.dispatchEvent(new Event('sai-account-changed'));return user;}
+  async function updateHeader(){let user=null;try{const d=await api('/api/me');user=d.user||null;}catch(_){}if(user){try{localStorage.setItem(SESSION_KEY,user.email);}catch(_){}const displayName=String(user.name||'').trim()||user.email;accountLabel.textContent='مرحبًا، '+displayName;accountButton.setAttribute('aria-label','حساب '+displayName);accountButton.title='حساب سعي بلس: '+displayName;logoutButton.hidden=false;}else{try{localStorage.removeItem(SESSION_KEY);localStorage.removeItem(TOKEN_KEY);}catch(_){}accountLabel.textContent='تسجيل الدخول';accountButton.setAttribute('aria-label','تسجيل الدخول');accountButton.title='تسجيل الدخول';logoutButton.hidden=true;if(!authDialog.open){showPage('login',false);authDialog.showModal();}else{showPage('login',false);}}window.dispatchEvent(new Event('sai-account-changed'));return user;}
   async function login(email,password){const d=await api('/api/login',{method:'POST',body:JSON.stringify({email,password})});if(!d.token)throw new Error('الخادم لم يُرجع جلسة. انشر تحديث Cloudflare Worker أولًا.');localStorage.setItem(TOKEN_KEY,d.token);localStorage.setItem(SESSION_KEY,email);await updateHeader();}
   accountButton.addEventListener('click',async()=>{if(busy)return;if(!authDialog.open)authDialog.showModal();const user=await updateHeader();if(user){showPage('change',false);showMessage('أنت مسجّل الدخول. يمكنك تغيير كلمة مرور حسابك هنا.');$('sai-current-password').focus();}else{showPage('login',false);$('sai-login-email').focus();}});
   authDialog.querySelectorAll('[data-auth-go]').forEach(b=>b.addEventListener('click',()=>showPage(b.dataset.authGo)));
   authDialog.querySelectorAll('[data-auth-close]').forEach(b=>b.addEventListener('click',()=>{if(!busy&&getToken())authDialog.close();else if(!busy)showMessage('سجّل الدخول أو أنشئ حسابًا للمتابعة.');}));
   authDialog.addEventListener('cancel',e=>{if(busy||!getToken()){e.preventDefault();showMessage('سجّل الدخول أو أنشئ حسابًا للمتابعة.');}});
   authDialog.addEventListener('close',()=>{resetForms();clearMessage();});
-  $('sai-register-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;validateRegister();if(!f.reportValidity())return;const name=$('sai-register-name').value.trim(),email=normalizeEmail($('sai-register-email').value),password=$('sai-register-password').value;if(!name){showMessage('أدخل اسمك.');return;}if(password.length<15){showMessage('استخدم كلمة مرور من 15 حرفًا على الأقل.');return;}run(f,async()=>{const d=await api('/api/signup',{method:'POST',body:JSON.stringify({email,password})});f.reset();showPage('login',false);$('sai-login-email').value=email;showMessage(d.message||'تم إنشاء الحساب. سجّل الدخول الآن.');});});
+  $('sai-register-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;validateRegister();if(!f.reportValidity())return;const name=$('sai-register-name').value.trim(),email=normalizeEmail($('sai-register-email').value),password=$('sai-register-password').value;if(!name){showMessage('أدخل اسمك.');return;}if(password.length<15){showMessage('استخدم كلمة مرور من 15 حرفًا على الأقل.');return;}run(f,async()=>{const d=await api('/api/signup',{method:'POST',body:JSON.stringify({name,email,password})});f.reset();showPage('login',false);$('sai-login-email').value=email;showMessage(d.message||'تم إنشاء الحساب. سجّل الدخول الآن.');});});
   $('sai-login-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;if(!f.reportValidity())return;const email=normalizeEmail($('sai-login-email').value),password=$('sai-login-password').value;run(f,async()=>{await login(email,password);authDialog.close();});});
   $('sai-forgot-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;if(!f.reportValidity())return;const email=normalizeEmail($('sai-forgot-email').value);run(f,async()=>{const d=await api('/api/reset-request',{method:'POST',body:JSON.stringify({email})});showMessage(d.message||'إذا كان البريد مسجّلًا وخدمة البريد مفعّلة، ستصلك رسالة الاستعادة.');});});
   $('sai-reset-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;validateReset();if(!f.reportValidity())return;const password=$('sai-reset-password').value,resetToken=new URLSearchParams(location.search).get('reset_token')||'';if(password.length<15){showMessage('استخدم كلمة مرور من 15 حرفًا على الأقل.');return;}if(!resetToken){showMessage('رابط الاستعادة غير صالح أو منتهي. اطلب رابطًا جديدًا.');return;}run(f,async()=>{await api('/api/reset-confirm',{method:'POST',body:JSON.stringify({token:resetToken,password})});history.replaceState(null,'',location.pathname+location.hash);showPage('login',false);showMessage('تم تغيير كلمة المرور. سجّل الدخول من جديد.');});});
@@ -1779,4 +1779,30 @@
   /*
    * حماية إرسال نموذج الإضافة أيضًا، وليس الضغط على الزر فقط.
    */
-  document.
+  document.addEventListener('submit', event => {
+    const form = event.target;
+
+    if (!(form instanceof HTMLFormElement)) return;
+    if (hasAccountSession()) return;
+    if (!isProtectedForm(form)) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
+    const type = getProtectedType(normalizeText([
+      form.innerText,
+      form.textContent,
+      form.id,
+      form.getAttribute('aria-label')
+    ].filter(Boolean).join(' '))) || 'المحتوى';
+
+    requestLogin(type);
+  }, true);
+
+})();
+</script>
+
+  <script src="discounts.js?v=20261028-active-24h-button-fix"></script>
+</body>
+</html>
