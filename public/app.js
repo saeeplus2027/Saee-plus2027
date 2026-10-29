@@ -19,6 +19,22 @@ function mapPage(){if(place>=places.length)place=0;let shown=places.map((p,i)=>(
 function mapCategory(i){mapCat=['الكل',...new Set(places.map(p=>p.cat))][i];mapPage()}
 function render(){route=location.hash.slice(1)||'home';if(route==='about'){home();setTimeout(()=>document.getElementById('about').scrollIntoView(),0)}else if(route==='home')home();else if(route==='services'){main.innerHTML=`<div class="container">${headerPage('خدمات سعي بلس','كل احتياجاتك وفرصك في مكان واحد. اختر المساحة التي تناسبك.')}<div class="services-grid" style="margin:20px 0 65px">${serviceCards()}</div></div>`}else if(route==='map')mapPage();else if(titles[route])listing();else home();document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('active',a.hash===location.hash||(!location.hash&&a.hash==='#home')));document.querySelector('nav').classList.remove('open');hydrate()}
 window.addEventListener('hashchange',()=>{category='الكل';query='';render();if(route!=='about')window.scrollTo(0,0)});document.getElementById('year').textContent=new Date().getFullYear();
+// Initial page render: the app previously defined render() but did not call it on first load.
+// Keep the visible UI in sync when SiteStore finishes loading remote or fallback content.
+function syncSiteStoreAndRender(){
+  try {
+    services = SiteStore.state.services || [];
+    titles = Object.fromEntries(services.map(s => [s[0], s[2]]));
+    base = SiteStore.state.items || [];
+    additions = SiteStore.remote ? [] : JSON.parse(localStorage.getItem('sai-additions') || '[]');
+    items = [...base, ...additions];
+  } catch (error) {
+    console.error('Saee Plus: failed to sync visible content from SiteStore.', error);
+  }
+  render();
+}
+window.addEventListener('sai-content-changed', syncSiteStoreAndRender);
+syncSiteStoreAndRender();
 function toast(t){const e=document.getElementById('toast');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2700)}
 function saveFavorite(id,b){favorites=favorites.includes(id)?favorites.filter(x=>x!==id):[...favorites,id];localStorage.setItem('sai-favorites',JSON.stringify(favorites));if(b){b.classList.toggle('saved',favorites.includes(id));b.setAttribute('aria-pressed',favorites.includes(id))}toast(favorites.includes(id)?'أُضيفت إلى مفضلتك':'أُزيلت من المفضلة')}
 function modal(html){document.getElementById('dialog-content').innerHTML=html;const d=document.getElementById('dialog');if(!d.open)d.showModal()}
@@ -98,7 +114,3 @@ function addForm(type){if(type==='market'||type==='library'){let loggedIn=false;
 async function submitEntry(e,type){e.preventDefault();let f=new FormData(e.target);let item={id:'local'+Date.now(),type,title:f.get('title').trim(),cat:f.get('cat'),desc:f.get('desc').trim(),badge:'مشاركتك',meta:f.get('cat'),emoji:'✦'};if(!item.title||!item.desc)return;if(f.get('price'))item.price=f.get('price')+' د.أ';try{const next=SiteStore.clone(SiteStore.state);next.items.push(item);await SiteStore.save(next);}catch(error){toast(error.message);return;}document.getElementById('dialog').close();category='الكل';query='';if(route===type)listing();else location.hash=type;toast('تم حفظ المشاركة على الموقع بنجاح')}
 function aboutPrivacy(){modal('<h2>خصوصيتك</h2><p>تُحفظ المفضلة والمشاركات التجريبية في متصفحك باستخدام التخزين المحلي. لا تتطلب هذه النسخة إنشاء حساب أو إرسال معلومات شخصية. يمكنك إزالة البيانات عبر إعدادات المتصفح.</p><button class="button light" onclick="localStorage.removeItem(\'sai-additions\');localStorage.removeItem(\'sai-favorites\');additions=[];items=[...base];favorites=[];document.getElementById(\'dialog\').close();render();toast(\'تم مسح بيانات هذا المتصفح\')">مسح بياناتي المحلية</button>')}
 function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}document.getElementById('dialog').addEventListener('click',e=>{if(e.target===e.currentTarget){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)e.target.close()}});
-
-
-// Initial render: display the public page immediately on first load.
-try { render(); } catch (error) { console.error('Saee Plus: initial page render failed.', error); }
