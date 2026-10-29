@@ -9,7 +9,7 @@
   <title>سعي بلس | من جامعتك، إلى مجتمعك</title>
 
   <link rel="icon" type="image/jpeg" href="https://cdn.phototourl.com/member/2026-10-25-a5e80966-a389-47e6-95e0-7d994efae181.jpg">
-  <link rel="stylesheet" href="style.css?v=20261025-3">
+  <link rel="stylesheet" href="style.css?v=20261028-discount-link-size">
   <link rel="stylesheet" href="smart.css?v=20261025-3">
   <link rel="stylesheet" href="admin.css?v=20261025-3">
 
@@ -2175,20 +2175,38 @@
   }
 
   /*
-   * التقاط النقر قبل وصوله إلى سكربتات الموقع الأخرى.
-   * المستخدم غير المسجل لا يستطيع تشغيل زر الإضافة.
+   * بوابة تسجيل الدخول العامة:
+   * أي نقرة داخل الموقع تتطلب تسجيل الدخول، سواء كانت على رابط
+   * أو زر أو بطاقة أو صورة أو مساحة أخرى. الاستثناء الوحيد هو
+   * نافذة الحساب نفسها حتى يستطيع الزائر تسجيل الدخول أو إنشاء حساب.
    */
   document.addEventListener('click', event => {
     if (hasAccountSession()) return;
 
-    const protectedAction = isProtectedAction(event.target);
-    if (!protectedAction) return;
+    const target = event.target instanceof Element ? event.target : null;
+
+    // السماح بالتفاعل مع نموذج تسجيل الدخول وإنشاء الحساب والاستعادة فقط.
+    if (target && target.closest('#' + AUTH_DIALOG_ID)) return;
 
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
 
-    requestLogin(protectedAction.type);
+    const protectedAction = isProtectedAction(event.target);
+    requestLogin(protectedAction?.type || 'استخدام الموقع');
+  }, true);
+
+  // منع إرسال أي نموذج في الموقع قبل تسجيل الدخول، باستثناء نماذج الحساب.
+  document.addEventListener('submit', event => {
+    if (hasAccountSession()) return;
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    if (form.closest('#' + AUTH_DIALOG_ID)) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    requestLogin('استخدام الموقع');
   }, true);
 
   /*

@@ -95,7 +95,7 @@ window.SiteStore = (() => {
 
       for (const field of [
         "image", "badge", "meta", "extra",
-        "price", "contact", "emoji", "socialLink"
+        "price", "contact", "emoji"
       ]) {
         if (
           item[field] !== undefined &&
@@ -244,6 +244,70 @@ window.SiteStore = (() => {
     }
   }
 
+  // Compress embedded images only when the complete content payload approaches
+  // the Worker storage ceiling. This also repairs older records that contain
+  // large base64 images, without degrading images on ordinary text-only saves.
+  function resizeDataImage(source, maxDimension, quality) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => {
+        try {
+          const scale = Math.min(1, maxDimension / image.naturalWidth, maxDimension / image.naturalHeight);
+          const width = Math.max(1, Math.round(image.naturalWidth * scale));
+          const height = Math.max(1, Math.round(image.naturalHeight * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const context = canvas.getContext('2d', { alpha: true });
+          if (!context) throw Error('تعذرت معالجة الصورة في المتصفح.');
+          context.drawImage(image, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/webp', quality));
+        } catch (error) { reject(error); }
+      };
+      image.onerror = () => reject(Error('تعذرت قراءة إحدى الصور لتقليل حجمها.'));
+      image.src = source;
+    });
+  }
+
+  async function compressEmbeddedImages(data, maxDimension, quality) {
+    const copy = clone(data);
+    const cache = new Map();
+    async function walk(value) {
+      if (typeof value === 'string' && /^data:image\/(png|jpeg|webp|gif);base64,/.test(value)) {
+        if (!cache.has(value)) cache.set(value, resizeDataImage(value, maxDimension, quality));
+        return cache.get(value);
+      }
+      if (Array.isArray(value)) {
+        for (let i = 0; i < value.length; i++) value[i] = await walk(value[i]);
+      } else if (value && typeof value === 'object') {
+        for (const key of Object.keys(value)) value[key] = await walk(value[key]);
+      }
+      return value;
+    }
+    return await walk(copy);
+  }
+
+  async function fitContentPayload(data) {
+    let result = data;
+    let size = JSON.stringify({ content: result }).length;
+    if (size <= 760000) return result;
+
+    const levels = [
+      { dimension: 1100, quality: 0.68 },
+      { dimension: 850, quality: 0.56 },
+      { dimension: 650, quality: 0.44 }
+    ];
+    for (const level of levels) {
+      result = await compressEmbeddedImages(data, level.dimension, level.quality);
+      size = JSON.stringify({ content: result }).length;
+      if (size <= 900000) return result;
+    }
+    if (size > 900000) {
+      throw Error('المحتوى والصور ما زال حجمها كبيرًا بعد الضغط التلقائي. قلّل عدد الصور الإضافية أو اختصر النصوص، ثم حاول الحفظ مرة أخرى.');
+    }
+    return result;
+  }
+
   async function save(next) {
     if (busy) throw Error('جاري حفظ تعديل سابق.');
     if (!loaded) throw Error('المحتوى لم يجهز بعد. أعد تحميل الصفحة ثم حاول مجددًا.');
@@ -251,7 +315,9 @@ window.SiteStore = (() => {
     if (!canEdit) throw Error('سجّل الدخول بحساب مالك الموقع لتتمكن من حفظ التعديلات.');
     busy = true;
     try {
-      const checked = validate(next);
+      const checked = await fitContentPayload(validate(next));
+      const payload = JSON.stringify({ content: checked });
+      if (payload.length > 900000) throw Error('حجم المحتوى والصور أكبر من الحد المسموح للحفظ.');
       const response = await fetch(apiUrl('/api/content'), {
         method: 'PUT',
         credentials: 'include',
@@ -261,7 +327,7 @@ window.SiteStore = (() => {
           'Accept': 'application/json',
           'If-Match': etag
         },
-        body: JSON.stringify({ content: checked, state: checked })
+        body: payload
       });
       const body = await readResponse(response);
       state = validate(body.state ?? body.content);
