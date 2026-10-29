@@ -218,9 +218,9 @@ window.SiteStore = (() => {
       // Do not leave the entire site stuck on "جاري تحميل الموقع" if the API hangs.
       // After 8 seconds, abort the request and let the existing fallback render cached/default content.
       const controller = new AbortController();
-      // Keep the timeout active until BOTH headers and the response body have
-      // been read. Clearing it immediately after fetch() resolves can leave
-      // refresh() pending forever if response.json() stalls.
+      // Keep the timeout active until the response body is fully read. Previously
+      // the timer was cleared immediately after fetch() returned headers, so a
+      // stalled response.json() could leave the public homepage on its loading screen.
       const requestTimeout = setTimeout(() => controller.abort(), 8000);
       let response;
       let body;
