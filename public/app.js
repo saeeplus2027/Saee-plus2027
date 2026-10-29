@@ -100,5 +100,5 @@ function aboutPrivacy(){modal('<h2>خصوصيتك</h2><p>تُحفظ المفضل
 function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}document.getElementById('dialog').addEventListener('click',e=>{if(e.target===e.currentTarget){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)e.target.close()}});
 
 
-// Initial page render: without this call the loading placeholder remains visible.
-render();
+// Initial render: display the public page immediately on first load.
+try { render(); } catch (error) { console.error('Saee Plus: initial page render failed.', error); }
