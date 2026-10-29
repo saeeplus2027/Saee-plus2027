@@ -897,6 +897,11 @@
       }
     }
   </style>
+<style id="saee-auth-interaction-lock">
+  html.sai-auth-checking body { pointer-events: none; }
+  html.sai-auth-checking #sai-auth,
+  html.sai-auth-checking #sai-auth * { pointer-events: auto; }
+</style>
 </head>
 
 <body>
@@ -913,7 +918,7 @@
   <nav aria-label="القائمة الرئيسية">
     <a href="#home">الرئيسية</a>
     <a href="#services">خدماتنا</a>
-    <a href="skill-passport.html">اسعى للعمل</a>
+    <a href="skill-passport.html">جواز المهارات</a>
     <a href="vocational.html">مهنتي إبداعي</a>
     <a href="#discounts">خصومات سعي</a>
     <a href="#market">السوق المحلي</a>
@@ -1014,7 +1019,7 @@
   <div class="auth-heading">
     <img class="auth-logo" src="assets/brand.jpg" alt="سعي بلس">
     <h2 id="sai-auth-title">تسجيل الدخول</h2>
-    <p class="auth-description" id="sai-auth-description">سجّل دخولك بحسابك المحلي على هذا المتصفح.</p>
+    <p class="auth-description" id="sai-auth-description">سجّل دخولك بحسابك من أي جهاز.</p>
   </div>
 
   <section data-auth-panel="login">
@@ -1060,22 +1065,21 @@
     <form id="sai-forgot-form">
       <label for="sai-forgot-email">البريد الإلكتروني</label>
       <input id="sai-forgot-email" name="email" type="email" dir="ltr" placeholder="example@email.com" autocomplete="email" maxlength="254" required>
-
-      <label for="sai-recovery-code">رمز الاسترداد</label>
-      <input id="sai-recovery-code" name="recovery_code" type="text" dir="ltr" autocomplete="off" autocapitalize="none" spellcheck="false" required>
-
-      <label for="sai-reset-password">كلمة المرور الجديدة — 15 حرفًا على الأقل</label>
-      <input id="sai-reset-password" name="new_password" type="password" autocomplete="new-password" minlength="15" required>
-
-      <label for="sai-reset-confirm">تأكيد كلمة المرور الجديدة</label>
-      <input id="sai-reset-confirm" name="new_password_confirmation" type="password" autocomplete="new-password" required>
-
-      <button type="submit" class="auth-submit">تغيير كلمة المرور</button>
+      <button type="submit" class="auth-submit">إرسال رابط استعادة كلمة المرور</button>
     </form>
-
     <div class="auth-links">
       <button type="button" class="auth-link" data-auth-go="login">العودة لتسجيل الدخول</button>
     </div>
+  </section>
+
+  <section data-auth-panel="reset" hidden>
+    <form id="sai-reset-form">
+      <label for="sai-reset-password">كلمة المرور الجديدة — 15 حرفًا على الأقل</label>
+      <input id="sai-reset-password" name="new_password" type="password" autocomplete="new-password" minlength="15" required>
+      <label for="sai-reset-confirm">تأكيد كلمة المرور الجديدة</label>
+      <input id="sai-reset-confirm" name="new_password_confirmation" type="password" autocomplete="new-password" required>
+      <button type="submit" class="auth-submit">تغيير كلمة المرور</button>
+    </form>
   </section>
 
   <p id="sai-auth-message" class="auth-message" role="status" aria-live="polite" hidden></p>
@@ -1083,8 +1087,7 @@
 
 
   <p class="auth-note">
-    الحساب الحالي محفوظ على هذا المتصفح فقط إلى أن يتم ربط خدمة الحسابات المركزية.
-    لا يتم إرسال رسائل بريد إلكتروني. استخدم كلمة مرور خاصة بهذه التجربة.
+    حسابك محفوظ في قاعدة بيانات سعي بلس، ويمكنك تسجيل الدخول من أكثر من جهاز.
   </p>
 </dialog>
 
@@ -1099,491 +1102,72 @@
 <script>
 (() => {
   'use strict';
-
   const $ = id => document.getElementById(id);
+  const API = String(window.SAI_API_BASE || 'https://saee-plus-api.ligagym.workers.dev').replace(/\/$/, '');
+  const TOKEN_KEY = 'saee-auth-token-v1';
+  const SESSION_KEY = 'sai-local-session-v1';
   const authDialog = $('sai-auth');
   const message = $('sai-auth-message');
   const accountButton = $('sai-open-auth');
   const accountLabel = accountButton.querySelector('.account-label');
   const logoutButton = $('sai-logout');
-
-  const ACCOUNT_PREFIX = 'sai-local-account-v1:';
-  const SESSION_KEY = 'sai-local-session-v1';
-  const ITERATIONS = 600000;
-
   let busy = false;
-
   const pages = {
-    login: {
-      title: 'تسجيل الدخول',
-      description: 'سجّل دخولك بحسابك المحلي على هذا المتصفح.'
-    },
-    register: {
-      title: 'إنشاء حساب',
-      description: 'انضم لسعي بلس. الحساب محفوظ على هذا المتصفح فقط.'
-    },
-    forgot: {
-      title: 'استعادة كلمة المرور',
-      description: 'استخدم رمز الاسترداد الذي حصلت عليه عند إنشاء الحساب.'
-    }
+    login: {title:'تسجيل الدخول', description:'سجّل دخولك بحسابك من أي جهاز.'},
+    register: {title:'إنشاء حساب', description:'أنشئ حسابًا يمكنك استخدامه من أي جهاز.'},
+    forgot: {title:'استعادة كلمة المرور', description:'أدخل بريدك الإلكتروني لإرسال رابط الاستعادة.'},
+    reset: {title:'تعيين كلمة مرور جديدة', description:'اختر كلمة مرور جديدة لحسابك.'}
   };
-
-  function normalizeEmail(value) {
-    return value.trim().toLowerCase();
+  function normalizeEmail(v){return String(v||'').trim().toLowerCase();}
+  function getToken(){try{return localStorage.getItem(TOKEN_KEY)||'';}catch(_){return '';}}
+  async function api(path, options={}) {
+    const headers = new Headers(options.headers || {});
+    if (options.body && !headers.has('Content-Type')) headers.set('Content-Type','application/json');
+    const t=getToken(); if(t) headers.set('Authorization','Bearer '+t);
+    const response=await fetch(API+path,{...options,headers,credentials:'include',cache:'no-store'});
+    let data={}; try{data=await response.json();}catch(_){throw new Error('تعذّر قراءة رد الخادم. تأكد من نشر Cloudflare Worker المحدّث.');}
+    if(!response.ok) throw Object.assign(new Error(data.error||data.message||'تعذّر إكمال الطلب.'),{status:response.status});
+    return data;
   }
-
-  function accountKey(email) {
-    return ACCOUNT_PREFIX + encodeURIComponent(email);
-  }
-
-  function readAccount(email) {
-    const raw = localStorage.getItem(accountKey(email));
-    if (!raw) return null;
-
-    const account = JSON.parse(raw);
-
-    if (
-      !account ||
-      account.version !== 1 ||
-      account.email !== email ||
-      typeof account.name !== 'string' ||
-      typeof account.salt !== 'string' ||
-      !/^[a-f0-9]{32}$/.test(account.salt) ||
-      typeof account.passwordHash !== 'string' ||
-      !/^[a-f0-9]{64}$/.test(account.passwordHash) ||
-      typeof account.recoveryHash !== 'string' ||
-      !/^[a-f0-9]{64}$/.test(account.recoveryHash)
-    ) {
-      throw new Error('INVALID_LOCAL_ACCOUNT');
-    }
-
-    return account;
-  }
-
-  function saveAccount(account) {
-    localStorage.setItem(accountKey(account.email), JSON.stringify(account));
-  }
-
-  function showMessage(text) {
-    message.textContent = text;
-    message.hidden = false;
-  }
-
-  function clearMessage() {
-    message.textContent = '';
-    message.hidden = true;
-  }
-
-  function resetForms() {
-    authDialog.querySelectorAll('form').forEach(form => form.reset());
-    $('sai-register-confirm').setCustomValidity('');
-    $('sai-reset-confirm').setCustomValidity('');
-  }
-
-  function showPage(page, focus = true) {
-    if (busy || !pages[page]) return;
-
-    resetForms();
-    clearMessage();
-
-    authDialog.querySelectorAll('[data-auth-panel]').forEach(panel => {
-      panel.hidden = panel.dataset.authPanel !== page;
-    });
-
-    $('sai-auth-title').textContent = pages[page].title;
-    $('sai-auth-description').textContent = pages[page].description;
-
-    if (focus && authDialog.open) {
-      authDialog.querySelector('[data-auth-panel="' + page + '"] input').focus();
-    }
-  }
-
-  function updateHeader() {
-    try {
-      const email = localStorage.getItem(SESSION_KEY);
-      const account = email ? readAccount(email) : null;
-      const label = account ? 'مرحبًا، ' + account.name : 'تسجيل الدخول';
-
-      accountLabel.textContent = label;
-      accountButton.setAttribute('aria-label', label);
-      accountButton.title = account
-        ? 'حساب محلي على هذا المتصفح: ' + account.name
-        : 'تسجيل الدخول';
-
-      logoutButton.hidden = !account;
-
-      if (email && !account) localStorage.removeItem(SESSION_KEY);
-    } catch {
-      accountLabel.textContent = 'تسجيل الدخول';
-      accountButton.title = 'تسجيل الدخول';
-      accountButton.setAttribute('aria-label', 'تسجيل الدخول');
-      logoutButton.hidden = true;
-    }
-
-    queueMicrotask(() => {
-      window.dispatchEvent(new Event('sai-account-changed'));
-    });
-  }
-
-  function toHex(bytes) {
-    return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
-  }
-
-  function randomHex(byteCount) {
-    return toHex(crypto.getRandomValues(new Uint8Array(byteCount)));
-  }
-
-  function saltBytes(hex) {
-    if (!/^[a-f0-9]{32}$/.test(hex)) throw new Error('INVALID_SALT');
-
-    return Uint8Array.from(
-      hex.match(/.{2}/g),
-      pair => parseInt(pair, 16)
-    );
-  }
-
-  async function hashPassword(password, salt) {
-    const key = await crypto.subtle.importKey(
-      'raw',
-      new TextEncoder().encode(password),
-      'PBKDF2',
-      false,
-      ['deriveBits']
-    );
-
-    const bits = await crypto.subtle.deriveBits(
-      {
-        name: 'PBKDF2',
-        salt: saltBytes(salt),
-        iterations: ITERATIONS,
-        hash: 'SHA-256'
-      },
-      key,
-      256
-    );
-
-    return toHex(new Uint8Array(bits));
-  }
-
-  async function hashRecovery(code) {
-    const normalized = code.trim().replace(/[\s-]/g, '').toLowerCase();
-    const bits = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalized));
-    return toHex(new Uint8Array(bits));
-  }
-
-  function bindConfirmation(passwordId, confirmationId) {
-    const password = $(passwordId);
-    const confirmation = $(confirmationId);
-
-    function validate() {
-      confirmation.setCustomValidity(
-        confirmation.value && confirmation.value !== password.value
-          ? 'كلمتا المرور غير متطابقتين.'
-          : ''
-      );
-    }
-
-    password.addEventListener('input', validate);
-    confirmation.addEventListener('input', validate);
-    return validate;
-  }
-
-  const validateRegistration = bindConfirmation('sai-register-password', 'sai-register-confirm');
-  const validateReset = bindConfirmation('sai-reset-password', 'sai-reset-confirm');
-
-  async function run(form, action) {
-    if (busy) return;
-
-    if (!window.isSecureContext || !window.crypto?.subtle) {
-      showMessage('افتح الموقع عبر HTTPS، مثل رابط GitHub Pages، لتفعيل الحسابات المحلية.');
+  function showMessage(t){message.textContent=t;message.hidden=false;}
+  function clearMessage(){message.textContent='';message.hidden=true;}
+  function resetForms(){authDialog.querySelectorAll('form').forEach(f=>f.reset());$('sai-register-confirm').setCustomValidity('');$('sai-reset-confirm').setCustomValidity('');}
+  function showPage(page,focus=true){if(busy||!pages[page])return;resetForms();clearMessage();authDialog.querySelectorAll('[data-auth-panel]').forEach(p=>p.hidden=p.dataset.authPanel!==page);$('sai-auth-title').textContent=pages[page].title;$('sai-auth-description').textContent=pages[page].description;if(focus&&authDialog.open){const input=authDialog.querySelector('[data-auth-panel="'+page+'"] input');if(input)input.focus();}}
+  function bindConfirm(pId,cId){const p=$(pId),c=$(cId);const validate=()=>c.setCustomValidity(c.value&&c.value!==p.value?'كلمتا المرور غير متطابقتين.':'');p.addEventListener('input',validate);c.addEventListener('input',validate);return validate;}
+  const validateRegister=bindConfirm('sai-register-password','sai-register-confirm');
+  const validateReset=bindConfirm('sai-reset-password','sai-reset-confirm');
+  async function run(form, action){if(busy)return;busy=true;clearMessage();const submit=form.querySelector('[type="submit"]'),old=submit.textContent;submit.disabled=true;submit.textContent='جارٍ التنفيذ…';try{await action();}catch(e){showMessage(e.message||'تعذّرت العملية. حاول مرة أخرى.');}finally{busy=false;submit.disabled=false;submit.textContent=old;}}
+  async function updateHeader(){let user=null;try{const d=await api('/api/me');user=d.user||null;}catch(_){}window.SAI_AUTH_USER=user;window.SAI_AUTH_READY=true;if(user){try{localStorage.setItem(SESSION_KEY,user.email);}catch(_){}accountLabel.textContent='مرحبًا، '+user.email;accountButton.setAttribute('aria-label','حساب '+user.email);accountButton.title='حساب سعي بلس: '+user.email;logoutButton.hidden=false;}else{try{localStorage.removeItem(SESSION_KEY);localStorage.removeItem(TOKEN_KEY);}catch(_){}accountLabel.textContent='تسجيل الدخول';accountButton.setAttribute('aria-label','تسجيل الدخول');accountButton.title='تسجيل الدخول';logoutButton.hidden=true;}window.dispatchEvent(new Event('sai-account-changed'));window.dispatchEvent(new Event('sai-auth-ready'));return user;}
+  async function login(email,password){const d=await api('/api/login',{method:'POST',body:JSON.stringify({email,password})});if(!d.token)throw new Error('الخادم لم يُرجع جلسة. انشر تحديث Cloudflare Worker أولًا.');localStorage.setItem(TOKEN_KEY,d.token);localStorage.setItem(SESSION_KEY,email);window.SAI_AUTH_READY=false;await updateHeader();if(!window.SAI_AUTH_USER)throw new Error('تعذّر التحقق من الجلسة. حاول تسجيل الدخول مرة أخرى.');}
+  accountButton.addEventListener('click',async()=>{if(busy)return;showPage('login',false);if(!authDialog.open)authDialog.showModal();const user=await updateHeader();if(user){$('sai-login-email').value=user.email;showMessage('أنت مسجّل الدخول. يمكنك استخدام الحساب نفسه على أي جهاز.');}$('sai-login-email').focus();});
+  authDialog.querySelectorAll('[data-auth-go]').forEach(b=>b.addEventListener('click',()=>showPage(b.dataset.authGo)));
+  authDialog.querySelectorAll('[data-auth-close]').forEach(b=>b.addEventListener('click',()=>{if(!busy&&getToken())authDialog.close();else if(!busy)showMessage('سجّل الدخول أو أنشئ حسابًا للمتابعة.');}));
+  authDialog.addEventListener('cancel',e=>{if(busy||!getToken()){e.preventDefault();showMessage('سجّل الدخول أو أنشئ حسابًا للمتابعة.');}});
+  authDialog.addEventListener('close',()=>{resetForms();clearMessage();});
+  $('sai-register-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;validateRegister();if(!f.reportValidity())return;const name=$('sai-register-name').value.trim(),email=normalizeEmail($('sai-register-email').value),password=$('sai-register-password').value;if(!name){showMessage('أدخل اسمك.');return;}if(password.length<15){showMessage('استخدم كلمة مرور من 15 حرفًا على الأقل.');return;}run(f,async()=>{const d=await api('/api/signup',{method:'POST',body:JSON.stringify({email,password})});f.reset();showPage('login',false);$('sai-login-email').value=email;showMessage(d.message||'تم إنشاء الحساب. سجّل الدخول الآن.');});});
+  $('sai-login-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;if(!f.reportValidity())return;const email=normalizeEmail($('sai-login-email').value),password=$('sai-login-password').value;run(f,async()=>{await login(email,password);authDialog.close();});});
+  $('sai-forgot-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;if(!f.reportValidity())return;const email=normalizeEmail($('sai-forgot-email').value);run(f,async()=>{const d=await api('/api/reset-request',{method:'POST',body:JSON.stringify({email})});showMessage(d.message||'إذا كان البريد مسجّلًا وخدمة البريد مفعّلة، ستصلك رسالة الاستعادة.');});});
+  $('sai-reset-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;validateReset();if(!f.reportValidity())return;const password=$('sai-reset-password').value,resetToken=new URLSearchParams(location.search).get('reset_token')||'';if(password.length<15){showMessage('استخدم كلمة مرور من 15 حرفًا على الأقل.');return;}if(!resetToken){showMessage('رابط الاستعادة غير صالح أو منتهي. اطلب رابطًا جديدًا.');return;}run(f,async()=>{await api('/api/reset-confirm',{method:'POST',body:JSON.stringify({token:resetToken,password})});history.replaceState(null,'',location.pathname+location.hash);showPage('login',false);showMessage('تم تغيير كلمة المرور. سجّل الدخول من جديد.');});});
+  logoutButton.addEventListener('click',async()=>{if(busy)return;logoutButton.disabled=true;try{await api('/api/logout',{method:'POST',body:JSON.stringify({})});}catch(_){}try{localStorage.removeItem(TOKEN_KEY);localStorage.removeItem(SESSION_KEY);}catch(_){}logoutButton.disabled=false;await updateHeader();showPage('login',false);if(!authDialog.open)authDialog.showModal();showMessage('تم تسجيل الخروج.');});
+  window.addEventListener('storage',e=>{if(e.key===TOKEN_KEY||e.key===SESSION_KEY)updateHeader();});
+  // Validate every saved session against the shared server before allowing site use.
+  window.SAI_AUTH_READY=false;
+  window.SAI_AUTH_USER=null;
+  document.documentElement.classList.add('sai-auth-checking');
+  updateHeader().then(user=>{
+    document.documentElement.classList.remove('sai-auth-checking');
+    if(new URLSearchParams(location.search).has('reset_token')){
+      showPage('reset',false);
+      if(!authDialog.open)authDialog.showModal();
       return;
     }
-
-    busy = true;
-    clearMessage();
-
-    const submit = form.querySelector('[type="submit"]');
-    const originalText = submit.textContent;
-
-    submit.disabled = true;
-    submit.textContent = 'جارٍ التنفيذ…';
-
-    try {
-      await action();
-    } catch {
-      showMessage('تعذّرت العملية. تأكد من السماح بحفظ بيانات الموقع وعدم تلف البيانات المحلية.');
-    } finally {
-      busy = false;
-      submit.disabled = false;
-      submit.textContent = originalText;
-    }
-  }
-
-  accountButton.addEventListener('click', () => {
-    if (busy) return;
-
-    showPage('login', false);
-    if (!authDialog.open) authDialog.showModal();
-
-    try {
-      const email = localStorage.getItem(SESSION_KEY);
-      const account = email ? readAccount(email) : null;
-
-      if (account) {
-        $('sai-login-email').value = account.email;
-        showMessage(
-          'أنت مسجّل الدخول محليًا باسم ' + account.name +
-          '. يمكنك متابعة التصفح أو تسجيل الخروج من أعلى الصفحة.'
-        );
-      }
-    } catch {
-      showMessage('تعذّر الوصول إلى بيانات الحساب المحلية.');
-    }
-
-    $('sai-login-email').focus();
-  });
-
-  authDialog.querySelectorAll('[data-auth-go]').forEach(button => {
-    button.addEventListener('click', () => showPage(button.dataset.authGo));
-  });
-
-  authDialog.querySelectorAll('[data-auth-close]').forEach(button => {
-    button.addEventListener('click', () => {
-      if (busy) return;
-      if (!localStorage.getItem(SESSION_KEY)) {
-        showMessage('أنشئ حسابًا أو سجّل الدخول أولًا للمتابعة.');
-        return;
-      }
-      authDialog.close();
-    });
-  });
-
-  authDialog.addEventListener('cancel', event => {
-    if (busy || !localStorage.getItem(SESSION_KEY)) {
-      event.preventDefault();
-      showMessage('أنشئ حسابًا أو سجّل الدخول أولًا للمتابعة.');
+    if(!user){
+      showPage('login',false);
+      if(!authDialog.open)authDialog.showModal();
+      showMessage('سجّل الدخول أولًا لاستخدام جميع أقسام الموقع.');
     }
   });
-
-  authDialog.addEventListener('close', () => {
-    resetForms();
-    clearMessage();
-  });
-
-  $('sai-register-form').addEventListener('submit', event => {
-    event.preventDefault();
-
-    const form = event.currentTarget;
-    validateRegistration();
-
-    if (!form.reportValidity()) return;
-
-    const name = $('sai-register-name').value.trim();
-    const email = normalizeEmail($('sai-register-email').value);
-    const secret = $('sai-register-password').value;
-
-    if (!name) {
-      showMessage('أدخل اسمًا صالحًا.');
-      return;
-    }
-
-    if (secret.length < 15) {
-      showMessage('استخدم كلمة مرور من 15 حرفًا على الأقل.');
-      return;
-    }
-
-    run(form, async () => {
-      if (readAccount(email)) {
-        showMessage('يوجد حساب بهذا البريد على هذا المتصفح. انتقل إلى تسجيل الدخول.');
-        return;
-      }
-
-      const salt = randomHex(16);
-      const recoveryCode = randomHex(20);
-      const passwordHash = await hashPassword(secret, salt);
-      const recoveryHash = await hashRecovery(recoveryCode);
-
-      if (readAccount(email)) {
-        showMessage('يوجد حساب بهذا البريد على هذا المتصفح.');
-        return;
-      }
-
-      saveAccount({
-        version: 1,
-        name,
-        email,
-        salt,
-        passwordHash,
-        recoveryHash,
-        createdAt: new Date().toISOString()
-      });
-
-      form.reset();
-
-      showMessage(
-        'تم إنشاء حسابك بنجاح.\n\n' +
-        'احفظ رمز الاسترداد الآن في مكان خاص؛ لن يظهر مجددًا:\n\n' +
-        recoveryCode +
-        '\n\nتحتاج هذا الرمز إذا نسيت كلمة المرور. يمكنك الآن الانتقال إلى تسجيل الدخول.'
-      );
-    });
-  });
-
-  $('sai-login-form').addEventListener('submit', event => {
-    event.preventDefault();
-
-    const form = event.currentTarget;
-    if (!form.reportValidity()) return;
-
-    const email = normalizeEmail($('sai-login-email').value);
-    const secret = $('sai-login-password').value;
-
-    run(form, async () => {
-      const account = readAccount(email);
-
-      if (!account) {
-        showMessage('البريد الإلكتروني أو كلمة المرور غير صحيحة.');
-        return;
-      }
-
-      const candidate = await hashPassword(secret, account.salt);
-
-      if (candidate !== account.passwordHash) {
-        showMessage('البريد الإلكتروني أو كلمة المرور غير صحيحة.');
-        return;
-      }
-
-      const latest = readAccount(email);
-
-      if (
-        !latest ||
-        latest.passwordHash !== account.passwordHash ||
-        latest.salt !== account.salt
-      ) {
-        showMessage('تغيّرت بيانات الحساب. حاول تسجيل الدخول مجددًا.');
-        return;
-      }
-
-      localStorage.setItem(SESSION_KEY, email);
-      updateHeader();
-      authDialog.close();
-    });
-  });
-
-  $('sai-forgot-form').addEventListener('submit', event => {
-    event.preventDefault();
-
-    const form = event.currentTarget;
-    validateReset();
-
-    if (!form.reportValidity()) return;
-
-    const email = normalizeEmail($('sai-forgot-email').value);
-    const code = $('sai-recovery-code').value;
-    const secret = $('sai-reset-password').value;
-
-    if (secret.length < 15) {
-      showMessage('استخدم كلمة مرور من 15 حرفًا على الأقل.');
-      return;
-    }
-
-    run(form, async () => {
-      const account = readAccount(email);
-      const recoveryHash = await hashRecovery(code);
-
-      if (!account || recoveryHash !== account.recoveryHash) {
-        showMessage('البريد الإلكتروني أو رمز الاسترداد غير صحيح.');
-        return;
-      }
-
-      const salt = randomHex(16);
-      const passwordHash = await hashPassword(secret, salt);
-      const newRecoveryCode = randomHex(20);
-      const newRecoveryHash = await hashRecovery(newRecoveryCode);
-      const latest = readAccount(email);
-
-      if (
-        !latest ||
-        latest.recoveryHash !== account.recoveryHash ||
-        latest.passwordHash !== account.passwordHash ||
-        latest.salt !== account.salt
-      ) {
-        showMessage('تغيّرت بيانات الحساب. حاول الاسترداد مجددًا.');
-        return;
-      }
-
-      saveAccount({
-        ...latest,
-        salt,
-        passwordHash,
-        recoveryHash: newRecoveryHash,
-        updatedAt: new Date().toISOString()
-      });
-
-      if (localStorage.getItem(SESSION_KEY) === email) {
-        localStorage.removeItem(SESSION_KEY);
-      }
-
-      updateHeader();
-      form.reset();
-
-      showMessage(
-        'تم تغيير كلمة المرور بنجاح.\n\n' +
-        'أُلغي رمز الاسترداد السابق. احفظ الرمز الجديد الآن:\n\n' +
-        newRecoveryCode +
-        '\n\nيمكنك الآن العودة إلى تسجيل الدخول.'
-      );
-    });
-  });
-
-  logoutButton.addEventListener('click', () => {
-    if (busy) return;
-
-    try {
-      localStorage.removeItem(SESSION_KEY);
-      updateHeader();
-
-      if (authDialog.open) {
-        showPage('login');
-        showMessage('تم تسجيل الخروج.');
-      }
-    } catch {
-      if (!authDialog.open) {
-        showPage('login', false);
-        authDialog.showModal();
-      }
-
-      showMessage('تعذّر تسجيل الخروج من التخزين المحلي.');
-    }
-  });
-
-  window.addEventListener('storage', event => {
-    if (
-      event.key === null ||
-      event.key === SESSION_KEY ||
-      event.key.startsWith(ACCOUNT_PREFIX)
-    ) {
-      updateHeader();
-    }
-  });
-
-  $('year').textContent = new Date().getFullYear();
-  updateHeader();
-
-  // Require sign-in or account creation before using the site.
-  try {
-    const email = localStorage.getItem(SESSION_KEY);
-    const account = email ? readAccount(email) : null;
-    if (!account) {
-      localStorage.removeItem(SESSION_KEY);
-      showPage('login', false);
-      if (!authDialog.open) authDialog.showModal();
-    }
-  } catch (_) {
-    localStorage.removeItem(SESSION_KEY);
-    showPage('login', false);
-    if (!authDialog.open) authDialog.showModal();
-  }
+  if(new URLSearchParams(location.search).has('reset_token')){showPage('reset',false);if(!authDialog.open)authDialog.showModal();}
 })();
 </script>
 
@@ -1992,26 +1576,8 @@
   const AUTH_DIALOG_ID = 'sai-auth';
 
   function hasAccountSession() {
-    try {
-      const email = localStorage.getItem(SESSION_KEY);
-      if (!email) return false;
-
-      const raw = localStorage.getItem(
-        ACCOUNT_PREFIX + encodeURIComponent(email)
-      );
-
-      if (!raw) return false;
-
-      const account = JSON.parse(raw);
-
-      return Boolean(
-        account &&
-        account.version === 1 &&
-        account.email === email
-      );
-    } catch (_) {
-      return false;
-    }
+    // Only a session validated by the shared API is accepted.
+    return window.SAI_AUTH_READY === true && Boolean(window.SAI_AUTH_USER);
   }
 
   function normalizeText(value) {
