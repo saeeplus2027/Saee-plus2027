@@ -1,4 +1,5 @@
 let adminTab='dashboard',adminFilter='all',adminQuery='',textQuery='';
+const vocationalApiUrl = path => `${String(window.SAI_API_BASE || 'https://saee-plus-api.ligagym.workers.dev').replace(/\/$/, '')}${path}`;
 const originalRender=render;
 const serviceLabel=id=>SiteStore.state.services.find(s=>s[0]===id)?.[2]||id;
 function syncContent(){services=SiteStore.state.services;base=SiteStore.state.items;places=SiteStore.state.places;descriptions=SiteStore.state.descriptions;titles=Object.fromEntries(services.map(s=>[s[0],s[2]]));items=[...base,...additions.filter(x=>!base.some(b=>b.id===x.id))];document.documentElement.style.setProperty('--green',SiteStore.state.theme.green);document.documentElement.style.setProperty('--cream',SiteStore.state.theme.cream);document.title=SiteStore.state.siteName+' | من جامعتك، إلى مجتمعك';}
@@ -166,7 +167,7 @@ async function adminVocational(){
  const host=document.getElementById('admin-content');
  host.innerHTML='<div class="admin-panel"><p>جاري تحميل مشاريع مهنتي إبداعي...</p></div>';
  try{
-  const r=await fetch('/api/vocational-projects?admin=1',{credentials:'include'});const d=await r.json();
+  const r=await fetch(vocationalApiUrl('/api/vocational-projects?admin=1'),{credentials:'include'});const d=await r.json();
   if(!r.ok)throw Error(d.error||'تعذر تحميل الطلبات');
   const projects=d.projects||[];
   const badge=s=>s==='approved'?'مقبول':s==='rejected'?'مرفوض':'بانتظار المراجعة';
@@ -175,24 +176,24 @@ async function adminVocational(){
 }
 async function reviewVocationalProject(id,status){
  let note='';if(status==='rejected'){note=prompt('سبب الرفض (اختياري):')||'';}
- try{const r=await fetch('/api/vocational-review',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,status,note})});const d=await r.json();if(!r.ok)throw Error(d.error||'تعذر حفظ القرار');toast(d.message||'تم حفظ القرار');adminVocational();}catch(e){toast(e.message||'تعذر حفظ القرار');}
+ try{const r=await fetch(vocationalApiUrl('/api/vocational-review'),{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,status,note})});const d=await r.json();if(!r.ok)throw Error(d.error||'تعذر حفظ القرار');toast(d.message||'تم حفظ القرار');adminVocational();}catch(e){toast(e.message||'تعذر حفظ القرار');}
 }
 
 
 async function loadVocationalMentorsAdmin(){
  const host=document.getElementById('vocational-mentors-admin-list');if(!host)return;
  host.innerHTML='<p>جاري تحميل المساعدين...</p>';
- try{const r=await fetch('/api/vocational-mentors?admin=1',{credentials:'include'});const d=await r.json();if(!r.ok)throw Error(d.error||'تعذر تحميل المساعدين');const mentors=d.mentors||[];
+ try{const r=await fetch(vocationalApiUrl('/api/vocational-mentors?admin=1'),{credentials:'include'});const d=await r.json();if(!r.ok)throw Error(d.error||'تعذر تحميل المساعدين');const mentors=d.mentors||[];
  host.innerHTML=`<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>الأستاذ</th><th>رقم الهاتف</th><th>التخصص</th><th>الحالة</th><th>الإجراءات</th></tr></thead><tbody>${mentors.map(m=>`<tr><td><strong>${escapeHtml(m.name)}</strong>${m.bio?`<p>${escapeHtml(m.bio)}</p>`:''}</td><td dir="ltr">${escapeHtml(m.phone)}</td><td>${escapeHtml(m.specialty)}</td><td>${Number(m.active)===1?'نشط':'مخفي'}</td><td><div class="admin-actions"><button onclick="editVocationalMentor('${m.id}')">تعديل</button><button class="danger" onclick="deleteVocationalMentor('${m.id}')">حذف</button></div></td></tr>`).join('')||'<tr><td colspan="5">لم تضف أي مساعد بعد.</td></tr>'}</tbody></table></div>`;
  }catch(e){host.innerHTML=`<p class="admin-help">${escapeHtml(e.message||'تعذر تحميل القائمة')}</p>`;}
 }
 async function editVocationalMentor(id){
- try{const r=await fetch('/api/vocational-mentors?admin=1',{credentials:'include'});const d=await r.json();if(!r.ok)throw Error(d.error||'تعذر تحميل البيانات');const m=(d.mentors||[]).find(x=>x.id===id);if(!m)throw Error('المساعد غير موجود');const f=document.getElementById('vocational-mentor-form');if(!f)return;for(const k of ['id','name','phone','specialty','bio'])f.elements[k].value=m[k]||'';f.elements.active.value=String(m.active?1:0);f.scrollIntoView({behavior:'smooth',block:'center'});
+ try{const r=await fetch(vocationalApiUrl('/api/vocational-mentors?admin=1'),{credentials:'include'});const d=await r.json();if(!r.ok)throw Error(d.error||'تعذر تحميل البيانات');const m=(d.mentors||[]).find(x=>x.id===id);if(!m)throw Error('المساعد غير موجود');const f=document.getElementById('vocational-mentor-form');if(!f)return;for(const k of ['id','name','phone','specialty','bio'])f.elements[k].value=m[k]||'';f.elements.active.value=String(m.active?1:0);f.scrollIntoView({behavior:'smooth',block:'center'});
  }catch(e){toast(e.message||'تعذر تحميل بيانات المساعد');}
 }
 function resetVocationalMentorForm(){const f=document.getElementById('vocational-mentor-form');if(f)f.reset();if(f)f.elements.id.value='';}
 async function saveVocationalMentor(e){
  e.preventDefault();const f=e.currentTarget;const data=Object.fromEntries(new FormData(f));data.action='save';data.active=data.active==='1';
- try{const r=await fetch('/api/vocational-mentors',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const d=await r.json();if(!r.ok)throw Error(d.error||'تعذر حفظ المساعد');toast(d.message||'تم الحفظ');resetVocationalMentorForm();await loadVocationalMentorsAdmin();}catch(err){toast(err.message||'تعذر حفظ المساعد');}
+ try{const r=await fetch(vocationalApiUrl('/api/vocational-mentors'),{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const d=await r.json();if(!r.ok)throw Error(d.error||'تعذر حفظ المساعد');toast(d.message||'تم الحفظ');resetVocationalMentorForm();await loadVocationalMentorsAdmin();}catch(err){toast(err.message||'تعذر حفظ المساعد');}
 }
-async function deleteVocationalMentor(id){if(!confirm('هل أنت متأكد من حذف هذا المساعد؟'))return;try{const r=await fetch('/api/vocational-mentors',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id})});const d=await r.json();if(!r.ok)throw Error(d.error||'تعذر الحذف');toast(d.message||'تم الحذف');await loadVocationalMentorsAdmin();}catch(e){toast(e.message||'تعذر حذف المساعد');}}
+async function deleteVocationalMentor(id){if(!confirm('هل أنت متأكد من حذف هذا المساعد؟'))return;try{const r=await fetch(vocationalApiUrl('/api/vocational-mentors'),{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id})});const d=await r.json();if(!r.ok)throw Error(d.error||'تعذر الحذف');toast(d.message||'تم الحذف');await loadVocationalMentorsAdmin();}catch(e){toast(e.message||'تعذر حذف المساعد');}}
