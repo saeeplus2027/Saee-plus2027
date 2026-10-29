@@ -220,6 +220,7 @@ window.SiteStore = (() => {
       const controller = new AbortController();
       const requestTimeout = setTimeout(() => controller.abort(), 8000);
       let response;
+      let body;
       try {
         response = await fetch(apiUrl('/api/content'), {
           method: 'GET',
@@ -228,10 +229,12 @@ window.SiteStore = (() => {
           credentials: 'include',
           signal: controller.signal
         });
+        // Keep the timeout active while the response body is being read too.
+        // Fetch may receive headers but stall while downloading/parsing the body.
+        body = await readResponse(response);
       } finally {
         clearTimeout(requestTimeout);
       }
-      const body = await readResponse(response);
       state = validate(body.state ?? body.content);
       state.revision = Number(body.revision ?? state.revision ?? 0);
       etag = response.headers.get('ETag') || `"${state.revision}"`;
