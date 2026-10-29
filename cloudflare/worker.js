@@ -402,14 +402,31 @@ export default {
         ).first();
 
         if (credential) {
-          // Existing permanent admin password.
+          // Check the permanent password first.
           const candidate = await derive(
             supplied,
             credential.salt
           );
 
           if (candidate !== credential.password_hash) {
-            return fail('كلمة المرور غير صحيحة', 401);
+            // Recovery path: allow the server-only ADMIN_PASSWORD secret
+            // to restore access if the stored admin password no longer matches.
+            // On successful recovery, persist the supplied secret as the new
+            // permanent admin password so normal logins use the same check.
+            if (
+              !env.ADMIN_PASSWORD ||
+              (await hash(supplied)) !== (await hash(env.ADMIN_PASSWORD))
+            ) {
+              return fail('كلمة المرور غير صحيحة', 401);
+            }
+
+            const recoverySalt = random();
+            const recoveryHash = await derive(supplied, recoverySalt);
+            await env.DB.prepare(`
+              UPDATE admin_credentials
+              SET salt = ?, password_hash = ?, updated_at = ?
+              WHERE id = 1
+            `).bind(recoverySalt, recoveryHash, Date.now()).run();
           }
         } else {
           // First login uses the Cloudflare bootstrap secret.
