@@ -9,9 +9,9 @@
   <title>سعي بلس | من جامعتك، إلى مجتمعك</title>
 
   <link rel="icon" type="image/jpeg" href="https://cdn.phototourl.com/member/2026-10-25-a5e80966-a389-47e6-95e0-7d994efae181.jpg">
-  <link rel="stylesheet" href="style.css?v=20261028-discount-link-size">
-  <link rel="stylesheet" href="smart.css?v=20261025-3">
-  <link rel="stylesheet" href="admin.css?v=20261025-3">
+  <link rel="stylesheet" href="style.css?v=20261029-click-fix">
+  <link rel="stylesheet" href="smart.css?v=20261029-click-fix">
+  <link rel="stylesheet" href="admin.css?v=20261029-click-fix">
 
   <style id="hide-saee-smart-on-admin">
     body.admin #saee-smart,
@@ -1113,11 +1113,11 @@
 
 <div id="toast" role="status"></div>
 
-<script src="remote-config.js?v=20261029-loading-fix-v2"></script>
-<script src="content-data.js?v=20261029-loading-fix-v2"></script>
-<script src="store.js?v=20261029-loading-fix-v2"></script>
-<script src="app.js?v=20261029-loading-fix-v2"></script>
-<script src="admin.js?v=20261029-loading-fix-v2"></script>
+<script src="remote-config.js?v=20261029-click-fix"></script>
+<script src="content-data.js?v=20261029-click-fix"></script>
+<script src="store.js?v=20261029-click-fix"></script>
+<script src="app.js?v=20261029-click-fix"></script>
+<script src="admin.js?v=20261029-click-fix"></script>
 
 <script>
 (() => {
@@ -1178,8 +1178,8 @@
 })();
 </script>
 
-<script src="smart-engine.js?v=20261029-loading-fix-v2"></script>
-<script src="smart-ui.js?v=20261029-loading-fix-v2"></script>
+<script src="smart-engine.js?v=20261029-click-fix"></script>
+<script src="smart-ui.js?v=20261029-click-fix"></script>
 
 <script id="bau-campus-google-map-inline">
 (() => {
@@ -1752,38 +1752,45 @@
   }
 
   /*
-   * بوابة تسجيل الدخول العامة:
-   * أي نقرة داخل الموقع تتطلب تسجيل الدخول، سواء كانت على رابط
-   * أو زر أو بطاقة أو صورة أو مساحة أخرى. الاستثناء الوحيد هو
-   * نافذة الحساب نفسها حتى يستطيع الزائر تسجيل الدخول أو إنشاء حساب.
+   * بوابة تسجيل الدخول:
+   * لا نعترض كل نقرات الموقع؛ لأن ذلك يعطّل البحث والتنقل وفتح الأقسام.
+   * نطلب تسجيل الدخول فقط عند محاولة تنفيذ إجراء محمي أو إرسال نموذج محمي.
    */
   document.addEventListener('click', event => {
     if (hasAccountSession()) return;
 
     const target = event.target instanceof Element ? event.target : null;
+    if (!target || target.closest('#' + AUTH_DIALOG_ID)) return;
 
-    // السماح بالتفاعل مع نموذج تسجيل الدخول وإنشاء الحساب والاستعادة فقط.
-    if (target && target.closest('#' + AUTH_DIALOG_ID)) return;
+    const protectedAction = isProtectedAction(target);
+    if (!protectedAction) return;
 
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
-
-    const protectedAction = isProtectedAction(event.target);
-    requestLogin(protectedAction?.type || 'استخدام الموقع');
+    requestLogin(protectedAction.type || 'المحتوى');
   }, true);
 
-  // منع إرسال أي نموذج في الموقع قبل تسجيل الدخول، باستثناء نماذج الحساب.
+  // السماح بالنماذج العامة، وحماية نماذج الإضافة فقط.
   document.addEventListener('submit', event => {
     if (hasAccountSession()) return;
     const form = event.target;
     if (!(form instanceof HTMLFormElement)) return;
     if (form.closest('#' + AUTH_DIALOG_ID)) return;
+    if (!isProtectedForm(form)) return;
 
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
-    requestLogin('استخدام الموقع');
+
+    const type = getProtectedType(normalizeText([
+      form.innerText,
+      form.textContent,
+      form.id,
+      form.getAttribute('aria-label')
+    ].filter(Boolean).join(' '))) || 'المحتوى';
+
+    requestLogin(type);
   }, true);
 
   /*
@@ -1839,6 +1846,6 @@
     if (root) new MutationObserver(removeLocalMarketCard).observe(root, { childList: true, subtree: true });
   })();
   </script>
-  <script src="discounts.js?v=20261029-loading-fix-v2"></script>
+  <script src="discounts.js?v=20261029-click-fix"></script>
 </body>
 </html>
