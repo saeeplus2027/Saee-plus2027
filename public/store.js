@@ -9,6 +9,13 @@ window.SiteStore = (() => {
   // Keep this fallback only for backwards compatibility; a wrong Worker URL causes HTTP 404.
   const API_BASE = String(window.SAI_API_BASE || "https://saee-plus-api.ligagym.workers.dev").replace(/\/$/, "");
   const apiUrl = (path) => `${API_BASE}${path}`;
+  // Admin API token fallback for browsers that block cross-site cookies.
+  // The token is kept in sessionStorage (this tab only), not localStorage.
+  const ADMIN_TOKEN_KEY = "saee-plus-admin-token-v1";
+  function authHeaders(headers = {}) {
+    const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
+    return token ? { ...headers, Authorization: `Bearer ${token}` } : headers;
+  }
 
   let loaded = false;
   let canEdit = false;
@@ -208,7 +215,7 @@ window.SiteStore = (() => {
       const response = await fetch(apiUrl('/api/content'), {
         method: 'GET',
         cache: 'no-store',
-        headers: { 'Accept': 'application/json' },
+        headers: authHeaders({ 'Accept': 'application/json' }),
         credentials: 'include'
       });
       const body = await readResponse(response);
@@ -322,11 +329,11 @@ window.SiteStore = (() => {
         method: 'PUT',
         credentials: 'include',
         cache: 'no-store',
-        headers: {
+        headers: authHeaders({
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'If-Match': etag
-        },
+        }),
         body: payload
       });
       const body = await readResponse(response);
@@ -346,7 +353,7 @@ window.SiteStore = (() => {
   async function apiPost(path, payload = {}) {
     const response = await fetch(apiUrl(path), {
       method: 'POST', credentials: 'include', cache: 'no-store',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json', 'Accept': 'application/json' }),
       body: JSON.stringify(payload)
     });
     let body = {};
@@ -363,15 +370,24 @@ window.SiteStore = (() => {
 
   async function loginAdmin(password) {
     if (!remote) throw Error('تسجيل الدخول المركزي غير مفعّل في هذه النسخة.');
-    await apiPost('/api/admin-login', { password: String(password || '') });
+    const result = await apiPost('/api/admin-login', { password: String(password || '') });
+    if (result && typeof result.token === 'string' && /^[a-f0-9]{64}$/i.test(result.token)) {
+      sessionStorage.setItem(ADMIN_TOKEN_KEY, result.token);
+    } else {
+      throw Error('نجح طلب الدخول لكن الخادم لم يُرجع رمز الجلسة. حدّث كود Cloudflare Worker أولاً.');
+    }
     await refresh();
-    if (!canEdit) throw Error('تم تسجيل الدخول، لكن الخادم لم يمنح صلاحية الإدارة. تحقق من إعدادات الخادم.');
+    if (!canEdit) throw Error('تم تسجيل الدخول، لكن الخادم لم يمنح صلاحية الإدارة. جرّب تسجيل الدخول مجددًا.');
     return true;
   }
 
   async function logoutAdmin() {
     if (!remote) return true;
-    try { await apiPost('/api/logout'); } finally { canEdit = false; await refresh(); }
+    try { await apiPost('/api/logout'); } finally {
+      sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+      canEdit = false;
+      await refresh();
+    }
     return true;
   }
 
@@ -379,7 +395,7 @@ window.SiteStore = (() => {
     if (!remote) return null;
     const response = await fetch(apiUrl('/api/discount-usage'), {
       method: 'GET', cache: 'no-store', credentials: 'include',
-      headers: { 'Accept': 'application/json' }
+      headers: authHeaders({ 'Accept': 'application/json' })
     });
     let body = {}; try { body = await response.json(); } catch (_) {}
     if (!response.ok) {
