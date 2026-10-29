@@ -82,7 +82,7 @@ async function identity(req, env) {
   if (!token) return null;
 
   return await env.DB.prepare(
-    `SELECT u.id, u.email, u.is_admin
+    `SELECT u.id, u.email, u.name, u.is_admin
      FROM sessions s
      JOIN users u ON u.id = s.user_id
      WHERE s.token_hash = ? AND s.expires_at > ?`
@@ -220,6 +220,7 @@ export default {
             ? {
                 id: user.id,
                 email: user.email,
+                name: user.name || '',
                 admin: !!user.is_admin
               }
             : null
@@ -402,31 +403,14 @@ export default {
         ).first();
 
         if (credential) {
-          // Check the permanent password first.
+          // Existing permanent admin password.
           const candidate = await derive(
             supplied,
             credential.salt
           );
 
           if (candidate !== credential.password_hash) {
-            // Recovery path: allow the server-only ADMIN_PASSWORD secret
-            // to restore access if the stored admin password no longer matches.
-            // On successful recovery, persist the supplied secret as the new
-            // permanent admin password so normal logins use the same check.
-            if (
-              !env.ADMIN_PASSWORD ||
-              (await hash(supplied)) !== (await hash(env.ADMIN_PASSWORD))
-            ) {
-              return fail('كلمة المرور غير صحيحة', 401);
-            }
-
-            const recoverySalt = random();
-            const recoveryHash = await derive(supplied, recoverySalt);
-            await env.DB.prepare(`
-              UPDATE admin_credentials
-              SET salt = ?, password_hash = ?, updated_at = ?
-              WHERE id = 1
-            `).bind(recoverySalt, recoveryHash, Date.now()).run();
+            return fail('كلمة المرور غير صحيحة', 401);
           }
         } else {
           // First login uses the Cloudflare bootstrap secret.
@@ -837,6 +821,38 @@ export default {
         );
       }
 
+      // CHANGE PASSWORD (authenticated account)
+      if (path === '/api/change-password' && req.method === 'POST') {
+        const user = await identity(req, env);
+        if (!user) return fail('سجّل الدخول أولاً لتغيير كلمة المرور', 401);
+
+        const b = await readBody(req);
+        const currentPassword = typeof b.currentPassword === 'string' ? b.currentPassword : '';
+        const newPassword = typeof b.newPassword === 'string' ? b.newPassword : '';
+        if (newPassword.length < 12 || newPassword.length > 128) {
+          return fail('كلمة المرور الجديدة يجب أن تكون بين 12 و128 حرفاً');
+        }
+        if (currentPassword === newPassword) {
+          return fail('اختر كلمة مرور مختلفة عن الحالية');
+        }
+
+        const account = await env.DB.prepare(
+          'SELECT salt, password_hash FROM users WHERE id = ?'
+        ).bind(user.id).first();
+        if (!account || (await derive(currentPassword, account.salt)) !== account.password_hash) {
+          return fail('كلمة المرور الحالية غير صحيحة', 401);
+        }
+
+        const salt = random();
+        const password_hash = await derive(newPassword, salt);
+        await env.DB.batch([
+          env.DB.prepare('UPDATE users SET salt = ?, password_hash = ? WHERE id = ?').bind(salt, password_hash, user.id),
+          env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(user.id)
+        ]);
+        return reply({ success: true, message: 'تم تغيير كلمة المرور. سجّل الدخول مجدداً.' }, 200,
+          { 'set-cookie': cookie('', 0) });
+      }
+
       // =========================================
       // OTHER ACCOUNT ROUTES
       // =========================================
@@ -907,11 +923,12 @@ export default {
 
         await env.DB.prepare(`
           INSERT INTO users
-            (id, email, salt, password_hash, is_admin)
-          VALUES (?, ?, ?, ?, 0)
+            (id, email, name, salt, password_hash, is_admin)
+          VALUES (?, ?, ?, ?, ?, 0)
         `).bind(
           crypto.randomUUID(),
           email,
+          String(b.name || '').trim().slice(0, 100),
           salt,
           password_hash
         ).run();
@@ -957,52 +974,69 @@ export default {
 
       // PASSWORD RESET REQUEST
       if (path === '/api/reset-request') {
+        // Fail clearly when email delivery is not configured; otherwise the UI
+        // could claim a message was sent even though no provider was contacted.
+        if (!env.RESEND_API_KEY || !env.FROM_EMAIL || !env.SITE_URL) {
+          return fail(
+            'خدمة استعادة كلمة المرور غير مفعّلة بعد. يرجى التواصل مع إدارة الموقع.',
+            503
+          );
+        }
+
         const row = await env.DB.prepare(
           'SELECT id FROM users WHERE email = ?'
         ).bind(email).first();
 
-        if (
-          row &&
-          env.RESEND_API_KEY &&
-          env.FROM_EMAIL &&
-          env.SITE_ORIGIN
-        ) {
+        // Keep the response generic so the endpoint does not reveal whether an
+        // email address has an account.
+        if (row) {
           const token = random();
+          const tokenHash = await hash(token);
+          const expiresAt = Date.now() + 30 * 60 * 1000;
 
           await env.DB.prepare(`
-            INSERT INTO resets
-              (token_hash, user_id, expires_at)
+            INSERT INTO resets (token_hash, user_id, expires_at)
             VALUES (?, ?, ?)
-          `).bind(
-            await hash(token),
-            row.id,
-            Date.now() + 1800000
-          ).run();
+          `).bind(tokenHash, row.id, expiresAt).run();
 
-          const base = env.SITE_URL || allowed[0] + '/';
-          const link =
-            base + '?reset_token=' + token + '#account';
+          const base = String(env.SITE_URL).trim().replace(/\/+$/, '');
+          const separator = base.includes('?') ? '&' : '?';
+          const link = `${base}${separator}reset_token=${encodeURIComponent(token)}#account`;
 
-          await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-              Authorization: 'Bearer ' + env.RESEND_API_KEY,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              from: env.FROM_EMAIL,
-              to: [email],
-              subject: 'استعادة كلمة مرور سعي بلس',
-              text:
-                'لتغيير كلمة المرور افتح الرابط خلال 30 دقيقة:\n' +
-                link
-            })
-          });
+          let mailResponse;
+          try {
+            mailResponse = await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${env.RESEND_API_KEY}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                from: env.FROM_EMAIL,
+                to: [email],
+                subject: 'استعادة كلمة مرور سعي بلس',
+                text: 'وصلنا طلب لاستعادة كلمة مرور حسابك في سعي بلس.\n\n' +
+                  'لتعيين كلمة مرور جديدة، افتح الرابط التالي خلال 30 دقيقة فقط:\n' +
+                  link + '\n\nإذا لم تطلب الاستعادة، تجاهل هذه الرسالة.'
+              })
+            });
+          } catch (_) {
+            mailResponse = null;
+          }
+
+          if (!mailResponse || !mailResponse.ok) {
+            await env.DB.prepare(
+              'DELETE FROM resets WHERE token_hash = ?'
+            ).bind(tokenHash).run();
+            return fail(
+              'تعذّر إرسال رسالة الاستعادة. تأكد إدارة الموقع من إعداد خدمة البريد ثم حاول مجددًا.',
+              502
+            );
+          }
         }
 
         return reply({
-          message:
-            'إذا كان البريد مسجلاً وخدمة البريد مفعلة، ستصلك تعليمات الاستعادة.'
+          message: 'إذا كان البريد مسجلاً، فستصلك رسالة استعادة خلال دقائق. افحص مجلد الرسائل غير المرغوب فيها أيضًا.'
         });
       }
 
