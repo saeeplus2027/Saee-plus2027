@@ -4,13 +4,25 @@
 window.SiteStore = (() => {
   const key = "sai-plus-cms-v1";
   const remote = true;
+  const ADMIN_TOKEN_KEY = "saee-plus-admin-token-v1";
+
+  function authHeaders(initial = {}) {
+    const headers = new Headers(initial);
+    try {
+      const token = localStorage.getItem(ADMIN_TOKEN_KEY);
+      if (token && /^[a-f0-9]{64}$/i.test(token)) headers.set("Authorization", `Bearer ${token}`);
+    } catch (_) {}
+    return headers;
+  }
   // The static GitHub Pages frontend talks to the separately deployed Cloudflare Worker.
   // Set the real deployed Cloudflare Worker URL in remote-config.js.
   // Keep this fallback only for backwards compatibility; a wrong Worker URL causes HTTP 404.
   const API_BASE = String(window.SAI_API_BASE || "https://saee-plus-api.ligagym.workers.dev").replace(/\/$/, "");
   const apiUrl = (path) => `${API_BASE}${path}`;
 
-  let loaded = false;
+  // The validated bundled content is immediately usable. Remote refreshes replace
+  // it in place instead of hiding the whole site behind a loading screen.
+  let loaded = true;
   let canEdit = false;
   let busy = false;
   let etag = '"0"';
@@ -201,16 +213,26 @@ window.SiteStore = (() => {
   async function refresh(silent = false) {
     const previousRevision = Number(state.revision || 0);
     if (!silent) {
-      loaded = false;
+      // Keep the current/default content visible while the network request runs.
       apiAvailable = false;
     }
     try {
-      const response = await fetch(apiUrl('/api/content'), {
-        method: 'GET',
-        cache: 'no-store',
-        headers: { 'Accept': 'application/json' },
-        credentials: 'include'
-      });
+      // Do not leave the entire site stuck on "جاري تحميل الموقع" if the API hangs.
+      // After 8 seconds, abort the request and let the existing fallback render cached/default content.
+      const controller = new AbortController();
+      const requestTimeout = setTimeout(() => controller.abort(), 8000);
+      let response;
+      try {
+        response = await fetch(apiUrl('/api/content'), {
+          method: 'GET',
+          cache: 'no-store',
+          headers: authHeaders({ 'Accept': 'application/json' }),
+          credentials: 'include',
+          signal: controller.signal
+        });
+      } finally {
+        clearTimeout(requestTimeout);
+      }
       const body = await readResponse(response);
       state = validate(body.state ?? body.content);
       state.revision = Number(body.revision ?? state.revision ?? 0);
@@ -228,7 +250,7 @@ window.SiteStore = (() => {
         console.warn('Saee Plus: background refresh failed; keeping the current content.', error);
         return state;
       }
-      console.error('Saee Plus: central content could not be loaded; using cached/default content.', error);
+      console.warn('Saee Plus: central content could not be loaded; using cached/default content.', error);
       try {
         const cached = localStorage.getItem(key);
         if (cached) state = validate(JSON.parse(cached));
@@ -322,11 +344,11 @@ window.SiteStore = (() => {
         method: 'PUT',
         credentials: 'include',
         cache: 'no-store',
-        headers: {
+        headers: authHeaders({
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'If-Match': etag
-        },
+        }),
         body: payload
       });
       const body = await readResponse(response);
@@ -346,7 +368,7 @@ window.SiteStore = (() => {
   async function apiPost(path, payload = {}) {
     const response = await fetch(apiUrl(path), {
       method: 'POST', credentials: 'include', cache: 'no-store',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      headers: authHeaders({ 'Content-Type': 'application/json', 'Accept': 'application/json' }),
       body: JSON.stringify(payload)
     });
     let body = {};
@@ -363,7 +385,10 @@ window.SiteStore = (() => {
 
   async function loginAdmin(password) {
     if (!remote) throw Error('تسجيل الدخول المركزي غير مفعّل في هذه النسخة.');
-    await apiPost('/api/admin-login', { password: String(password || '') });
+    const result = await apiPost('/api/admin-login', { password: String(password || '') });
+    if (result && typeof result.token === 'string' && /^[a-f0-9]{64}$/i.test(result.token)) {
+      localStorage.setItem(ADMIN_TOKEN_KEY, result.token);
+    }
     await refresh();
     if (!canEdit) throw Error('تم تسجيل الدخول، لكن الخادم لم يمنح صلاحية الإدارة. تحقق من إعدادات الخادم.');
     return true;
@@ -371,7 +396,7 @@ window.SiteStore = (() => {
 
   async function logoutAdmin() {
     if (!remote) return true;
-    try { await apiPost('/api/logout'); } finally { canEdit = false; await refresh(); }
+    try { await apiPost('/api/logout'); } finally { try { localStorage.removeItem(ADMIN_TOKEN_KEY); } catch (_) {} canEdit = false; await refresh(); }
     return true;
   }
 
@@ -379,7 +404,7 @@ window.SiteStore = (() => {
     if (!remote) return null;
     const response = await fetch(apiUrl('/api/discount-usage'), {
       method: 'GET', cache: 'no-store', credentials: 'include',
-      headers: { 'Accept': 'application/json' }
+      headers: authHeaders({ 'Accept': 'application/json' })
     });
     let body = {}; try { body = await response.json(); } catch (_) {}
     if (!response.ok) {
@@ -434,6 +459,7 @@ window.SiteStore = (() => {
     key,
     loginAdmin,
     logoutAdmin,
+    authHeaders,
     getDiscountUsage,
     useDiscount,
     reload: refresh
