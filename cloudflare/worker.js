@@ -73,8 +73,11 @@ async function readBody(req) {
 }
 
 async function identity(req, env) {
-  const token = (req.headers.get('cookie') || '')
+  const bearer = (req.headers.get('authorization') || '')
+    .match(/^Bearer\s+([a-f0-9]{64})$/i)?.[1];
+  const cookieToken = (req.headers.get('cookie') || '')
     .match(/(?:^|;\s*)saee_session=([a-f0-9]{64})/)?.[1];
+  const token = bearer || cookieToken;
 
   if (!token) return null;
 
@@ -119,7 +122,7 @@ export default {
       ? {
           'access-control-allow-origin': origin,
           'access-control-allow-credentials': 'true',
-          'access-control-allow-headers': 'Content-Type, If-Match',
+          'access-control-allow-headers': 'Content-Type, If-Match, Authorization',
           'vary': 'Origin'
         }
       : {};
@@ -136,7 +139,7 @@ export default {
         headers: {
           ...cors,
           'access-control-allow-methods': 'GET,POST,PUT,OPTIONS',
-          'access-control-allow-headers': 'Content-Type, If-Match',
+          'access-control-allow-headers': 'Content-Type, If-Match, Authorization',
           'access-control-max-age': '600'
         }
       });
@@ -798,8 +801,11 @@ export default {
       // =========================================
 
       if (path === '/api/logout' && req.method === 'POST') {
-        const token = (req.headers.get('cookie') || '')
+        const bearer = (req.headers.get('authorization') || '')
+          .match(/^Bearer\s+([a-f0-9]{64})$/i)?.[1];
+        const cookieToken = (req.headers.get('cookie') || '')
           .match(/saee_session=([a-f0-9]{64})/)?.[1];
+        const token = bearer || cookieToken;
 
         if (token) {
           await env.DB.prepare(
@@ -926,7 +932,7 @@ export default {
         ).run();
 
         return reply(
-          { message: 'تم تسجيل الدخول' },
+          { message: 'تم تسجيل الدخول', token, expiresIn: 604800 },
           200,
           { 'set-cookie': cookie(token, 604800) }
         );
