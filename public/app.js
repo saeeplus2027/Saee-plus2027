@@ -19,9 +19,22 @@ function mapPage(){if(place>=places.length)place=0;let shown=places.map((p,i)=>(
 function mapCategory(i){mapCat=['الكل',...new Set(places.map(p=>p.cat))][i];mapPage()}
 function render(){route=location.hash.slice(1)||'home';if(route==='about'){home();setTimeout(()=>document.getElementById('about').scrollIntoView(),0)}else if(route==='home')home();else if(route==='services'){main.innerHTML=`<div class="container">${headerPage('خدمات سعي بلس','كل احتياجاتك وفرصك في مكان واحد. اختر المساحة التي تناسبك.')}<div class="services-grid" style="margin:20px 0 65px">${serviceCards()}</div></div>`}else if(route==='map')mapPage();else if(titles[route])listing();else home();document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('active',a.hash===location.hash||(!location.hash&&a.hash==='#home')));document.querySelector('nav').classList.remove('open');hydrate()}
 window.addEventListener('hashchange',()=>{category='الكل';query='';render();if(route!=='about')window.scrollTo(0,0)});document.getElementById('year').textContent=new Date().getFullYear();
-function syncStoreContent(){services=SiteStore.state.services;titles=Object.fromEntries(services.map(s=>[s[0],s[2]]));base=SiteStore.state.items;additions=SiteStore.remote?[]:JSON.parse(localStorage.getItem('sai-additions')||'[]');items=[...base,...additions];places=SiteStore.state.places;descriptions=SiteStore.state.descriptions;if(location.hash!=='#admin'){category='الكل';query='';render()}}
-window.addEventListener('sai-content-changed',syncStoreContent);
-if(location.hash!=='#admin')render();
+// Initial page render: the app previously defined render() but did not call it on first load.
+// Keep the visible UI in sync when SiteStore finishes loading remote or fallback content.
+function syncSiteStoreAndRender(){
+  try {
+    services = SiteStore.state.services || [];
+    titles = Object.fromEntries(services.map(s => [s[0], s[2]]));
+    base = SiteStore.state.items || [];
+    additions = SiteStore.remote ? [] : JSON.parse(localStorage.getItem('sai-additions') || '[]');
+    items = [...base, ...additions];
+  } catch (error) {
+    console.error('Saee Plus: failed to sync visible content from SiteStore.', error);
+  }
+  render();
+}
+window.addEventListener('sai-content-changed', syncSiteStoreAndRender);
+syncSiteStoreAndRender();
 function toast(t){const e=document.getElementById('toast');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2700)}
 function saveFavorite(id,b){favorites=favorites.includes(id)?favorites.filter(x=>x!==id):[...favorites,id];localStorage.setItem('sai-favorites',JSON.stringify(favorites));if(b){b.classList.toggle('saved',favorites.includes(id));b.setAttribute('aria-pressed',favorites.includes(id))}toast(favorites.includes(id)?'أُضيفت إلى مفضلتك':'أُزيلت من المفضلة')}
 function modal(html){document.getElementById('dialog-content').innerHTML=html;const d=document.getElementById('dialog');if(!d.open)d.showModal()}
