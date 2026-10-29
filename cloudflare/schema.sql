@@ -48,3 +48,36 @@ CREATE TABLE IF NOT EXISTS discount_usage_global (
 );
 CREATE INDEX IF NOT EXISTS idx_discount_usage_global_expiry
   ON discount_usage_global(expires_at);
+
+
+CREATE TABLE IF NOT EXISTS vocational_projects (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  student_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  title TEXT NOT NULL,
+  field TEXT NOT NULL,
+  project_type TEXT NOT NULL,
+  description TEXT NOT NULL,
+  image_url TEXT NOT NULL DEFAULT '',
+  contact TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'pending',
+  admin_note TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL,
+  reviewed_at INTEGER,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_vocational_status_created ON vocational_projects(status, created_at DESC);
+
+
+CREATE TABLE IF NOT EXISTS vocational_mentors (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  specialty TEXT NOT NULL,
+  bio TEXT NOT NULL DEFAULT '',
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_vocational_mentors_active_name ON vocational_mentors(active, name);

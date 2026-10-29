@@ -224,6 +224,141 @@ export default {
       }
 
       // =========================================
+      // VOCATIONAL PROJECTS: student submissions + admin moderation
+      // =========================================
+      if (path === '/api/vocational-projects') {
+        await env.DB.prepare(`CREATE TABLE IF NOT EXISTS vocational_projects (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          student_name TEXT NOT NULL,
+          email TEXT NOT NULL,
+          title TEXT NOT NULL,
+          field TEXT NOT NULL,
+          project_type TEXT NOT NULL,
+          description TEXT NOT NULL,
+          image_url TEXT NOT NULL DEFAULT '',
+          contact TEXT NOT NULL DEFAULT '',
+          status TEXT NOT NULL DEFAULT 'pending',
+          admin_note TEXT NOT NULL DEFAULT '',
+          created_at INTEGER NOT NULL,
+          reviewed_at INTEGER,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )`).run();
+
+        if (req.method === 'GET') {
+          const user = await identity(req, env);
+          if (new URL(req.url).searchParams.get('admin') === '1') {
+            if (!user?.is_admin) return fail('هذه الصفحة للإدارة فقط.', 403);
+            const rows = await env.DB.prepare(`SELECT id, user_id, student_name, email, title, field, project_type, description, image_url, contact, status, admin_note, created_at, reviewed_at FROM vocational_projects ORDER BY created_at DESC LIMIT 500`).all();
+            return reply({ projects: rows.results || [] });
+          }
+          const rows = await env.DB.prepare(`SELECT id, student_name, title, field, project_type, description, image_url, contact, created_at FROM vocational_projects WHERE status = 'approved' ORDER BY reviewed_at DESC, created_at DESC LIMIT 200`).all();
+          return reply({ projects: rows.results || [] });
+        }
+
+        if (req.method === 'POST') {
+          const user = await identity(req, env);
+          if (!user) return fail('سجّل الدخول أولاً حتى تتمكن من إرسال مشروعك.', 401);
+          const body = await readBody(req);
+          const studentName = String(body.studentName || '').trim().slice(0, 100);
+          const title = String(body.title || '').trim().slice(0, 120);
+          const field = String(body.field || '').trim().slice(0, 100);
+          const projectType = String(body.projectType || '').trim().slice(0, 40);
+          const description = String(body.description || '').trim().slice(0, 2000);
+          const imageUrl = String(body.imageUrl || '').trim().slice(0, 1000);
+          const contact = String(body.contact || '').trim().slice(0, 160);
+          if (!studentName || !title || !field || !projectType || description.length < 10) return fail('أكمل الحقول المطلوبة، واجعل وصف المشروع 10 أحرف على الأقل.');
+          if (imageUrl && !/^https:\/\//i.test(imageUrl)) return fail('رابط الصورة يجب أن يبدأ بـ https://');
+          if (!['منتج','خدمة','فكرة إبداعية'].includes(projectType)) return fail('نوع المشروع غير صالح.');
+          if (!await throttle(env, user.id + ':vocational-submit', 8)) return fail('أرسلت طلبات كثيرة. حاول لاحقاً.', 429);
+          const id = 'vp_' + random().slice(0, 24);
+          const now = Date.now();
+          await env.DB.prepare(`INSERT INTO vocational_projects (id,user_id,student_name,email,title,field,project_type,description,image_url,contact,status,created_at) VALUES (?,?,?,?,?,?,?,?,?,?, 'pending', ?)`).bind(id,user.id,studentName,user.email,title,field,projectType,description,imageUrl,contact,now).run();
+          return reply({ success: true, message: 'تم إرسال مشروعك إلى الإدارة للمراجعة. لن يظهر للزوار إلا بعد الموافقة.' }, 201);
+        }
+        return fail('الطريقة غير مدعومة.', 405);
+      }
+
+      if (path === '/api/vocational-review' && req.method === 'POST') {
+        const user = await identity(req, env);
+        if (!user?.is_admin) return fail('هذه العملية متاحة للإدارة فقط.', 403);
+        await env.DB.prepare(`CREATE TABLE IF NOT EXISTS vocational_projects (
+          id TEXT PRIMARY KEY, user_id TEXT NOT NULL, student_name TEXT NOT NULL, email TEXT NOT NULL,
+          title TEXT NOT NULL, field TEXT NOT NULL, project_type TEXT NOT NULL, description TEXT NOT NULL,
+          image_url TEXT NOT NULL DEFAULT '', contact TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'pending',
+          admin_note TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL, reviewed_at INTEGER,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )`).run();
+        const body = await readBody(req);
+        const id = String(body.id || '').trim();
+        const status = String(body.status || '').trim();
+        const note = String(body.note || '').trim().slice(0, 500);
+        if (!/^vp_[a-f0-9]{1,24}$/.test(id) || !['approved','rejected','pending'].includes(status)) return fail('بيانات المراجعة غير صالحة.');
+        const result = await env.DB.prepare(`UPDATE vocational_projects SET status = ?, admin_note = ?, reviewed_at = ? WHERE id = ?`).bind(status,note,Date.now(),id).run();
+        if (!result.meta.changes) return fail('المشروع غير موجود.',404);
+        return reply({ success: true, message: status === 'approved' ? 'تمت الموافقة ونشر المشروع.' : status === 'rejected' ? 'تم رفض المشروع.' : 'أعيد المشروع إلى قائمة الانتظار.' });
+      }
+
+      // =========================================
+      // VOCATIONAL MENTORS: public directory managed by site admins
+      // =========================================
+      if (path === '/api/vocational-mentors') {
+        await env.DB.prepare(`CREATE TABLE IF NOT EXISTS vocational_mentors (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          phone TEXT NOT NULL,
+          specialty TEXT NOT NULL,
+          bio TEXT NOT NULL DEFAULT '',
+          active INTEGER NOT NULL DEFAULT 1,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        )`).run();
+
+        if (req.method === 'GET') {
+          const user = await identity(req, env);
+          const isAdminView = new URL(req.url).searchParams.get('admin') === '1';
+          if (isAdminView && !user?.is_admin) return fail('هذه الصفحة للإدارة فقط.', 403);
+          const rows = isAdminView
+            ? await env.DB.prepare(`SELECT id, name, phone, specialty, bio, active, created_at, updated_at FROM vocational_mentors ORDER BY updated_at DESC LIMIT 500`).all()
+            : await env.DB.prepare(`SELECT id, name, phone, specialty, bio FROM vocational_mentors WHERE active = 1 ORDER BY name COLLATE NOCASE LIMIT 200`).all();
+          return reply({ mentors: rows.results || [] });
+        }
+
+        if (req.method === 'POST') {
+          const user = await identity(req, env);
+          if (!user?.is_admin) return fail('إدارة المساعدين متاحة للإدارة فقط.', 403);
+          const body = await readBody(req);
+          const action = String(body.action || 'save');
+          if (action === 'delete') {
+            const id = String(body.id || '').trim();
+            if (!/^vm_[a-f0-9]{1,24}$/.test(id)) return fail('معرّف المساعد غير صالح.');
+            const result = await env.DB.prepare(`DELETE FROM vocational_mentors WHERE id = ?`).bind(id).run();
+            if (!result.meta.changes) return fail('المساعد غير موجود.', 404);
+            return reply({ success: true, message: 'تم حذف المساعد.' });
+          }
+          const id = String(body.id || '').trim();
+          const name = String(body.name || '').trim().slice(0, 120);
+          const phone = String(body.phone || '').trim().slice(0, 40);
+          const specialty = String(body.specialty || '').trim().slice(0, 160);
+          const bio = String(body.bio || '').trim().slice(0, 1000);
+          const active = body.active === false || body.active === 0 || body.active === '0' ? 0 : 1;
+          if (!name || !phone || !specialty) return fail('أدخل اسم الأستاذ ورقم الهاتف والتخصص.');
+          if (!/^[+0-9٠-٩۰-۹()\-\s]{7,40}$/.test(phone)) return fail('رقم الهاتف غير صالح.');
+          const now = Date.now();
+          if (id) {
+            if (!/^vm_[a-f0-9]{1,24}$/.test(id)) return fail('معرّف المساعد غير صالح.');
+            const result = await env.DB.prepare(`UPDATE vocational_mentors SET name=?, phone=?, specialty=?, bio=?, active=?, updated_at=? WHERE id=?`).bind(name,phone,specialty,bio,active,now,id).run();
+            if (!result.meta.changes) return fail('المساعد غير موجود.',404);
+            return reply({ success: true, message: 'تم تحديث بيانات المساعد.' });
+          }
+          const newId = 'vm_' + random().slice(0, 24);
+          await env.DB.prepare(`INSERT INTO vocational_mentors (id,name,phone,specialty,bio,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)`).bind(newId,name,phone,specialty,bio,active,now,now).run();
+          return reply({ success: true, message: 'تمت إضافة المساعد بنجاح.' }, 201);
+        }
+        return fail('الطريقة غير مدعومة.', 405);
+      }
+
+      // =========================================
       // ADMIN LOGIN
       // =========================================
 
