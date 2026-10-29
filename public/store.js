@@ -4,18 +4,21 @@
 window.SiteStore = (() => {
   const key = "sai-plus-cms-v1";
   const remote = true;
+  const ADMIN_TOKEN_KEY = "saee-plus-admin-token-v1";
+
+  function authHeaders(initial = {}) {
+    const headers = new Headers(initial);
+    try {
+      const token = localStorage.getItem(ADMIN_TOKEN_KEY);
+      if (token && /^[a-f0-9]{64}$/i.test(token)) headers.set("Authorization", `Bearer ${token}`);
+    } catch (_) {}
+    return headers;
+  }
   // The static GitHub Pages frontend talks to the separately deployed Cloudflare Worker.
   // Set the real deployed Cloudflare Worker URL in remote-config.js.
   // Keep this fallback only for backwards compatibility; a wrong Worker URL causes HTTP 404.
   const API_BASE = String(window.SAI_API_BASE || "https://saee-plus-api.ligagym.workers.dev").replace(/\/$/, "");
   const apiUrl = (path) => `${API_BASE}${path}`;
-  // Admin API token fallback for browsers that block cross-site cookies.
-  // The token is kept in sessionStorage (this tab only), not localStorage.
-  const ADMIN_TOKEN_KEY = "saee-plus-admin-token-v1";
-  function authHeaders(headers = {}) {
-    const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
-    return token ? { ...headers, Authorization: `Bearer ${token}` } : headers;
-  }
 
   let loaded = false;
   let canEdit = false;
@@ -372,22 +375,16 @@ window.SiteStore = (() => {
     if (!remote) throw Error('تسجيل الدخول المركزي غير مفعّل في هذه النسخة.');
     const result = await apiPost('/api/admin-login', { password: String(password || '') });
     if (result && typeof result.token === 'string' && /^[a-f0-9]{64}$/i.test(result.token)) {
-      sessionStorage.setItem(ADMIN_TOKEN_KEY, result.token);
-    } else {
-      throw Error('نجح طلب الدخول لكن الخادم لم يُرجع رمز الجلسة. حدّث كود Cloudflare Worker أولاً.');
+      localStorage.setItem(ADMIN_TOKEN_KEY, result.token);
     }
     await refresh();
-    if (!canEdit) throw Error('تم تسجيل الدخول، لكن الخادم لم يمنح صلاحية الإدارة. جرّب تسجيل الدخول مجددًا.');
+    if (!canEdit) throw Error('تم تسجيل الدخول، لكن الخادم لم يمنح صلاحية الإدارة. تحقق من إعدادات الخادم.');
     return true;
   }
 
   async function logoutAdmin() {
     if (!remote) return true;
-    try { await apiPost('/api/logout'); } finally {
-      sessionStorage.removeItem(ADMIN_TOKEN_KEY);
-      canEdit = false;
-      await refresh();
-    }
+    try { await apiPost('/api/logout'); } finally { try { localStorage.removeItem(ADMIN_TOKEN_KEY); } catch (_) {} canEdit = false; await refresh(); }
     return true;
   }
 
@@ -450,6 +447,7 @@ window.SiteStore = (() => {
     key,
     loginAdmin,
     logoutAdmin,
+    authHeaders,
     getDiscountUsage,
     useDiscount,
     reload: refresh
