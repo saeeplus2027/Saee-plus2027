@@ -1,0 +1,46 @@
+﻿path,status,size_bytes,sha256,notes
+.github/workflows/skill-passport-tests.yml,NEW,973,55635bd486121dbc89aa466beae0423093e8178df0d77f181bb030c96a4a6414,New workflow that runs passport tests.
+PACKAGE-README-AR.md,PACKAGE_METADATA,3613,df49baa3223f91b1c12620f1406bf15886df3b3feb0cd4de0ed4d52e9eda9a8d,Created for this bundle.
+UNCHANGED-ROOT-SOURCE-PATHS.txt,PACKAGE_METADATA,764,387e490af93e4a5b37e4c5df62ccfefc50aa5d165f3b0611c2e92d2d18d286ca,Created for this bundle.
+app/api/skill-passport/route.ts,NEW,8372,63a7397e769ace74d4dd7db48eecaa163cd65d18a86a38861f990af06ed3d578,New authenticated D1 API for GET/PUT/DELETE.
+db/schema.ts,MODIFIED,640,ae42b3bab0ee5bf672167ea56ce79b18f065e14894698abb15c3d260717d198e,Merged new skillPassports table while retaining existing siteContent table.
+docs/INSTALL-README.md,PACKAGE_DOCUMENTATION,7511,c1ebab4f931bc4f921a5b92c48ba8fcaf391c3549253712fc24b054532749883,Created for this bundle; not a site runtime file.
+docs/PATCH-NOTES.md,PACKAGE_DOCUMENTATION,1420,6e2f1fa71af569dd19090874bb1dbc1174370eb588867c2a7bae9fba75785b27,Created for this bundle; not a site runtime file.
+docs/REPORT.md,PACKAGE_DOCUMENTATION,4291,87b07bfd1c0fea89e1e1fe97e052264f7c26bad451e9c16cd321e24d3ce12b15,Created for this bundle; not a site runtime file.
+docs/TEST-RESULTS.txt,PACKAGE_DOCUMENTATION,1245,927fe9f21bad072cde6243624b3353a40c9616f7fdd8cb34a96c195074836996,Created for this bundle; not a site runtime file.
+drizzle/0001_skill_passports.sql,NEW,171,a6d1954d2b218e9623463ef2efa685e83c869d02fbaec3ac7f73432b5cbfb4df,New D1 migration for per-user passport records.
+drizzle/meta/0001_snapshot.json,NEW,2220,f943f0c96a93c0bf898098477a823168a53582205adf2f767237ca60d9a0a3d8,New Drizzle migration snapshot.
+drizzle/meta/_journal.json,MODIFIED,356,c05f0749654ec90affaf1e9f0ec561bfbd3ae8101115e91386e4dc888d39727e,Updated migration journal to include new skill-passport migration.
+lib/skill-passport-validation.mjs,NEW,5046,81158c9c0fa616599a47623d169df5f84d7deeac1e42a9b80ba943d1d9ffeecd,New strict server-side validation and normalisation.
+public/README.txt,UNCHANGED_PUBLIC_SITE,1793,0404b6e5dfaa26a0395e363a70a04a86144d08babf26b873981690121b35abfb,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/SMART_FEATURES.md,UNCHANGED_PUBLIC_SITE,7500,53387ba495dfaf3bfd352ddc14ac3ae15df44c2dd255c2e008ebb19f582e67c2,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/admin.css,UNCHANGED_PUBLIC_SITE,9623,940a257f8b9ce5e2617cc8807a9405c696930af0d30c8dd62d2e4ced665d0752,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/admin.html,UNCHANGED_PUBLIC_SITE,377,0146f89c19b8c0cbd8831b0970ba6673d7d61058dc7022be0a7f3387cd5ef47f,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/admin.js,UNCHANGED_PUBLIC_SITE,44690,48d1211b6d829c06319c6873a3aeaf1899f07ce1f7100b076797d3a0cb5617eb,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/app.js,UNCHANGED_PUBLIC_SITE,16806,cd431e0d82525b135aeb20fd8a1374a78eea2d2c0bce4364e8ceee735056910e,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/assets/art.jpg,UNCHANGED_PUBLIC_SITE,58988,f4417c7d78b84cd1848eae2ad0d14176690d3ccab40362a1084df67715386621,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/assets/bag.jpg,UNCHANGED_PUBLIC_SITE,56905,650fd66b1bcc62b84f2a61fa5808589b10665bcb5d0db85c3f8e155a26222f81,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/assets/books.jpg,UNCHANGED_PUBLIC_SITE,103139,102d231efbabdb3834c211a238a590c414214c36e179e3c2a1464b707db35dc7,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/assets/brand.jpg,UNCHANGED_PUBLIC_SITE,6038,e47ae064ea10dbfc0fe1a3505f7bb63ec94aa37f780249b1b68fd845639801e3,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/assets/campus.jpg,UNCHANGED_PUBLIC_SITE,366607,82c76889188180e1f19607f44366c2378790f8dfd90e4ef75b21317c6fa7faed,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/assets/coffee.jpg,UNCHANGED_PUBLIC_SITE,136135,210fe18fd4c1c2314c2bdf469ae5863ac4102ec4c4e0961e74047c69a04f6ba4,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/assets/food.jpg,UNCHANGED_PUBLIC_SITE,92441,251effb11c08746af26debcdfe0bf89ab197d093d37097f07570131bcd48d67e,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/assets/plant.jpg,UNCHANGED_PUBLIC_SITE,88661,8afcdbc39a6da37bed14b58b6d990bd75fd6ea154f135742a4bb879bac65d7c1,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/assets/soap.jpg,UNCHANGED_PUBLIC_SITE,81864,49d476355f5cf5b0ab8df26a72000c29003793dc2e4154c63db068c2063a3952,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/bau-map.js,UNCHANGED_PUBLIC_SITE,13601,77c4b451a943292305431c7bb5da0a87258b925454551c39f205c51d045144df,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/content-data.js,UNCHANGED_PUBLIC_SITE,9436,e0f93ec9ae72a67370829cc5a8a4784b0cfe010e4dce4db30a47f5967fca1c35,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/export-kit.js,UNCHANGED_PUBLIC_SITE,1524510,fa3c52767a425e2d02d3edbf999d95728af388de059c658d67ff664cfcc55f82,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/favicon.svg,UNCHANGED_PUBLIC_SITE,712,e6d2e59b7b5bbb0342e0fb496dfc262decbfe4426bbb7b047aec8d467d1dc6f7,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/index.html,UNCHANGED_PUBLIC_SITE,50509,6b9502dd9879d51c51d7db0dfce116814e8775b4a96b7dd537ebc73ce9670ac2,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/remote-config.js,UNCHANGED_PUBLIC_SITE,27,ed3e8724268dacd8d9433ac35842c384487a0ce8afbf5d8d5e1e22548a6133ec,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/skill-passport.css,MODIFIED,14448,6909a0a95f9f4e19358c1f2a0168af618f151538a222a96a4c9e7a2dcf1c0bac,Updated styling for account/save and recovery state.
+public/skill-passport.html,MODIFIED,14873,04a4cc175d0d073230e82cb57eb0d68b456e9c70968334cad47bb5abccbbc8fe,"Updated login, server-save status and privacy disclosures."
+public/skill-passport.js,MODIFIED,41677,3b092745f3845fab36b264d58252fb3536a8c108881c5f07540256cc030bbbad,Replaced with server-backed version; no passport localStorage persistence.
+public/smart-engine.js,UNCHANGED_PUBLIC_SITE,7058,67951ee4cae254abb54648afac80fc32159b5708df9fb67f192160e4c48dd1a9,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/smart-ui.js,UNCHANGED_PUBLIC_SITE,10860,0f528d946f013654e1d57cdfbcfd3d360f0a470167637f187f9412409612fb3a,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/smart.css,UNCHANGED_PUBLIC_SITE,2557,35209a3d680c56cc56654ba0cf5630c0aafeaca4c4d44ad87b0e9dd252f9aee5,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/store.js,UNCHANGED_PUBLIC_SITE,6440,3f995d2e899bffc588fb7b01228cf11a9a2f14b86790141f3858a8cc2bc8b238,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+public/style.css,UNCHANGED_PUBLIC_SITE,16235,4e5e68ce906372dc59f731ccda495944af200197be8b63936d952fca6a61176b,Copied unchanged from the successful GitHub Pages artifact; only the three passport files listed as modified were replaced.
+tests/skill-passport-client.test.mjs,NEW,7376,b457e1e7b2b2886038ee215d11a0e828f7ffab5dfd064acb97be6536741df8cd,New client behaviour tests.
+tests/skill-passport-security.test.mjs,NEW,6936,4664c8195c2361686e0139a11d5fef4960920e29b355f030550f43073ba3e51a,New security validation tests.
+tests/test_skill_passport_migration.py,NEW,2671,c3b9e94e8ca39dc9438c23c54e8fd273595af7e948c004dc825c840fa0c1bec3,New SQLite/D1 migration isolation tests.
