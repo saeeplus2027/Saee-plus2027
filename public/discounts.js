@@ -1,369 +1,212 @@
-/* =========================================================
-   Saee Plus — Discount Button
-   زر تم الخصم مع حفظ الاستخدام لمدة 24 ساعة
-   File: discounts.js
-   ========================================================= */
-
-(function () {
+/* Saee Plus: per-account 24-hour discount usage */
+(() => {
   'use strict';
+  const API = 'https://saee-plus-api.ligagym.workers.dev';
+  const active = new Map();
+  const TOKEN_KEY = 'saee-auth-token-v1';
+  let loaded = false;
+  let loading = null;
 
-  const DAY = 24 * 60 * 60 * 1000;
+  const esc = value => String(value).replace(/[&<>"']/g, ch => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[ch]));
 
-
-  const BUTTON_SELECTOR = '.saee-discount-use';
-  /* ---------------------------------------------------------
-     Server-only shared usage state. No localStorage fallback is allowed.
-     --------------------------------------------------------- */
-  const serverExpiries = Object.create(null);
-  let usageLoadInProgress = false;
-  let usageReady = false;
-  let usageLoadFailed = false;
-
-  /* ---------------------------------------------------------
-     4. حساب الوقت المتبقي
-     --------------------------------------------------------- */
-
-  function formatRemaining(milliseconds) {
-    const totalSeconds = Math.max(
-      0,
-      Math.ceil(milliseconds / 1000)
-    );
-
-    const hours = Math.floor(totalSeconds / 3600);
-
-    const minutes = Math.floor(
-      (totalSeconds % 3600) / 60
-    );
-
-    const seconds = totalSeconds % 60;
-
-    return (
-      hours +
-      ' ساعة و ' +
-      minutes +
-      ' دقيقة و ' +
-      seconds +
-      ' ثانية'
-    );
+  function getToken() {
+    try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (_) { return ''; }
   }
 
-  /* ---------------------------------------------------------
-     5. إظهار رسالة للمستخدم
-     --------------------------------------------------------- */
-
-  function showMessage(message) {
-    let toast = document.getElementById(
-      'saee-discount-use-toast'
-    );
-
-    if (!toast) {
-      toast = document.createElement('div');
-
-      toast.id = 'saee-discount-use-toast';
-
-      toast.style.cssText = [
-        'position:fixed',
-        'z-index:2147483647',
-        'bottom:24px',
-        'left:50%',
-        'transform:translateX(-50%)',
-        'width:max-content',
-        'max-width:90%',
-        'padding:14px 20px',
-        'border-radius:12px',
-        'background:#075a52',
-        'color:white',
-        'font-size:14px',
-        'font-weight:700',
-        'text-align:center',
-        'box-shadow:0 8px 28px rgba(0,0,0,.2)'
-      ].join(';');
-
-      document.body.appendChild(toast);
+  async function api(path, options = {}) {
+    const headers = new Headers(options.headers || {});
+    if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+    const token = getToken();
+    if (token) headers.set('Authorization', 'Bearer ' + token);
+    const response = await fetch(API + path, {
+      ...options,
+      credentials: 'include',
+      cache: 'no-store',
+      headers
+    });
+    let data = {};
+    try { data = await response.json(); } catch (_) {}
+    if (!response.ok) {
+      const error = new Error(data.error || 'تعذر الاتصال بالخادم');
+      error.status = response.status;
+      error.data = data;
+      throw error;
     }
-
-    toast.textContent = message;
-    toast.hidden = false;
-
-    clearTimeout(toast._hideTimer);
-
-    toast._hideTimer = setTimeout(function () {
-      toast.hidden = true;
-    }, 3500);
+    return data;
   }
 
-  /* ---------------------------------------------------------
-     6. تحديث شكل الزر بحسب حالة الخصم
-     --------------------------------------------------------- */
+  function getId(card) {
+    const button = card.querySelector('.details-btn[onclick]');
+    if (!button) return '';
+    const match = button.getAttribute('onclick').match(/details\(['"]([^'"]+)['"]\)/);
+    return match ? match[1] : '';
+  }
 
-  function updateButton(button) {
-    if (!button || !button.dataset.discountId) return;
+  function shouldShow(card) {
+    const hash = (location.hash || '').replace(/^#/, '').split('?')[0];
+    return hash === 'discounts' || !!card.closest('.offers-section');
+  }
 
-    const discountId = button.dataset.discountId;
-    const expiry = Number(serverExpiries[discountId] || 0);
-    let timer = button.parentElement.querySelector('.saee-discount-use-timer');
+  function remaining(until) {
+    const seconds = Math.max(0, Math.ceil((until - Date.now()) / 1000));
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours} ساعة و ${minutes} دقيقة`;
+  }
 
-    if (!timer) {
-      timer = document.createElement('small');
-      timer.className = 'saee-discount-use-timer';
-      timer.style.cssText = [
-        'display:block', 'text-align:center', 'margin-top:8px',
-        'font-size:13px', 'color:#788675'
-      ].join(';');
-      button.insertAdjacentElement('afterend', timer);
+  function toast(message) {
+    if (typeof window.toast === 'function') window.toast(message);
+    else {
+      let node = document.getElementById('saee-discount-toast');
+      if (!node) {
+        node = document.createElement('div');
+        node.id = 'saee-discount-toast';
+        node.style.cssText = 'position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:99999;background:#124b43;color:white;padding:12px 18px;border-radius:12px;box-shadow:0 5px 25px #0002;max-width:90vw;text-align:center';
+        document.body.appendChild(node);
+      }
+      node.textContent = message;
+      node.hidden = false;
+      clearTimeout(node._hideTimer);
+      node._hideTimer = setTimeout(() => { node.hidden = true; }, 2800);
     }
+  }
 
-    // Once this client has received a confirmed expiry from the server,
-    // keep the button locked even if a later status refresh fails.
-    if (expiry > Date.now()) {
-      button.disabled = true;
-      setText(button, 'تم الخصم ✓');
-      button.setAttribute('aria-label', 'تم استخدام هذا الخصم');
-      button.title = 'تم تسجيل الخصم على الخادم؛ لن يتاح قبل انتهاء 24 ساعة.';
-      button.style.opacity = '0.7';
-      button.style.cursor = 'not-allowed';
-      timer.hidden = false;
-      setText(timer, 'إعادة التفعيل بعد ' + formatRemaining(expiry - Date.now()));
+  async function loadUsages() {
+    if (loading) return loading;
+    active.clear();
+    if (!getToken()) {
+      loaded = true;
+      addButtons();
       return;
     }
+    loaded = false;
+    loading = api('/api/discount-usage').then(data => {
+      active.clear();
+      Object.entries(data.usages || {}).forEach(([id, value]) => {
+        if (Number(value.expiresAt) > Date.now()) active.set(id, Number(value.expiresAt));
+      });
+      loaded = true;
+    }).catch(error => {
+      loaded = true;
+      active.clear();
+      if (error.status !== 401) console.warn('Saee discount usage:', error);
+    }).finally(() => { loading = null; addButtons(); });
+    return loading;
+  }
 
-    if (!usageReady) {
-      if (usageLoadFailed) {
-        // Keep the button clickable after a failed GET. Clicking still POSTs to
-        // the server, and only a confirmed server response counts as a use.
-        // This avoids trapping the visitor behind a failed status read while
-        // keeping the shared 24-hour rule enforced by Cloudflare/D1.
+  function addButtons() {
+    document.querySelectorAll('.offer-card').forEach(card => {
+      if (!shouldShow(card)) return;
+      const id = getId(card);
+      const body = card.querySelector('.card-body');
+      const foot = body && body.querySelector('.card-foot');
+      if (!id || !body || !foot) return;
+
+      let wrap = body.querySelector('.saee-discount-use-wrap');
+      if (!wrap) {
+        wrap = document.createElement('div');
+        wrap.className = 'saee-discount-use-wrap';
+        wrap.style.cssText = 'margin-top:12px';
+        wrap.innerHTML = `<button type="button" class="button small saee-discount-use" data-discount-id="${esc(id)}" style="width:100%;justify-content:center">تم الخصم</button><small class="saee-discount-timer" style="display:none;text-align:center;margin-top:6px;color:#6b756b"></small>`;
+        foot.insertAdjacentElement('afterend', wrap);
+      }
+      const button = wrap.querySelector('button');
+      const timer = wrap.querySelector('small');
+      const until = active.get(id) || 0;
+      if (until > Date.now()) {
+        button.disabled = true;
+        button.textContent = 'تم استخدام الخصم';
+        button.style.opacity = '.65';
+        button.style.cursor = 'not-allowed';
+        timer.style.display = 'block';
+        timer.dataset.until = String(until);
+        timer.textContent = `يتفعّل بعد ${remaining(until)}`;
+      } else {
+        active.delete(id);
         button.disabled = false;
-        setText(button, 'تم الخصم');
-        button.setAttribute('aria-label', 'تسجيل استخدام الخصم والتحقق من الخادم');
-        button.title = 'تعذر تحميل الحالة الحالية؛ عند الضغط سيتحقق الخادم من إمكانية تسجيل الخصم.';
+        button.textContent = 'تم الخصم';
         button.style.opacity = '1';
         button.style.cursor = 'pointer';
-        timer.hidden = false;
-        setText(timer, 'سيتم تأكيد الاستخدام من الخادم قبل تسجيله.');
-      } else {
-        button.disabled = true;
-        setText(button, 'جارٍ التحقق من الخصم…');
-        button.title = 'يتم تحميل حالة الخصم المشتركة من الخادم.';
-        timer.hidden = false;
-        setText(timer, 'انتظر حتى يكتمل التحقق من الخادم.');
+        timer.style.display = 'none';
+        timer.removeAttribute('data-until');
       }
-      return;
-    }
-
-    button.disabled = false;
-    setText(button, 'تم الخصم');
-    button.setAttribute('aria-label', 'تسجيل استخدام الخصم');
-    button.title = 'اضغط بعد الاستفادة من الخصم لتسجيله؛ يتاح الاستخدام مرة واحدة كل 24 ساعة.';
-    button.style.opacity = '1';
-    button.style.cursor = 'pointer';
-    timer.hidden = true;
-    setText(timer, '');
+    });
   }
 
-  // Avoid replacing text nodes when nothing changed. This also prevents the
-  // modal MutationObserver from repeatedly reacting to its own UI updates.
-  function setText(element, value) {
-    if (element && element.textContent !== value) element.textContent = value;
-  }
-
-  /* ---------------------------------------------------------
-     7. تسجيل الاستخدام لمدة 24 ساعة
-     --------------------------------------------------------- */
-
-  async function useDiscount(button) {
-    const discountId = button.dataset.discountId;
-    if (!discountId) {
-      showMessage('تعذّر تحديد الخصم.');
-      return;
-    }
-
-    if (!usageReady && !usageLoadFailed) {
-      showMessage('انتظر حتى يكتمل التحقق من حالة الخصم.');
-      return;
-    }
-
-    const currentExpiry = Number(serverExpiries[discountId] || 0);
-    if (currentExpiry > Date.now()) {
-      updateButton(button);
-      showMessage('سبق تسجيل هذا الخصم. يرجع يتفعّل بعد ' + formatRemaining(currentExpiry - Date.now()));
+  document.addEventListener('click', async event => {
+    const button = event.target.closest('.saee-discount-use');
+    if (!button) return;
+    event.preventDefault();
+    if (button.disabled) return;
+    const id = button.dataset.discountId;
+    if (!id) return;
+    if (!getToken()) {
+      toast('سجّل الدخول أولًا لاستخدام الخصم.');
+      const login = document.getElementById('sai-open-auth');
+      if (login) login.click();
       return;
     }
 
     button.disabled = true;
-    const oldText = button.textContent;
-    button.textContent = 'جاري تسجيل الخصم…';
-
+    button.textContent = 'جارٍ تسجيل الخصم...';
     try {
-      if (!window.SiteStore || typeof window.SiteStore.useDiscount !== 'function') {
-        throw Error('خدمة تسجيل الخصم المشتركة غير متاحة.');
-      }
-
-      const result = await window.SiteStore.useDiscount(discountId);
-      if (!result || result.success !== true) {
-        throw Error('لم يؤكد الخادم تسجيل الخصم. حاول مرة أخرى.');
-      }
-
-      serverExpiries[discountId] = Number(result.expiresAt || (Date.now() + DAY));
-      updateButton(button);
-      showMessage('تم تسجيل الخصم ✓ سيُعاد تفعيله بعد 24 ساعة على جميع الأجهزة.');
+      const data = await api('/api/discount-usage', {
+        method: 'POST',
+        body: JSON.stringify({ discountId: id })
+      });
+      active.set(id, Number(data.expiresAt));
+      addButtons();
+      toast('تم تسجيل استخدام الخصم لهذا الحساب لمدة 24 ساعة.');
     } catch (error) {
-      if (error && (error.alreadyUsed || (error.status === 409 && error.body && error.body.alreadyUsed))) {
-        const expiry = Number(error.body && error.body.expiresAt || Date.now() + DAY);
-        serverExpiries[discountId] = expiry;
-        updateButton(button);
-        showMessage('تم تسجيل هذا الخصم بالفعل. يرجع يتفعّل بعد ' + formatRemaining(Math.max(0, expiry - Date.now())));
+      if (error.status === 401) {
+        button.disabled = false;
+        button.textContent = 'تم الخصم';
+        toast('سجّل الدخول أولًا لاستخدام الخصم.');
+        const login = document.getElementById('sai-open-auth');
+        if (login) login.click();
+      } else if (error.status === 409 && error.data && error.data.expiresAt) {
+        active.set(id, Number(error.data.expiresAt));
+        addButtons();
+        toast('سبق استخدام هذا الخصم، وسيعود متاحًا بعد انتهاء المدة.');
       } else {
-        button.disabled = true;
-        button.textContent = 'تعذر الاتصال';
-        button.title = (error && error.message) || 'تعذر الاتصال بخادم الخصومات.';
-        showMessage((error && error.message) || 'تعذّر تسجيل الخصم المشترك. حاول مرة أخرى.');
+        button.disabled = false;
+        button.textContent = 'تم الخصم';
+        toast(error.message || 'تعذر تسجيل استخدام الخصم.');
       }
     }
-  }
+  });
 
-  async function loadServerUsage() {
-    if (usageLoadInProgress || !window.SiteStore || typeof window.SiteStore.getDiscountUsage !== 'function') return;
-    usageLoadInProgress = true;
-    try {
-      const usages = await window.SiteStore.getDiscountUsage();
-      for (const id of Object.keys(serverExpiries)) delete serverExpiries[id];
-      const now = Date.now();
-      for (const [id, usage] of Object.entries(usages || {})) {
-        const expiry = Number(usage && usage.expiresAt || 0);
-        if (expiry > now) serverExpiries[id] = expiry;
-      }
-      usageReady = true;
-      usageLoadFailed = false;
-      refreshButtons();
-    } catch (error) {
-      usageReady = false;
-      usageLoadFailed = true;
-      refreshButtons();
-      console.warn('Saee Plus: تعذر تحميل سجل الخصومات المشترك من الخادم.', error);
-    } finally {
-      usageLoadInProgress = false;
-    }
-  }
-
-  /* ---------------------------------------------------------
-     8. استقبال الضغط حتى لو أعيد إنشاء نافذة التفاصيل
-     --------------------------------------------------------- */
-
-  document.addEventListener(
-    'click',
-    function (event) {
-      const target = event.target;
-
-      if (!(target instanceof Element)) {
-        return;
-      }
-
-      const button = target.closest(BUTTON_SELECTOR);
-
-      if (!button) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      if (button.disabled) {
-        updateButton(button);
-        return;
-      }
-
-      void useDiscount(button);
-    },
-    true
-  );
-
-  /* ---------------------------------------------------------
-     9. تحديث الأزرار عند فتح التفاصيل أو إعادة تحميل الصفحة
-     --------------------------------------------------------- */
-
-  function refreshButtons() {
-    document.querySelectorAll(BUTTON_SELECTOR).forEach(
-      function (button) {
-        updateButton(button);
-      }
-    );
-  }
-
+  const observer = new MutationObserver(() => addButtons());
   function start() {
-    refreshButtons();
-    void loadServerUsage();
+    observer.observe(document.body, { childList: true, subtree: true });
+    loadUsages().then(addButtons);
+    addButtons();
+  }
 
-    /*
-     * نافذة التفاصيل قد تُنشأ من جديد عند فتح خصم آخر.
-     * نحدّث الأزرار الجديدة تلقائيًا.
-     */
+  window.addEventListener('hashchange', () => {
+    loadUsages().then(addButtons);
+    setTimeout(addButtons, 100);
+  });
 
-    const modalContent =
-      document.getElementById('dialog-content');
+  window.addEventListener('sai-account-changed', () => {
+    active.clear();
+    loadUsages().then(addButtons);
+  });
 
-    if (modalContent) {
-      let syncTimer = 0;
-      const observer = new MutationObserver(function (records) {
-        refreshButtons();
-
-        // Fetch the shared status immediately when a new discount detail
-        // button is inserted, rather than waiting for the next poll.
-        const discountButtonAdded = records.some(function (record) {
-          return Array.from(record.addedNodes || []).some(function (node) {
-            return node instanceof Element && (
-              node.matches(BUTTON_SELECTOR) || node.querySelector(BUTTON_SELECTOR)
-            );
-          });
-        });
-        if (discountButtonAdded) {
-          clearTimeout(syncTimer);
-          syncTimer = window.setTimeout(function () {
-            void loadServerUsage();
-          }, 60);
-        }
-      });
-
-      observer.observe(modalContent, {
-        childList: true,
-        subtree: true
-      });
-    }
-
-    // The displayed countdown updates every second without hitting the API.
-    window.setInterval(refreshButtons, 1000);
-
-    // Re-query shared state every 5 seconds so an already-open second device
-    // reflects a click made elsewhere quickly. The state itself lives in D1.
-    window.setInterval(function () {
-      if (!document.hidden) void loadServerUsage();
-    }, 5000);
-
-    // Always re-check shared status when the visitor returns to this tab/page.
-    window.addEventListener('pageshow', function () {
-      void loadServerUsage();
-      refreshButtons();
-    });
-    window.addEventListener('focus', function () {
-      void loadServerUsage();
-    });
-
-    document.addEventListener('visibilitychange', function () {
-      if (!document.hidden) {
-        void loadServerUsage();
-        refreshButtons();
+  setInterval(() => {
+    document.querySelectorAll('.saee-discount-timer[data-until]').forEach(timer => {
+      const until = Number(timer.dataset.until || 0);
+      if (until <= Date.now()) {
+        active.delete(timer.closest('.saee-discount-use-wrap')?.querySelector('button')?.dataset.discountId);
+        addButtons();
+      } else {
+        timer.textContent = `يتفعّل بعد ${remaining(until)}`;
       }
     });
-  }
+  }, 30000);
 
-  if (document.readyState === 'loading') {
-    document.addEventListener(
-      'DOMContentLoaded',
-      start,
-      { once: true }
-    );
-  } else {
-    start();
-  }
-
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+  else start();
 })();
