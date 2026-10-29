@@ -1,8 +1,8 @@
 const paths={pin:'M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z M15 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0',book:'M12 5v16 M12 5C8 2 4 3 2 4v16c4-2 7-1 10 1 3-2 6-3 10-1V4c-3-1-6-2-10 1',percent:'M5 20 19 4 M9 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0 M21 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0',users:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M18 3a4 4 0 0 1 0 8 M22 21v-2a4 4 0 0 0-3-3.87',store:'M3 10v11h18V10 M2 10l3-7h14l3 7 M2 10c1 4 5 4 5 0 1 4 5 4 5 0 1 4 5 4 5 0 1 4 5 4 5 0 M9 21v-7h6v7',bulb:'M9 18h6 M9 22h6 M8 14a7 7 0 1 1 8 0l-1 4H9l-1-4 M12 1v-1 M2 6 0 5 M24 5l-2 1',heart:'M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z',search:'M21 21l-5-5 M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0',menu:'M3 6h18 M3 12h18 M3 18h18',leaf:'M20 3C8 1 2 7 5 15s17 4 15-12Z M4 22 16 8',coffee:'M5 3h12v12a6 6 0 0 1-12 0V3 M17 5h2a3 3 0 0 1 0 6h-2 M3 22h16',check:'M5 12l4 4L20 5',grad:'M1 8l11-5 11 5-11 5L1 8 M5 10v7c4 3 10 3 14 0v-7 M23 8v9'};
 function icon(name){return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="${paths[name]||paths.leaf}"/></svg>`}function hydrate(){document.querySelectorAll('[data-icon]').forEach(e=>e.innerHTML=icon(e.dataset.icon))}
-let services=SiteStore.state.services;
+let services=SiteStore.state.services.filter(s=>s[0]!=="market");
 let titles=Object.fromEntries(services.map(s=>[s[0],s[2]]));
-let base=SiteStore.state.items;
+let base=SiteStore.state.items.filter(x=>x.type!=="market");
 let additions=SiteStore.remote?[]:JSON.parse(localStorage.getItem('sai-additions')||'[]'),items=[...base,...additions],favorites=JSON.parse(localStorage.getItem('sai-favorites')||'[]'),route='',category='الكل',query='';
 const main=document.getElementById('main');
 function serviceCards(){return services.filter(s=>!SiteStore.state.hidden.includes(s[0])).map(s=>`<a class="service-card" href="#${s[0]}"><div class="service-icon">${icon(s[1])}</div><h3>${escapeHtml(s[2])}</h3><p>${escapeHtml(s[3])}</p><span class="card-arrow">↖</span></a>`).join('')}
