@@ -215,12 +215,22 @@ window.SiteStore = (() => {
       apiAvailable = false;
     }
     try {
-      const response = await fetch(apiUrl('/api/content'), {
-        method: 'GET',
-        cache: 'no-store',
-        headers: authHeaders({ 'Accept': 'application/json' }),
-        credentials: 'include'
-      });
+      // Do not leave the entire site stuck on "جاري تحميل الموقع" if the API hangs.
+      // After 8 seconds, abort the request and let the existing fallback render cached/default content.
+      const controller = new AbortController();
+      const requestTimeout = setTimeout(() => controller.abort(), 8000);
+      let response;
+      try {
+        response = await fetch(apiUrl('/api/content'), {
+          method: 'GET',
+          cache: 'no-store',
+          headers: authHeaders({ 'Accept': 'application/json' }),
+          credentials: 'include',
+          signal: controller.signal
+        });
+      } finally {
+        clearTimeout(requestTimeout);
+      }
       const body = await readResponse(response);
       state = validate(body.state ?? body.content);
       state.revision = Number(body.revision ?? state.revision ?? 0);
