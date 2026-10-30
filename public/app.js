@@ -118,6 +118,13 @@ function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;',
 
 // إحصائيات سعي بلس: العدد مأخوذ من حسابات المستخدمين المسجلة فعلياً.
 async function showStatistics() {
+  // Expose the handler explicitly for inline HTML buttons and cached/embedded deployments.
+  const existingDialog = document.getElementById('dialog');
+  const existingContent = document.getElementById('dialog-content');
+  if (!existingDialog || !existingContent) {
+    toast('تعذر فتح نافذة الإحصائيات. حدّث الصفحة وحاول مرة أخرى.');
+    return;
+  }
   modal(`
     <div class="site-statistics" dir="rtl">
       <span class="kicker">سعي بلس</span>
@@ -147,3 +154,13 @@ async function showStatistics() {
     note.textContent = 'تعذر تحميل العدد حالياً. حاول مرة أخرى.';
   }
 }
+
+// Ensure the statistics button works even if inline handlers are not exposed globally.
+window.showStatistics = showStatistics;
+document.addEventListener('click', function (event) {
+  const button = event.target.closest('.statistics-nav-button, [data-open-statistics]');
+  if (!button) return;
+  event.preventDefault();
+  showStatistics();
+});
+
