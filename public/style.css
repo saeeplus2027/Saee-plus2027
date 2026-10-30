@@ -34,3 +34,24 @@ body.admin #smart-home {
 .offers-section .section-head > .arrow-link{font-size:16px;gap:12px;padding:8px 0;font-weight:700}
 .offers-section .section-head > .arrow-link span{font-size:22px;line-height:1}
 @media(max-width:700px){.offers-section .section-head > .arrow-link{font-size:14px;gap:9px}.offers-section .section-head > .arrow-link span{font-size:20px}}
+
+
+/* Site statistics button and dialog */
+header nav .statistics-nav-button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 8px 10px;
+}
+header nav .statistics-nav-button:hover,
+header nav .statistics-nav-button:focus-visible {
+  color: var(--accent, #087f75);
+}
+.site-statistics { text-align: center; padding: 18px 10px 12px; min-width: min(280px, 75vw); }
+.site-statistics h2 { margin: 8px 0 20px; }
+.site-statistics p { margin: 0 0 10px; font-size: 1.05rem; }
+.site-statistics strong { display: block; font-size: clamp(2.5rem, 12vw, 4rem); line-height: 1.2; font-weight: 800; color: var(--accent, #087f75); }
+.site-statistics small { display: block; margin-top: 12px; opacity: .75; }

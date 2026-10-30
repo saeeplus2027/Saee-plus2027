@@ -19,6 +19,22 @@ function mapPage(){if(place>=places.length)place=0;let shown=places.map((p,i)=>(
 function mapCategory(i){mapCat=['الكل',...new Set(places.map(p=>p.cat))][i];mapPage()}
 function render(){route=location.hash.slice(1)||'home';if(route==='about'){home();setTimeout(()=>document.getElementById('about').scrollIntoView(),0)}else if(route==='home')home();else if(route==='services'){main.innerHTML=`<div class="container">${headerPage('خدمات سعي بلس','كل احتياجاتك وفرصك في مكان واحد. اختر المساحة التي تناسبك.')}<div class="services-grid" style="margin:20px 0 65px">${serviceCards()}</div></div>`}else if(route==='map')mapPage();else if(titles[route])listing();else home();document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('active',a.hash===location.hash||(!location.hash&&a.hash==='#home')));document.querySelector('nav').classList.remove('open');hydrate()}
 window.addEventListener('hashchange',()=>{category='الكل';query='';render();if(route!=='about')window.scrollTo(0,0)});document.getElementById('year').textContent=new Date().getFullYear();
+// Initial page render: the app previously defined render() but did not call it on first load.
+// Keep the visible UI in sync when SiteStore finishes loading remote or fallback content.
+function syncSiteStoreAndRender(){
+  try {
+    services = SiteStore.state.services || [];
+    titles = Object.fromEntries(services.map(s => [s[0], s[2]]));
+    base = SiteStore.state.items || [];
+    additions = SiteStore.remote ? [] : JSON.parse(localStorage.getItem('sai-additions') || '[]');
+    items = [...base, ...additions];
+  } catch (error) {
+    console.error('Saee Plus: failed to sync visible content from SiteStore.', error);
+  }
+  render();
+}
+window.addEventListener('sai-content-changed', syncSiteStoreAndRender);
+syncSiteStoreAndRender();
 function toast(t){const e=document.getElementById('toast');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2700)}
 function saveFavorite(id,b){favorites=favorites.includes(id)?favorites.filter(x=>x!==id):[...favorites,id];localStorage.setItem('sai-favorites',JSON.stringify(favorites));if(b){b.classList.toggle('saved',favorites.includes(id));b.setAttribute('aria-pressed',favorites.includes(id))}toast(favorites.includes(id)?'أُضيفت إلى مفضلتك':'أُزيلت من المفضلة')}
 function modal(html){document.getElementById('dialog-content').innerHTML=html;const d=document.getElementById('dialog');if(!d.open)d.showModal()}
@@ -91,10 +107,60 @@ async function markDiscountUsed(id){
 }
 setInterval(()=>syncDiscountUsage(false),15000);
 window.addEventListener('focus',()=>syncDiscountUsage(true));
-function details(id){let x=items.find(x=>x.id===id);if(!x)return;const isDiscount=x.type==='discounts';const locationUrl=String(x.shopLocation||'').trim();const safeLocation=/^https?:\/\//i.test(locationUrl)?locationUrl:'';const socialUrl=String(x.socialLink||'').trim();const safeSocial=/^https?:\/\//i.test(socialUrl)&&!/[<>\"']/.test(socialUrl)?socialUrl:'';const shopPhotos=(Array.isArray(x.shopImages)&&x.shopImages.length?x.shopImages:[x.shopImage1,x.shopImage2]).filter(Boolean);modal(`<span class="kicker">${titles[x.type]} · التفاصيل</span><h2>${escapeHtml(x.title)}</h2>${x.image?`<img src="${escapeHtml(SiteStore.imageSrc(x.image))}" alt="${escapeHtml(x.title)}" style="width:100%;height:180px;object-fit:cover;border-radius:12px;margin-bottom:12px">`:''}<p>${escapeHtml(x.extra||x.desc)}</p>${isDiscount&&shopPhotos.length?`<div class="discount-shop-photos" style="display:grid;grid-template-columns:repeat(${shopPhotos.length===1?1:2},minmax(0,1fr));gap:10px;margin:14px 0">${shopPhotos.map((src,i)=>`<img src="${escapeHtml(SiteStore.imageSrc(src))}" alt="صورة ${i+1} من ${escapeHtml(x.title)}" style="width:100%;height:160px;object-fit:cover;border-radius:12px;border:1px solid #e1e8df">`).join('')}</div>`:''}${isDiscount?`<p><button type="button" class="button light shop-location-btn" onclick="openShopLocation('${escapeHtml(String(id))}')" ${safeLocation?'':'title="لم يضف المضيف رابط الموقع بعد"'}>📍 ${safeLocation?'عرض موقع المحل':'موقع المحل غير مضاف'}</button></p>`:''}${safeSocial?`<p><a class="button light" href="${escapeHtml(safeSocial)}" target="_blank" rel="noopener noreferrer">↗ زيارة صفحة المتجر / التواصل</a></p>`:''}${x.price?`<p class="price">السعر التوضيحي: ${escapeHtml(x.price)}</p>`:''}<p>${escapeHtml(x.contact||"لم تُضف بيانات تواصل لهذا الإعلان بعد.")}</p>${isDiscount?`<button type="button" class="button discount-use-btn" data-discount-use="${escapeHtml(String(id))}" onclick="markDiscountUsed(this.dataset.discountUse)">✓ تم الخصم</button>`:''}<button class="button" onclick="saveFavorite('${id}');this.textContent=favorites.includes('${id}')?'محفوظ في المفضلة ✓':'حفظ في المفضلة'">${favorites.includes(id)?'محفوظ في المفضلة ✓':'حفظ في المفضلة ♡'}</button>`);if(isDiscount)updateDiscountButton(String(id))}
+function details(id){let x=items.find(x=>x.id===id);if(!x)return;const isDiscount=x.type==='discounts';const locationUrl=String(x.shopLocation||'').trim();const safeLocation=/^https?:\/\//i.test(locationUrl)?locationUrl:'';const socialUrl=String(x.socialLink||'').trim();const safeSocial=/^https?:\/\//i.test(socialUrl)&&!/[<>\"']/.test(socialUrl)?socialUrl:'';const shopPhotos=(Array.isArray(x.shopImages)&&x.shopImages.length?x.shopImages:[x.shopImage1,x.shopImage2]).filter(Boolean);modal(`<span class="kicker">${titles[x.type]} · التفاصيل</span><h2>${escapeHtml(x.title)}</h2>${x.image?`<img src="${escapeHtml(SiteStore.imageSrc(x.image))}" alt="${escapeHtml(x.title)}" style="width:100%;height:180px;object-fit:cover;border-radius:12px;margin-bottom:12px">`:''}<p>${escapeHtml(x.extra||x.desc)}</p>${isDiscount&&shopPhotos.length?`<div class="discount-shop-photos" style="display:grid;grid-template-columns:repeat(${shopPhotos.length===1?1:2},minmax(0,1fr));gap:10px;margin:14px 0">${shopPhotos.map((src,i)=>`<img src="${escapeHtml(SiteStore.imageSrc(src))}" alt="صورة ${i+1} من ${escapeHtml(x.title)}" style="width:100%;height:160px;object-fit:cover;border-radius:12px;border:1px solid #e1e8df">`).join('')}</div>`:''}${isDiscount?`<p><button type="button" class="button light shop-location-btn" onclick="openShopLocation('${escapeHtml(String(id))}')" ${safeLocation?'':'title="لم يضف المضيف رابط الموقع بعد"'}>📍 ${safeLocation?'عرض موقع المحل':'موقع المحل غير مضاف'}</button></p>`:''}${safeSocial?`<p><a class="button light" href="${escapeHtml(safeSocial)}" target="_blank" rel="noopener noreferrer">↗ زيارة صفحة المتجر / التواصل</a></p>`:''}${x.price?`<p class="price">السعر التوضيحي: ${escapeHtml(x.price)}</p>`:''}<p>${escapeHtml(x.contact||"لم تُضف بيانات تواصل لهذا الإعلان بعد.")}</p><button class="button" onclick="saveFavorite('${id}');this.textContent=favorites.includes('${id}')?'محفوظ في المفضلة ✓':'حفظ في المفضلة'">${favorites.includes(id)?'محفوظ في المفضلة ✓':'حفظ في المفضلة ♡'}</button>`);if(isDiscount)updateDiscountButton(String(id))}
 function openShopLocation(id){const x=items.find(item=>String(item.id)===String(id));const url=String(x?.shopLocation||'').trim();if(!/^https?:\/\//i.test(url)){toast('لم يضف المضيف موقع هذا المحل بعد.');return;}window.open(url,'_blank','noopener,noreferrer')}
 function showFavorites(){favorites=favorites.filter(id=>items.some(x=>x.id===id));modal(`<span class="kicker">اختياراتك، في مكان واحد</span><h2>المفضلة</h2>${favorites.length?favorites.map(id=>items.find(x=>x.id===id)).filter(Boolean).map(x=>`<button class="place-card" onclick="details('${x.id}')"><h3>${escapeHtml(x.title)}</h3><p>${titles[x.type]} ←</p></button>`).join(''):'<p>مفضلتك فارغة حتى الآن. اضغط على القلب بجانب أي عرض أو كتاب أو منتج لحفظه هنا.</p>'}`)}
 function addForm(type){if(type==='market'||type==='library'){let loggedIn=false;try{const session=localStorage.getItem('sai-local-session-v1');loggedIn=!!session&&session!=='null'&&session!=='{}';}catch(e){}if(!loggedIn){const authButton=document.getElementById('sai-open-auth');if(authButton)authButton.click();toast('سجّل دخولك أولًا حتى تتمكن من إضافة '+(type==='market'?'منتجك':'كتابك'));return;}}const label={library:'كتابك',market:'منتجك',experts:'خبرتك',projects:'مشروعك'}[type]||'مشروعك';modal(`<span class="kicker">كل مشاركة تصنع فرقًا</span><h2>شارك ${label}</h2><p>تُحفظ المشاركات عبر حساب مالك الموقع.</p><form class="form-grid" onsubmit="submitEntry(event,'${type}')"><label>العنوان<input name="title" required maxlength="70" placeholder="اكتب عنوانًا واضحًا"></label><label>التصنيف<select name="cat">${[...new Set([...base.filter(x=>x.type===type).map(x=>x.cat),'عام'])].map(c=>`<option>${escapeHtml(c)}</option>`).join('')}</select></label><label>وصف مختصر<textarea name="desc" required rows="3" maxlength="350" placeholder="احكِ لنا عن مشاركتك..."></textarea></label>${type==='market'?'<label>السعر بالدينار الأردني<input name="price" type="number" min="0" step="0.01" required></label>':''}<button class="button" type="submit">حفظ المشاركة <span>↖</span></button></form>`)}
 async function submitEntry(e,type){e.preventDefault();let f=new FormData(e.target);let item={id:'local'+Date.now(),type,title:f.get('title').trim(),cat:f.get('cat'),desc:f.get('desc').trim(),badge:'مشاركتك',meta:f.get('cat'),emoji:'✦'};if(!item.title||!item.desc)return;if(f.get('price'))item.price=f.get('price')+' د.أ';try{const next=SiteStore.clone(SiteStore.state);next.items.push(item);await SiteStore.save(next);}catch(error){toast(error.message);return;}document.getElementById('dialog').close();category='الكل';query='';if(route===type)listing();else location.hash=type;toast('تم حفظ المشاركة على الموقع بنجاح')}
 function aboutPrivacy(){modal('<h2>خصوصيتك</h2><p>تُحفظ المفضلة والمشاركات التجريبية في متصفحك باستخدام التخزين المحلي. لا تتطلب هذه النسخة إنشاء حساب أو إرسال معلومات شخصية. يمكنك إزالة البيانات عبر إعدادات المتصفح.</p><button class="button light" onclick="localStorage.removeItem(\'sai-additions\');localStorage.removeItem(\'sai-favorites\');additions=[];items=[...base];favorites=[];document.getElementById(\'dialog\').close();render();toast(\'تم مسح بيانات هذا المتصفح\')">مسح بياناتي المحلية</button>')}
 function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}document.getElementById('dialog').addEventListener('click',e=>{if(e.target===e.currentTarget){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)e.target.close()}});
+
+
+// إحصائيات سعي بلس: العدد مأخوذ من حسابات المستخدمين المسجلة فعلياً.
+async function showStatistics() {
+  // Expose the handler explicitly for inline HTML buttons and cached/embedded deployments.
+  const existingDialog = document.getElementById('dialog');
+  const existingContent = document.getElementById('dialog-content');
+  if (!existingDialog || !existingContent) {
+    toast('تعذر فتح نافذة الإحصائيات. حدّث الصفحة وحاول مرة أخرى.');
+    return;
+  }
+  modal(`
+    <div class="site-statistics" dir="rtl">
+      <span class="kicker">سعي بلس</span>
+      <h2>الإحصائيات</h2>
+      <p>عدد مستخدمي الموقع</p>
+      <strong id="site-users-count" aria-live="polite">جارٍ التحميل...</strong>
+      <small id="site-users-note">عدد الحسابات المسجلة في الموقع</small>
+    </div>
+  `);
+
+  const count = document.getElementById('site-users-count');
+  const note = document.getElementById('site-users-note');
+  try {
+    const response = await fetch(`${DISCOUNT_API}/api/statistics`, {
+      method: 'GET',
+      cache: 'no-store',
+      headers: { Accept: 'application/json' }
+    });
+    const data = await response.json();
+    if (!response.ok || !Number.isFinite(Number(data.users))) {
+      throw new Error('تعذر تحميل الإحصائيات');
+    }
+    count.textContent = Number(data.users).toLocaleString('ar-JO');
+    note.textContent = 'إجمالي الحسابات المسجلة، ويُحدّث العدد تلقائياً عند فتح الإحصائيات.';
+  } catch (error) {
+    count.textContent = '—';
+    note.textContent = 'تعذر تحميل العدد حالياً. حاول مرة أخرى.';
+  }
+}
+
+// Ensure the statistics button works even if inline handlers are not exposed globally.
+window.showStatistics = showStatistics;
+document.addEventListener('click', function (event) {
+  const button = event.target.closest('.statistics-nav-button, [data-open-statistics]');
+  if (!button) return;
+  event.preventDefault();
+  showStatistics();
+});
+
