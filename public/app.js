@@ -114,3 +114,36 @@ function addForm(type){if(type==='market'||type==='library'){let loggedIn=false;
 async function submitEntry(e,type){e.preventDefault();let f=new FormData(e.target);let item={id:'local'+Date.now(),type,title:f.get('title').trim(),cat:f.get('cat'),desc:f.get('desc').trim(),badge:'مشاركتك',meta:f.get('cat'),emoji:'✦'};if(!item.title||!item.desc)return;if(f.get('price'))item.price=f.get('price')+' د.أ';try{const next=SiteStore.clone(SiteStore.state);next.items.push(item);await SiteStore.save(next);}catch(error){toast(error.message);return;}document.getElementById('dialog').close();category='الكل';query='';if(route===type)listing();else location.hash=type;toast('تم حفظ المشاركة على الموقع بنجاح')}
 function aboutPrivacy(){modal('<h2>خصوصيتك</h2><p>تُحفظ المفضلة والمشاركات التجريبية في متصفحك باستخدام التخزين المحلي. لا تتطلب هذه النسخة إنشاء حساب أو إرسال معلومات شخصية. يمكنك إزالة البيانات عبر إعدادات المتصفح.</p><button class="button light" onclick="localStorage.removeItem(\'sai-additions\');localStorage.removeItem(\'sai-favorites\');additions=[];items=[...base];favorites=[];document.getElementById(\'dialog\').close();render();toast(\'تم مسح بيانات هذا المتصفح\')">مسح بياناتي المحلية</button>')}
 function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}document.getElementById('dialog').addEventListener('click',e=>{if(e.target===e.currentTarget){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)e.target.close()}});
+
+
+// إحصائيات سعي بلس: العدد مأخوذ من حسابات المستخدمين المسجلة فعلياً.
+async function showStatistics() {
+  modal(`
+    <div class="site-statistics" dir="rtl">
+      <span class="kicker">سعي بلس</span>
+      <h2>الإحصائيات</h2>
+      <p>عدد مستخدمي الموقع</p>
+      <strong id="site-users-count" aria-live="polite">جارٍ التحميل...</strong>
+      <small id="site-users-note">عدد الحسابات المسجلة في الموقع</small>
+    </div>
+  `);
+
+  const count = document.getElementById('site-users-count');
+  const note = document.getElementById('site-users-note');
+  try {
+    const response = await fetch(`${DISCOUNT_API}/api/statistics`, {
+      method: 'GET',
+      cache: 'no-store',
+      headers: { Accept: 'application/json' }
+    });
+    const data = await response.json();
+    if (!response.ok || !Number.isFinite(Number(data.users))) {
+      throw new Error('تعذر تحميل الإحصائيات');
+    }
+    count.textContent = Number(data.users).toLocaleString('ar-JO');
+    note.textContent = 'إجمالي الحسابات المسجلة، ويُحدّث العدد تلقائياً عند فتح الإحصائيات.';
+  } catch (error) {
+    count.textContent = '—';
+    note.textContent = 'تعذر تحميل العدد حالياً. حاول مرة أخرى.';
+  }
+}
