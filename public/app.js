@@ -164,3 +164,33 @@ document.addEventListener('click', function (event) {
   showStatistics();
 });
 
+
+
+// Keep exactly one Statistics button in the main navigation and place it at the far left.
+(function fixStatisticsNavigation() {
+  function normalizeStatisticsNavigation() {
+    const nav = document.querySelector('header nav[aria-label="القائمة الرئيسية"]');
+    if (!nav) return;
+    const matches = Array.from(document.querySelectorAll('header nav button, header nav a'))
+      .filter(el => (el.textContent || '').trim() === 'الإحصائيات');
+    if (!matches.length) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'statistics-nav-button';
+      button.textContent = 'الإحصائيات';
+      button.addEventListener('click', () => window.showStatistics && window.showStatistics());
+      nav.appendChild(button);
+      return;
+    }
+    const keep = matches.find(el => el.classList.contains('statistics-nav-button')) || matches[matches.length - 1];
+    matches.forEach(el => { if (el !== keep) el.remove(); });
+    keep.classList.add('statistics-nav-button');
+    // In the RTL navigation, the last DOM item is displayed at the far left.
+    nav.appendChild(keep);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', normalizeStatisticsNavigation, { once: true });
+  } else {
+    normalizeStatisticsNavigation();
+  }
+})();
