@@ -8,7 +8,7 @@
 
   <title>سعي بلس | من جامعتك، إلى مجتمعك</title>
 
-  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="icon" type="image/jpeg" href="https://cdn.phototourl.com/member/2026-10-25-a5e80966-a389-47e6-95e0-7d994efae181.jpg">
   <link rel="stylesheet" href="style.css?v=20261028-discount-link-size">
   <link rel="stylesheet" href="smart.css?v=20261025-3">
   <link rel="stylesheet" href="admin.css?v=20261025-3">
@@ -929,6 +929,7 @@
         <button type="button" data-inquiry="projects">المشاريع</button>
       </div>
     </div>
+    <button type="button" class="statistics-nav-button" onclick="showStatistics()">الإحصائيات</button>
   </nav>
 
   <div class="header-actions">
@@ -1113,11 +1114,11 @@
 
 <div id="toast" role="status"></div>
 
-<script src="remote-config.js?v=20261030-loading-fix-v3"></script>
-<script src="content-data.js?v=20261030-loading-fix-v3"></script>
-<script src="store.js?v=20261030-loading-fix-v3"></script>
-<script src="app.js?v=20261030-loading-fix-v3"></script>
-<script src="admin.js?v=20261030-loading-fix-v3"></script>
+<script src="remote-config.js?v=20261029-loading-fix-v2"></script>
+<script src="content-data.js?v=20261029-loading-fix-v2"></script>
+<script src="store.js?v=20261030-nonblocking-load-v1"></script>
+<script src="app.js?v=20261030-statistics-click-fix-v2"></script>
+<script src="admin.js?v=20261029-loading-fix-v2"></script>
 
 <script>
 (() => {
@@ -1178,8 +1179,8 @@
 })();
 </script>
 
-<script src="smart-engine.js?v=20261030-loading-fix-v3"></script>
-<script src="smart-ui.js?v=20261030-loading-fix-v3"></script>
+<script src="smart-engine.js?v=20261029-loading-fix-v2"></script>
+<script src="smart-ui.js?v=20261029-loading-fix-v2"></script>
 
 <script id="bau-campus-google-map-inline">
 (() => {
@@ -1839,6 +1840,6 @@
     if (root) new MutationObserver(removeLocalMarketCard).observe(root, { childList: true, subtree: true });
   })();
   </script>
-  <script src="discounts.js?v=20261030-loading-fix-v3"></script>
+  <script src="discounts.js?v=20261029-loading-fix-v2"></script>
 </body>
 </html>
