@@ -17,9 +17,6 @@ async function adminPasswordHash(value){
   return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
 }
 function adminPasswordGate(){
-  // The live GitHub Pages site uses Cloudflare Worker authentication.
-  // Never gate access with a browser-local password: localStorage does not sync across devices.
-  if (SiteStore.remote) return true;
   if(sessionStorage.getItem(ADMIN_PASSWORD_SESSION_KEY)==='yes')return true;
   const hasPassword=Boolean(localStorage.getItem(ADMIN_PASSWORD_HASH_KEY));
   main.innerHTML=`<section class="admin-password-screen"><form id="admin-password-form" class="admin-password-card"><div class="admin-password-icon">🔐</div><span class="kicker">سعي بلس · حماية الإدارة</span><h1>${hasPassword?'تسجيل الدخول إلى لوحة الإدارة':'إنشاء كلمة مرور الإدارة'}</h1><p>${hasPassword?'أدخل كلمة المرور التي أنشأتها لحماية لوحة الإدارة.':'هذه أول مرة تدخل فيها. أنشئ كلمة مرور خاصة بك، وستُطلب منك في المرات القادمة على هذا المتصفح.'}</p><label for="admin-password">${hasPassword?'كلمة المرور':'كلمة المرور الجديدة'}</label><input id="admin-password" name="password" type="password" minlength="8" autocomplete="${hasPassword?'current-password':'new-password'}" required placeholder="8 أحرف على الأقل"><label for="admin-password-confirm" ${hasPassword?'hidden':''}>تأكيد كلمة المرور</label><input id="admin-password-confirm" name="confirm" type="password" minlength="8" autocomplete="new-password" ${hasPassword?'hidden':''} placeholder="أعد كتابة كلمة المرور"><p id="admin-password-error" class="admin-password-error" role="alert"></p><button class="button" type="submit">${hasPassword?'دخول لوحة الإدارة':'حفظ كلمة المرور والمتابعة'}</button><a href="#home" class="admin-password-back">العودة إلى الموقع</a><small>مهم: كلمة المرور محفوظة في هذا المتصفح. لا تمسح بيانات الموقع من المتصفح حتى لا تفقد إعداد الحماية.</small></form></section>`;
@@ -46,16 +43,7 @@ function adminPasswordGate(){
   });
   return false;
 }
-function adminPasswordLogout(){
-  if (SiteStore.remote && typeof SiteStore.logoutAdmin === 'function') {
-    const button = document.querySelector('.admin-password-logout:last-child');
-    if (button) { button.disabled = true; button.textContent = 'جارٍ تسجيل الخروج…'; }
-    SiteStore.logoutAdmin().then(() => { renderAdmin(); }).catch(err => { toast(err.message || 'تعذر تسجيل الخروج'); renderAdmin(); });
-    return;
-  }
-  sessionStorage.removeItem(ADMIN_PASSWORD_SESSION_KEY);
-  renderAdmin();
-}
+function adminPasswordLogout(){sessionStorage.removeItem(ADMIN_PASSWORD_SESSION_KEY);renderAdmin();}
 function adminChangePassword(){
   const content=document.getElementById('admin-content');
   if(!content)return;

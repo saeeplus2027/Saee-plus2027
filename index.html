@@ -1186,16 +1186,17 @@
   "use strict";
 
   const bauCampusPlaces = [
+    { name: "كلية الذكاء الاصطناعي", category: "الكليات والعمادات", query: "Faculty of Artificial Intelligence, Al-Balqa Applied University, As-Salt, Jordan" },
     { name: "كلية السلط التقنية", category: "الكليات والعمادات", query: "Al-Salt Technical College, Al-Balqa Applied University, As-Salt, Jordan" },
-    { name: "كلية الهندسة – مبنى 2", category: "الكليات والعمادات", query: "Engineering Building 2, Al-Balqa Applied University, As-Salt, Jordan" },
-    { name: "كلية الهندسة – مبنى 3", category: "الكليات والعمادات", query: "Engineering Building 3, Al-Balqa Applied University, As-Salt, Jordan" },
-    { name: "كلية تكنولوجيا المعلومات والاتصالات", category: "الكليات والعمادات", query: "Information and Communication Technology, Al-Balqa Applied University, As-Salt, Jordan" },
-    { name: "كلية العلوم", category: "الكليات والعمادات", query: "Faculty of Science, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية الهندسة", category: "الكليات والعمادات", query: "Faculty of Engineering, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية تكنولوجيا المعلومات والاتصالات", category: "الكليات والعمادات", query: "Prince Abdullah Bin Ghazi Faculty for Information and Communication Technology, Al-Balqa Applied University, As-Salt, Jordan" },
     { name: "كلية التمريض", category: "الكليات والعمادات", query: "Faculty of Nursing, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية العلوم", category: "الكليات والعمادات", query: "Faculty of Science, Al-Balqa Applied University, As-Salt, Jordan" },
     { name: "كلية الأعمال", category: "الكليات والعمادات", query: "Faculty of Business, Al-Balqa Applied University, As-Salt, Jordan" },
-    { name: "كلية الحقوق والدراسات العليا والبحث العلمي", category: "الكليات والعمادات", query: "Faculty of Law Graduate Studies Deanship of Scientific Research, Al-Balqa Applied University, As-Salt, Jordan" },
     { name: "كلية السلط للعلوم الإنسانية", category: "الكليات والعمادات", query: "Al-Salt College for Human Sciences, Al-Balqa Applied University, As-Salt, Jordan" },
-    { name: "كلية التكنولوجيا الزراعية", category: "الكليات والعمادات", query: "Faculty of Agricultural Technology, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية الحقوق والدراسات العليا", category: "الكليات والعمادات", query: "Faculty of Law and Deanship of Graduate Studies, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية الزراعة التكنولوجية", category: "الكليات والعمادات", query: "Faculty of Agricultural Technology, Al-Balqa Applied University, As-Salt, Jordan" },
+
     { name: "عمادة شؤون الطلبة", category: "الكليات والعمادات", query: "Deanship of Student Affairs, Al-Balqa Applied University, As-Salt, Jordan" },
     { name: "رئاسة الجامعة", category: "الإدارة والخدمات", query: "Presidency Unit, Al-Balqa Applied University, As-Salt, Jordan" },
     { name: "وحدة التعاون والعلاقات الدولية", category: "الإدارة والخدمات", query: "Cooperation and International Relations Unit, Al-Balqa Applied University, As-Salt, Jordan" },
@@ -1255,8 +1256,10 @@
   const googleDirections = query =>
     "https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(query);
 
+  // Search for the selected place within the named BAU Salt campus context.
+  // Keep the full university and city in every query to reduce similarly named results.
   const mapEmbed = query =>
-    "https://maps.google.com/maps?q=" + encodeURIComponent(query) + "&z=19&output=embed";
+    "https://maps.google.com/maps?q=" + encodeURIComponent(query) + "&z=17&output=embed";
 
   function renderBauMap() {
     const main = document.getElementById("main");

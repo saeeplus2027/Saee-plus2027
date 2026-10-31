@@ -1056,20 +1056,49 @@
     </div>
   </section>
 
+  <section data-auth-panel="forgot" hidden>
+    <form id="sai-forgot-form">
+      <p class="auth-note" style="margin:0 0 10px;text-align:right">استخدم البريد الإلكتروني ورمز الاستعادة المكوّن من 8 أرقام الذي ظهر لك عند إنشاء الحساب. لن نرسل أي رسالة إلى بريدك.</p>
+      <label for="sai-forgot-email">البريد الإلكتروني</label>
+      <input id="sai-forgot-email" name="email" type="email" dir="ltr" placeholder="example@email.com" autocomplete="email" maxlength="254" required>
+      <label for="sai-recovery-code">رمز الاستعادة — 8 أرقام</label>
+      <input id="sai-recovery-code" name="recovery_code" type="text" inputmode="numeric" dir="ltr" pattern="[0-9]{8}" minlength="8" maxlength="8" autocomplete="one-time-code" placeholder="12345678" required>
+      <label for="sai-forgot-new-password">كلمة المرور الجديدة — 8 أحرف على الأقل (أحرف وأرقام ورموز)</label>
+      <input id="sai-forgot-new-password" name="new_password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required>
+      <button type="submit" class="auth-submit">تغيير كلمة المرور</button>
+    </form>
+    <div class="auth-links">
+      <button type="button" class="auth-link" data-auth-go="login">العودة لتسجيل الدخول</button>
+    </div>
+  </section>
+
+  <section data-auth-panel="recovery-code" hidden>
+    <div class="auth-note" style="margin:0 0 14px;padding:14px 16px;border:1px solid #76653b;border-radius:14px;background:#211b0d;color:#f1dba7;line-height:1.8">
+      احفظ هذا الرمز في مكان آمن. ستحتاج إليه مع بريدك الإلكتروني لتغيير كلمة المرور إذا نسيتها. لن يظهر الرمز مرة أخرى.
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:18px 0;direction:ltr">
+      <code id="sai-recovery-code-display" style="font-size:28px;letter-spacing:5px;font-weight:800;padding:12px 16px;border-radius:12px;background:#102a29;color:#fff"></code>
+      <button type="button" id="sai-copy-recovery-code" class="auth-submit" style="width:auto;margin:0;padding:12px 14px">نسخ</button>
+    </div>
+    <form id="sai-recovery-code-form">
+      <button type="submit" class="auth-submit">إصدار رمز استعادة جديد</button>
+    </form>
+    <div class="auth-links">
+      <button type="button" class="auth-link" data-auth-go="login">متابعة إلى تسجيل الدخول</button>
+      <button type="button" id="sai-recovery-return-account" class="auth-link" data-auth-go="change" hidden>العودة إلى الحساب</button>
+    </div>
+  </section>
 
   <section data-auth-panel="change" hidden>
-    <form id="sai-change-name-form">
-      <label for="sai-account-name">اسم المستخدم / اسم الحساب</label>
-      <input id="sai-account-name" name="name" type="text" autocomplete="nickname" maxlength="100" required>
-      <button type="submit" class="auth-submit">حفظ اسم الحساب</button>
-    </form>
-    <hr style="margin:18px 0;border:0;border-top:1px solid rgba(148,163,184,.25)">
     <form id="sai-change-password-form">
       <label for="sai-current-password">كلمة المرور الحالية</label>
       <input id="sai-current-password" name="current_password" type="password" autocomplete="current-password" required>
       <label for="sai-change-password">كلمة المرور الجديدة — 8 أحرف على الأقل (أحرف وأرقام ورموز)</label>
       <input id="sai-change-password" name="new_password" type="password" autocomplete="new-password" minlength="8" required>
       <button type="submit" class="auth-submit">تغيير كلمة المرور</button>
+    </form>
+    <form id="sai-recovery-code-issue-form" style="margin-top:12px">
+      <button type="submit" class="auth-submit">إنشاء / تجديد رمز الاستعادة</button>
     </form>
     <div class="auth-links"><button type="button" class="auth-link" data-auth-go="login">العودة</button></div>
   </section>
@@ -1087,9 +1116,9 @@
 
 <script src="remote-config.js?v=20261029-loading-fix-v2"></script>
 <script src="content-data.js?v=20261029-loading-fix-v2"></script>
-<script src="store.js?v=20261031-cross-device-auth-v3"></script>
+<script src="store.js?v=20261030-nonblocking-load-v1"></script>
 <script src="app.js?v=20261030-statistics-nav-dedupe-v1"></script>
-<script src="admin.js?v=20261031-account-name-v1"></script>
+<script src="admin.js?v=20261029-loading-fix-v2"></script>
 
 <script>
 (() => {
@@ -1107,6 +1136,8 @@
   const pages = {
     login: {title:'تسجيل الدخول', description:'سجّل دخولك بحسابك من أي جهاز.'},
     register: {title:'إنشاء حساب', description:'أنشئ حسابًا يمكنك استخدامه من أي جهاز.'},
+    forgot: {title:'تغيير كلمة المرور', description:'أدخل البريد الإلكتروني ورمز الاستعادة وكلمة المرور الجديدة.'},
+    'recovery-code': {title:'رمز استعادة الحساب', description:'احفظ الرمز في مكان آمن لاستخدامه عند الحاجة.'},
     change: {title:'تغيير كلمة المرور', description:'أدخل كلمة المرور الحالية ثم اختر كلمة مرور جديدة.'}
   };
   function normalizeEmail(v){return String(v||'').trim().toLowerCase();}
@@ -1129,15 +1160,18 @@
   async function run(form, action){if(busy)return;busy=true;clearMessage();const submit=form.querySelector('[type="submit"]'),old=submit.textContent;submit.disabled=true;submit.textContent='جارٍ التنفيذ…';try{await action();}catch(e){showMessage(e.message||'تعذّرت العملية. حاول مرة أخرى.');}finally{busy=false;submit.disabled=false;submit.textContent=old;}}
   async function updateHeader(){let user=null;try{const d=await api('/api/me');user=d.user||null;}catch(_){}if(user){try{localStorage.setItem(SESSION_KEY,user.email);}catch(_){}const displayName=String(user.name||'').trim()||user.email;accountLabel.textContent='مرحبًا، '+displayName;accountButton.setAttribute('aria-label','حساب '+displayName);accountButton.title='حساب سعي بلس: '+displayName;logoutButton.hidden=false;}else{try{localStorage.removeItem(SESSION_KEY);localStorage.removeItem(TOKEN_KEY);}catch(_){}accountLabel.textContent='تسجيل الدخول';accountButton.setAttribute('aria-label','تسجيل الدخول');accountButton.title='تسجيل الدخول';logoutButton.hidden=true;if(!authDialog.open){showPage('login',false);authDialog.showModal();}else{showPage('login',false);}}window.dispatchEvent(new Event('sai-account-changed'));return user;}
   async function login(email,password){const d=await api('/api/login',{method:'POST',body:JSON.stringify({email,password})});if(!d.token)throw new Error('الخادم لم يُرجع جلسة. انشر تحديث Cloudflare Worker أولًا.');localStorage.setItem(TOKEN_KEY,d.token);localStorage.setItem(SESSION_KEY,email);await updateHeader();}
-  accountButton.addEventListener('click',async()=>{if(busy)return;if(!authDialog.open)authDialog.showModal();const user=await updateHeader();if(user){showPage('change',false);$('sai-account-name').value=String(user.name||'');showMessage('من هنا يمكنك تعديل اسم الحساب أو تغيير كلمة المرور.');$('sai-account-name').focus();}else{showPage('login',false);$('sai-login-email').focus();}});
-  authDialog.querySelectorAll('[data-auth-go]').forEach(b=>b.addEventListener('click',()=>{showPage(b.dataset.authGo);}));
+  accountButton.addEventListener('click',async()=>{if(busy)return;if(!authDialog.open)authDialog.showModal();const user=await updateHeader();if(user){showPage('change',false);showMessage('أنت مسجّل الدخول. يمكنك تغيير كلمة مرور حسابك هنا.');$('sai-current-password').focus();}else{showPage('login',false);$('sai-login-email').focus();}});
+  authDialog.querySelectorAll('[data-auth-go]').forEach(b=>b.addEventListener('click',()=>{const target=b.dataset.authGo;showPage(target);if(target==='forgot')$('sai-forgot-email').value=normalizeEmail($('sai-login-email').value);}));
   authDialog.querySelectorAll('[data-auth-close]').forEach(b=>b.addEventListener('click',()=>{if(!busy&&getToken())authDialog.close();else if(!busy)showMessage('سجّل الدخول أو أنشئ حسابًا للمتابعة.');}));
   authDialog.addEventListener('cancel',e=>{if(busy||!getToken()){e.preventDefault();showMessage('سجّل الدخول أو أنشئ حسابًا للمتابعة.');}});
   authDialog.addEventListener('close',()=>{resetForms();clearMessage();});
-  $('sai-register-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;validateRegister();if(!f.reportValidity())return;const name=$('sai-register-name').value.trim(),email=normalizeEmail($('sai-register-email').value),password=$('sai-register-password').value;if(!name){showMessage('أدخل اسمك.');return;}if(password.length<8){showMessage('استخدم كلمة مرور من 8 أحرف على الأقل.');return;}run(f,async()=>{const d=await api('/api/signup',{method:'POST',body:JSON.stringify({name,email,password})});if(d.error)throw new Error(d.error);f.reset();showPage('login',false,true);$('sai-login-email').value=email;showMessage(d.message||'تم إنشاء الحساب. يمكنك تسجيل الدخول الآن.');});});
+  $('sai-register-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;validateRegister();if(!f.reportValidity())return;const name=$('sai-register-name').value.trim(),email=normalizeEmail($('sai-register-email').value),password=$('sai-register-password').value;if(!name){showMessage('أدخل اسمك.');return;}if(password.length<8){showMessage('استخدم كلمة مرور من 8 أحرف على الأقل.');return;}run(f,async()=>{const d=await api('/api/signup',{method:'POST',body:JSON.stringify({name,email,password})});if(!d.recoveryCode)throw new Error(d.message||'تعذّر إنشاء الحساب.');f.reset();showPage('recovery-code',false,true);$('sai-recovery-code-display').textContent=d.recoveryCode;$('sai-recovery-code-form').hidden=true;$('sai-recovery-return-account').hidden=true;$('sai-login-email').value=email;showMessage(d.message||'تم إنشاء الحساب. احفظ رمز الاستعادة.');});});
   $('sai-login-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;if(!f.reportValidity())return;const email=normalizeEmail($('sai-login-email').value),password=$('sai-login-password').value;run(f,async()=>{await login(email,password);authDialog.close();});});
+  $('sai-forgot-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;if(!f.reportValidity())return;const email=normalizeEmail($('sai-forgot-email').value),recoveryCode=$('sai-recovery-code').value.trim(),newPassword=$('sai-forgot-new-password').value;if(!/^\d{8}$/.test(recoveryCode)){showMessage('أدخل رمز الاستعادة المكوّن من 8 أرقام.');return;}if(newPassword.length<8||newPassword.length>128){showMessage('استخدم كلمة مرور من 8 إلى 128 حرفًا.');return;}run(f,async()=>{const d=await api('/api/reset-with-code',{method:'POST',body:JSON.stringify({email,recoveryCode,newPassword})});f.reset();showPage('login',false,true);$('sai-login-email').value=email;showMessage(d.message||'تم تغيير كلمة المرور بنجاح. سجّل الدخول بكلمة المرور الجديدة.');});});
+  $('sai-recovery-code-issue-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;run(f,async()=>{const d=await api('/api/recovery-code',{method:'POST',body:JSON.stringify({})});showPage('recovery-code',false,true);$('sai-recovery-code-display').textContent=d.recoveryCode;$('sai-recovery-code-form').hidden=false;$('sai-recovery-return-account').hidden=false;showMessage(d.message||'احفظ رمز الاستعادة في مكان آمن.');});});
+  $('sai-recovery-code-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;run(f,async()=>{const d=await api('/api/recovery-code',{method:'POST',body:JSON.stringify({})});$('sai-recovery-code-display').textContent=d.recoveryCode;showMessage(d.message||'تم إصدار رمز جديد. احفظه في مكان آمن.');});});
+  $('sai-copy-recovery-code').addEventListener('click',async()=>{const code=$('sai-recovery-code-display').textContent;if(!code)return;try{await navigator.clipboard.writeText(code);showMessage('تم نسخ رمز الاستعادة. احفظه في مكان آمن.');}catch(_){showMessage('تعذّر النسخ التلقائي. اضغط مطولًا على الرمز لنسخه.');}});
 
-  $('sai-change-name-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;if(!f.reportValidity())return;const name=$('sai-account-name').value.trim();if(!name||name.length>100){showMessage('اكتب اسم حساب من 1 إلى 100 حرف.');return;}run(f,async()=>{await api('/api/update-name',{method:'POST',body:JSON.stringify({name})});const user=await updateHeader();$('sai-account-name').value=String(user?.name||name);showMessage('تم تغيير اسم الحساب بنجاح.');});});
   $('sai-change-password-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;if(!f.reportValidity())return;const currentPassword=$('sai-current-password').value,newPassword=$('sai-change-password').value;if(newPassword.length<8 || newPassword.length>128){showMessage('استخدم كلمة مرور من 8 إلى 128 حرفًا، ويمكن أن تحتوي على أحرف وأرقام ورموز.');return;}if(currentPassword===newPassword){showMessage('اختر كلمة مرور جديدة مختلفة عن الحالية.');return;}run(f,async()=>{await api('/api/change-password',{method:'POST',body:JSON.stringify({currentPassword,newPassword})});try{localStorage.removeItem(TOKEN_KEY);localStorage.removeItem(SESSION_KEY);}catch(_){}await updateHeader();showPage('login',false,true);if(!authDialog.open)authDialog.showModal();showMessage('تم تغيير كلمة المرور بنجاح. سجّل الدخول بكلمة المرور الجديدة.');});});
   logoutButton.addEventListener('click',async()=>{if(busy)return;logoutButton.disabled=true;try{await api('/api/logout',{method:'POST',body:JSON.stringify({})});}catch(_){}try{localStorage.removeItem(TOKEN_KEY);localStorage.removeItem(SESSION_KEY);}catch(_){}logoutButton.disabled=false;await updateHeader();showPage('login',false);if(!authDialog.open)authDialog.showModal();showMessage('تم تسجيل الخروج.');});
   window.addEventListener('storage',e=>{if(e.key===TOKEN_KEY||e.key===SESSION_KEY)updateHeader();});
@@ -1153,16 +1187,17 @@
   "use strict";
 
   const bauCampusPlaces = [
+    { name: "كلية الذكاء الاصطناعي", category: "الكليات والعمادات", query: "Faculty of Artificial Intelligence, Al-Balqa Applied University, As-Salt, Jordan" },
     { name: "كلية السلط التقنية", category: "الكليات والعمادات", query: "Al-Salt Technical College, Al-Balqa Applied University, As-Salt, Jordan" },
-    { name: "كلية الهندسة – مبنى 2", category: "الكليات والعمادات", query: "Engineering Building 2, Al-Balqa Applied University, As-Salt, Jordan" },
-    { name: "كلية الهندسة – مبنى 3", category: "الكليات والعمادات", query: "Engineering Building 3, Al-Balqa Applied University, As-Salt, Jordan" },
-    { name: "كلية تكنولوجيا المعلومات والاتصالات", category: "الكليات والعمادات", query: "Information and Communication Technology, Al-Balqa Applied University, As-Salt, Jordan" },
-    { name: "كلية العلوم", category: "الكليات والعمادات", query: "Faculty of Science, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية الهندسة", category: "الكليات والعمادات", query: "Faculty of Engineering, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية تكنولوجيا المعلومات والاتصالات", category: "الكليات والعمادات", query: "Prince Abdullah Bin Ghazi Faculty for Information and Communication Technology, Al-Balqa Applied University, As-Salt, Jordan" },
     { name: "كلية التمريض", category: "الكليات والعمادات", query: "Faculty of Nursing, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية العلوم", category: "الكليات والعمادات", query: "Faculty of Science, Al-Balqa Applied University, As-Salt, Jordan" },
     { name: "كلية الأعمال", category: "الكليات والعمادات", query: "Faculty of Business, Al-Balqa Applied University, As-Salt, Jordan" },
-    { name: "كلية الحقوق والدراسات العليا والبحث العلمي", category: "الكليات والعمادات", query: "Faculty of Law Graduate Studies Deanship of Scientific Research, Al-Balqa Applied University, As-Salt, Jordan" },
     { name: "كلية السلط للعلوم الإنسانية", category: "الكليات والعمادات", query: "Al-Salt College for Human Sciences, Al-Balqa Applied University, As-Salt, Jordan" },
-    { name: "كلية التكنولوجيا الزراعية", category: "الكليات والعمادات", query: "Faculty of Agricultural Technology, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية الحقوق والدراسات العليا", category: "الكليات والعمادات", query: "Faculty of Law and Deanship of Graduate Studies, Al-Balqa Applied University, As-Salt, Jordan" },
+    { name: "كلية الزراعة التكنولوجية", category: "الكليات والعمادات", query: "Faculty of Agricultural Technology, Al-Balqa Applied University, As-Salt, Jordan" },
+
     { name: "عمادة شؤون الطلبة", category: "الكليات والعمادات", query: "Deanship of Student Affairs, Al-Balqa Applied University, As-Salt, Jordan" },
     { name: "رئاسة الجامعة", category: "الإدارة والخدمات", query: "Presidency Unit, Al-Balqa Applied University, As-Salt, Jordan" },
     { name: "وحدة التعاون والعلاقات الدولية", category: "الإدارة والخدمات", query: "Cooperation and International Relations Unit, Al-Balqa Applied University, As-Salt, Jordan" },
@@ -1222,8 +1257,10 @@
   const googleDirections = query =>
     "https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(query);
 
+  // Search for the selected place within the named BAU Salt campus context.
+  // Keep the full university and city in every query to reduce similarly named results.
   const mapEmbed = query =>
-    "https://maps.google.com/maps?q=" + encodeURIComponent(query) + "&z=19&output=embed";
+    "https://maps.google.com/maps?q=" + encodeURIComponent(query) + "&z=17&output=embed";
 
   function renderBauMap() {
     const main = document.getElementById("main");
