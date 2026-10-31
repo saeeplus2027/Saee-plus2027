@@ -9,9 +9,53 @@ window.addEventListener('sai-content-changed',()=>{syncContent();if(route!=='adm
 async function storeChange(update){try{let next=SiteStore.clone(SiteStore.state);update(next);await SiteStore.save(next);toast(SiteStore.remote?'تم الحفظ والنشر على الموقع ✓':'تم حفظ التعديلات ✓');return true;}catch(e){toast(e.message);return false;}}
 function goAdmin(tab='dashboard'){adminTab=tab;adminFilter='all';adminQuery='';if(location.hash==='#admin')renderAdmin();else location.hash='admin';}
 
-// لا تستخدم كلمة مرور محلية محفوظة على جهاز واحد؛ صلاحية الإدارة يتحقق منها Cloudflare Worker.
-function adminPasswordGate(){ return true; }
-function adminPasswordLogout(){adminServerLogout();}
+const ADMIN_PASSWORD_HASH_KEY='saee-plus-admin-password-hash-v1';
+const ADMIN_PASSWORD_SESSION_KEY='saee-plus-admin-unlocked-v1';
+async function adminPasswordHash(value){
+  const bytes=new TextEncoder().encode(value);
+  const digest=await crypto.subtle.digest('SHA-256',bytes);
+  return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
+}
+function adminPasswordGate(){
+  // The live GitHub Pages site uses Cloudflare Worker authentication.
+  // Never gate access with a browser-local password: localStorage does not sync across devices.
+  if (SiteStore.remote) return true;
+  if(sessionStorage.getItem(ADMIN_PASSWORD_SESSION_KEY)==='yes')return true;
+  const hasPassword=Boolean(localStorage.getItem(ADMIN_PASSWORD_HASH_KEY));
+  main.innerHTML=`<section class="admin-password-screen"><form id="admin-password-form" class="admin-password-card"><div class="admin-password-icon">🔐</div><span class="kicker">سعي بلس · حماية الإدارة</span><h1>${hasPassword?'تسجيل الدخول إلى لوحة الإدارة':'إنشاء كلمة مرور الإدارة'}</h1><p>${hasPassword?'أدخل كلمة المرور التي أنشأتها لحماية لوحة الإدارة.':'هذه أول مرة تدخل فيها. أنشئ كلمة مرور خاصة بك، وستُطلب منك في المرات القادمة على هذا المتصفح.'}</p><label for="admin-password">${hasPassword?'كلمة المرور':'كلمة المرور الجديدة'}</label><input id="admin-password" name="password" type="password" minlength="8" autocomplete="${hasPassword?'current-password':'new-password'}" required placeholder="8 أحرف على الأقل"><label for="admin-password-confirm" ${hasPassword?'hidden':''}>تأكيد كلمة المرور</label><input id="admin-password-confirm" name="confirm" type="password" minlength="8" autocomplete="new-password" ${hasPassword?'hidden':''} placeholder="أعد كتابة كلمة المرور"><p id="admin-password-error" class="admin-password-error" role="alert"></p><button class="button" type="submit">${hasPassword?'دخول لوحة الإدارة':'حفظ كلمة المرور والمتابعة'}</button><a href="#home" class="admin-password-back">العودة إلى الموقع</a><small>مهم: كلمة المرور محفوظة في هذا المتصفح. لا تمسح بيانات الموقع من المتصفح حتى لا تفقد إعداد الحماية.</small></form></section>`;
+  const form=document.getElementById('admin-password-form');
+  form.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const password=form.elements.password.value;
+    const confirm=form.elements.confirm.value;
+    const error=document.getElementById('admin-password-error');
+    const button=form.querySelector('button[type="submit"]');
+    if(password.length<8){error.textContent='استخدم كلمة مرور من 8 أحرف على الأقل.';return;}
+    if(!hasPassword&&password!==confirm){error.textContent='كلمتا المرور غير متطابقتين.';return;}
+    button.disabled=true;error.textContent='';
+    try{
+      const hash=await adminPasswordHash(password);
+      if(hasPassword){
+        if(hash!==localStorage.getItem(ADMIN_PASSWORD_HASH_KEY)){error.textContent='كلمة المرور غير صحيحة.';button.disabled=false;form.elements.password.value='';form.elements.password.focus();return;}
+      }else{
+        localStorage.setItem(ADMIN_PASSWORD_HASH_KEY,hash);
+      }
+      sessionStorage.setItem(ADMIN_PASSWORD_SESSION_KEY,'yes');
+      renderAdmin();
+    }catch(err){error.textContent='تعذر حفظ كلمة المرور. افتح الموقع عبر HTTPS وحاول مرة أخرى.';button.disabled=false;}
+  });
+  return false;
+}
+function adminPasswordLogout(){
+  if (SiteStore.remote && typeof SiteStore.logoutAdmin === 'function') {
+    const button = document.querySelector('.admin-password-logout:last-child');
+    if (button) { button.disabled = true; button.textContent = 'جارٍ تسجيل الخروج…'; }
+    SiteStore.logoutAdmin().then(() => { renderAdmin(); }).catch(err => { toast(err.message || 'تعذر تسجيل الخروج'); renderAdmin(); });
+    return;
+  }
+  sessionStorage.removeItem(ADMIN_PASSWORD_SESSION_KEY);
+  renderAdmin();
+}
 function adminChangePassword(){
   const content=document.getElementById('admin-content');
   if(!content)return;
@@ -39,13 +83,7 @@ function adminChangePassword(){
   });
 }
 
-async function adminServerLogout(){
-  try { if (SiteStore.logoutAdmin) await SiteStore.logoutAdmin(); }
-  catch(e) { toast(e.message || 'تعذر تسجيل الخروج'); }
-  adminTab='dashboard';
-  renderAdmin();
-}
-function renderAdmin(){if(!adminPasswordGate())return;if(!SiteStore.remote){main.innerHTML=`<section class="admin-password-screen"><div class="admin-password-card"><h1>الإدارة غير متصلة بالخادم</h1><p>فعّل الاتصال المركزي في remote-config.js وانشر التغييرات، ثم أعد تحميل الصفحة.</p></div></section>`;return;}if(!SiteStore.canEdit){main.innerHTML=`<section class="admin-password-screen"><form id="admin-server-login-form" class="admin-password-card"><div class="admin-password-icon">🔐</div><span class="kicker">سعي بلس · صلاحية المالك</span><h1>تسجيل دخول الإدارة</h1><p>أدخل كلمة مرور الإدارة المعتمدة على الخادم لتفعيل صلاحية الحفظ والنشر. كلمة مرور حماية هذه الصفحة وحدها لا تمنح صلاحية التعديل.</p><label for="admin-server-password">كلمة مرور الإدارة</label><input id="admin-server-password" name="password" type="password" autocomplete="current-password" required placeholder="أدخل كلمة مرور الإدارة"><p id="admin-server-login-error" class="admin-password-error" role="alert"></p><button class="button" type="submit">تسجيل الدخول وتفعيل التعديل</button><a href="#home" class="admin-password-back">العودة إلى الموقع</a></form></section>`;const form=document.getElementById('admin-server-login-form');form.addEventListener('submit',async e=>{e.preventDefault();const button=form.querySelector('button[type="submit"]');const error=document.getElementById('admin-server-login-error');button.disabled=true;error.textContent='';try{await SiteStore.loginAdmin(form.elements.password.value);renderAdmin();}catch(err){error.textContent=err.message||'تعذر تسجيل الدخول إلى الإدارة.';button.disabled=false;form.elements.password.focus();}});return;}const nav=[['dashboard','leaf','نظرة عامة'],['items','book','إدارة المحتوى'],['services','store','الأقسام والخدمات'],['places','pin','أماكن الخريطة'],['vocational','users','مراجعة مشاريع مهنتي إبداعي'],['texts','grad','نصوص الموقع'],['settings','bulb','الهوية والإعدادات'],['backup','check','التصدير والنسخ الاحتياطي']];main.innerHTML=`<div class="admin-shell"><aside class="admin-sidebar"><div class="admin-logo">${escapeHtml(SiteStore.state.siteName)}<small>مساحة إدارة الموقع</small></div><div class="admin-nav">${nav.map(([id,ico,label])=>`<button class="${adminTab===id?'selected':''}" onclick="goAdmin('${id}')">${icon(ico)} ${label}</button>`).join('')}</div><a href="#home">↗ العودة إلى الموقع</a><button class="admin-password-logout" onclick="adminServerLogout()">🔒 تسجيل الخروج من الإدارة</button></aside><section class="admin-main"><div class="admin-top"><div><span class="kicker">أهلًا بك في لوحة التحكم</span><h1>${nav.find(n=>n[0]===adminTab)?.[2]||'إدارة الموقع'}</h1><p>محتواك، بطريقتك. أضف وعدّل واحذف من مكان واحد.</p></div><span class="admin-status">${SiteStore.remote?"● حفظ مباشر ومتزامن":"● محرر ملفات محلي"}</span></div><div id="admin-content"></div></section></div>`;const fn={dashboard:adminDashboard,items:adminItems,services:adminServices,places:adminPlaces,vocational:adminVocational,texts:adminTexts,settings:adminSettings,backup:adminBackup}[adminTab]||adminDashboard;fn();}
+function renderAdmin(){if(!adminPasswordGate())return;if(SiteStore.remote&&!SiteStore.canEdit){main.innerHTML=`<section class="admin-password-screen"><form id="admin-server-login-form" class="admin-password-card"><div class="admin-password-icon">🔐</div><span class="kicker">سعي بلس · صلاحية المالك</span><h1>تسجيل دخول الإدارة</h1><p>أدخل كلمة مرور الإدارة المعتمدة على الخادم لتفعيل صلاحية الحفظ والنشر. كلمة مرور حماية هذه الصفحة وحدها لا تمنح صلاحية التعديل.</p><label for="admin-server-password">كلمة مرور الإدارة</label><input id="admin-server-password" name="password" type="password" autocomplete="current-password" required placeholder="أدخل كلمة مرور الإدارة"><p id="admin-server-login-error" class="admin-password-error" role="alert"></p><button class="button" type="submit">تسجيل الدخول وتفعيل التعديل</button><a href="#home" class="admin-password-back">العودة إلى الموقع</a></form></section>`;const form=document.getElementById('admin-server-login-form');form.addEventListener('submit',async e=>{e.preventDefault();const button=form.querySelector('button[type="submit"]');const error=document.getElementById('admin-server-login-error');button.disabled=true;error.textContent='';try{await SiteStore.loginAdmin(form.elements.password.value);renderAdmin();}catch(err){error.textContent=err.message||'تعذر تسجيل الدخول إلى الإدارة.';button.disabled=false;form.elements.password.focus();}});return;}const nav=[['dashboard','leaf','نظرة عامة'],['items','book','إدارة المحتوى'],['services','store','الأقسام والخدمات'],['places','pin','أماكن الخريطة'],['vocational','users','مراجعة مشاريع مهنتي إبداعي'],['texts','grad','نصوص الموقع'],['settings','bulb','الهوية والإعدادات'],['backup','check','التصدير والنسخ الاحتياطي']];main.innerHTML=`<div class="admin-shell"><aside class="admin-sidebar"><div class="admin-logo">${escapeHtml(SiteStore.state.siteName)}<small>مساحة إدارة الموقع</small></div><div class="admin-nav">${nav.map(([id,ico,label])=>`<button class="${adminTab===id?'selected':''}" onclick="goAdmin('${id}')">${icon(ico)} ${label}</button>`).join('')}</div><a href="#home">↗ العودة إلى الموقع</a><button class="admin-password-logout" onclick="adminChangePassword()">🔑 تغيير كلمة المرور</button><button class="admin-password-logout" onclick="adminPasswordLogout()">🔒 قفل لوحة الإدارة</button></aside><section class="admin-main"><div class="admin-top"><div><span class="kicker">أهلًا بك في لوحة التحكم</span><h1>${nav.find(n=>n[0]===adminTab)?.[2]||'إدارة الموقع'}</h1><p>محتواك، بطريقتك. أضف وعدّل واحذف من مكان واحد.</p></div><span class="admin-status">${SiteStore.remote?"● حفظ مباشر ومتزامن":"● محرر ملفات محلي"}</span></div><div id="admin-content"></div></section></div>`;const fn={dashboard:adminDashboard,items:adminItems,services:adminServices,places:adminPlaces,vocational:adminVocational,texts:adminTexts,settings:adminSettings,backup:adminBackup}[adminTab]||adminDashboard;fn();}
 function adminDashboard(){const d=SiteStore.state;document.getElementById('admin-content').innerHTML=`<div class="admin-notice">${SiteStore.remote?"تعديلاتك تُحفظ مركزيًا وتظهر على الموقع تلقائيًا بعد الحفظ، بما في ذلك النصوص والصور والإضافات والحذف. انتظر رسالة تأكيد الحفظ قبل مغادرة الصفحة.":"هذه لوحة تحرير محلية. صدّر نسخة محدثة لنشر التغييرات."}</div><div class="admin-stats"><div class="admin-stat"><strong>${d.items.length}</strong><span>عنصر محتوى</span></div><div class="admin-stat"><strong>${d.services.length}</strong><span>قسم وخدمة</span></div><div class="admin-stat"><strong>${d.places.length}</strong><span>مكان في الخريطة</span></div></div><div class="admin-panel"><h2>ماذا تريد أن تغيّر اليوم؟</h2><p>ابدأ بإضافة محتوى جديد، أو حرّر النصوص والصور في واجهة الموقع نفسها.</p><div class="admin-actions"><button class="button" onclick="editItem()">+ إضافة محتوى</button><button class="button light" onclick="startVisual()">تعديل مباشر على الموقع ↖</button><button class="button light" onclick="exportWebsite(this)">تحميل الموقع بعد التعديل ↓</button></div></div><div class="admin-tips"><div class="admin-panel"><span class="kicker">من فكرة إلى محتوى</span><h3>كل الأقسام تحت إدارتك</h3><p>خصومات، كتب، خبراء، منتجات ومشاريع. عدّل التفاصيل والتصنيفات والأسعار والصور وبيانات التواصل.</p><button class="text-btn" onclick="goAdmin('items')">إدارة المحتوى ←</button></div><div class="admin-panel"><span class="kicker">تصميم يعكس هويتك</span><h3>اسم الموقع، صوره وألوانه</h3><p>حدّث الهوية والنصوص وأظهر أو أخفِ مساحات الصفحة الرئيسية، واحتفظ بنسخة احتياطية من عملك.</p><button class="text-btn" onclick="goAdmin('settings')">إعدادات الموقع ←</button></div></div>`;}
 function adminItems(){document.getElementById('admin-content').innerHTML=`<div class="admin-panel"><div class="admin-toolbar"><div class="admin-actions"><select aria-label="تصفية حسب القسم" onchange="adminFilter=this.value;adminItemsRows()"><option value="all">كل الأقسام</option>${SiteStore.state.services.filter(s=>s[0]!=='map').map(s=>`<option value="${s[0]}" ${adminFilter===s[0]?'selected':''}>${escapeHtml(s[2])}</option>`).join('')}</select><input aria-label="بحث المحتوى" placeholder="ابحث بعنوان أو تصنيف..." value="${escapeHtml(adminQuery)}" oninput="adminQuery=this.value;adminItemsRows()"></div><button class="button small" onclick="editItem()">+ إضافة محتوى</button></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>العنصر</th><th>القسم</th><th>التصنيف</th><th>الإجراءات</th></tr></thead><tbody id="admin-rows"></tbody></table></div></div>`;adminItemsRows();}
 function adminItemsRows(){let list=SiteStore.state.items.map((x,i)=>({...x,index:i})).filter(x=>(adminFilter==='all'||x.type===adminFilter)&&`${x.title} ${x.cat}`.includes(adminQuery));document.getElementById('admin-rows').innerHTML=list.map(x=>`<tr><td><div class="admin-item-title">${x.image?`<img src="${escapeHtml(SiteStore.imageSrc(x.image))}" alt="">`:icon('book')}<strong>${escapeHtml(x.title)}</strong></div></td><td>${escapeHtml(serviceLabel(x.type))}</td><td>${escapeHtml(x.cat)}</td><td><div class="admin-actions"><button onclick="editItem(${x.index})">تعديل</button><button class="danger" onclick="deleteItem(${x.index})">حذف</button></div></td></tr>`).join('')||'<tr><td colspan="4">لا يوجد محتوى مطابق. يمكنك إضافة عنصر جديد.</td></tr>';}
