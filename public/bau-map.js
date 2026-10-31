@@ -47,11 +47,10 @@
   const googleDirections = query =>
     "https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(query);
 
-  // Keep the embedded map anchored to BAU's main Salt campus coordinates.
-  // Google text search can resolve generic college/building names to another university.
-  const BAU_SALT_CAMPUS = "32.02448,35.71693";
-  const mapEmbed = _query =>
-    "https://maps.google.com/maps?q=" + encodeURIComponent(BAU_SALT_CAMPUS) + "&z=17&output=embed";
+  // Search for the selected place within the named BAU Salt campus context.
+  // Keep the full university and city in every query to reduce similarly named results.
+  const mapEmbed = query =>
+    "https://maps.google.com/maps?q=" + encodeURIComponent(query) + "&z=17&output=embed";
 
   function renderBauMap() {
     const main = document.getElementById("main");
