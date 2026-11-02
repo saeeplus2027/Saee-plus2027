@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://saeeplus2027.github.io/Saee-plus2027/sitemap.xml
