@@ -1,7 +1,7 @@
 /* Saee Plus: per-account 24-hour discount usage */
 (() => {
   'use strict';
-  const API = 'https://saee-plus-api.ligagym.workers.dev';
+  const API = String(window.SAI_API_BASE || 'https://saeeplus-projects.ligagym.workers.dev').replace(/\/$/, '');
   const active = new Map();
   const TOKEN_KEY = 'saee-auth-token-v1';
   let loaded = false;

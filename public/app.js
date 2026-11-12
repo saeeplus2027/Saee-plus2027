@@ -39,7 +39,7 @@ function toast(t){const e=document.getElementById('toast');e.textContent=t;e.cla
 function saveFavorite(id,b){favorites=favorites.includes(id)?favorites.filter(x=>x!==id):[...favorites,id];localStorage.setItem('sai-favorites',JSON.stringify(favorites));if(b){b.classList.toggle('saved',favorites.includes(id));b.setAttribute('aria-pressed',favorites.includes(id))}toast(favorites.includes(id)?'أُضيفت إلى مفضلتك':'أُزيلت من المفضلة')}
 function modal(html){document.getElementById('dialog-content').innerHTML=html;const d=document.getElementById('dialog');if(!d.open)d.showModal()}
 const DISCOUNT_COOLDOWN_MS=24*60*60*1000;
-const DISCOUNT_API=String(window.SAI_API_BASE||'https://saee-plus-api.ligagym.workers.dev').replace(/\/$/,'');
+const DISCOUNT_API=String(window.SAI_API_BASE||'https://saeeplus-projects.ligagym.workers.dev').replace(/\/$/,'');
 const discountExpiries=Object.create(null);
 let discountLastSync=0,discountSyncing=false;
 function discountExpiry(id){const e=Number(discountExpiries[String(id)]||0);return e>Date.now()?e:0}
