@@ -113,10 +113,16 @@ export default {
   async fetch(req, env) {
     const origin = req.headers.get('origin') || '';
 
-    const allowed = (env.SITE_ORIGIN || '')
-      .split(',')
-      .map(x => x.trim())
-      .filter(Boolean);
+    // Allow the production GitHub Pages origin by default.
+    // SITE_ORIGIN may contain one or more comma-separated origins.
+    // Always allow the production GitHub Pages origin. SITE_ORIGIN is additive,
+    // not an override, so a mistaken dashboard value cannot break site login.
+    const allowed = [...new Set([
+      'https://saeeplus2027.github.io',
+      ...(env.SITE_ORIGIN || '').split(',')
+        .map(x => x.trim().replace(/\/$/, ''))
+        .filter(Boolean)
+    ])];
 
     const cors = allowed.includes(origin)
       ? {
@@ -168,7 +174,7 @@ export default {
       // =========================================
       const mediaMatch = path.match(/^\/api\/media\/([a-f0-9]{64}\.(?:png|jpeg|webp|gif))$/);
       if (mediaMatch && req.method === 'GET') {
-        const bucket = env.BUCKET || env.Bucket;
+        const bucket = env.IMAGES || env.BUCKET || env.Bucket;
         if (!bucket) return fail('تخزين الصور غير مهيأ على الخادم.', 503);
         const object = await bucket.get('media/' + mediaMatch[1]);
         if (!object) return fail('الصورة غير موجودة.', 404);
@@ -414,16 +420,18 @@ export default {
           }
         } else {
           // First login uses the Cloudflare bootstrap secret.
-          if (!env.ADMIN_PASSWORD) {
+          // Support both the current secret name and the legacy variable name.
+          const bootstrapPassword = env.ADMIN_BOOTSTRAP_KEY || env.ADMIN_PASSWORD;
+          if (!bootstrapPassword) {
             return fail(
-              'إعداد ADMIN_PASSWORD غير موجود في Cloudflare',
+              'إعداد ADMIN_BOOTSTRAP_KEY غير موجود في Cloudflare',
               503
             );
           }
 
           if (
             (await hash(supplied)) !==
-            (await hash(env.ADMIN_PASSWORD))
+            (await hash(bootstrapPassword))
           ) {
             return fail('كلمة المرور غير صحيحة', 401);
           }
@@ -475,10 +483,15 @@ export default {
           Date.now() + 7 * 86400000
         ).run();
 
+        // Return the opaque session token to the static frontend as well as
+        // setting the legacy cookie. GitHub Pages and workers.dev are different
+        // sites, so browsers may block the cookie; the frontend stores this
+        // token locally and sends it as an Authorization: Bearer header.
         return reply(
           {
             message: 'تم تسجيل دخول الإدارة',
-            needsPasswordSetup: !credential
+            needsPasswordSetup: !credential,
+            token
           },
           200,
           { 'set-cookie': cookie(token, 604800) }
@@ -570,10 +583,11 @@ export default {
         } else {
           // The current session was created after verifying
           // the ADMIN_PASSWORD bootstrap secret.
+          const bootstrapPassword = env.ADMIN_BOOTSTRAP_KEY || env.ADMIN_PASSWORD;
           if (
-            !env.ADMIN_PASSWORD ||
+            !bootstrapPassword ||
             (await hash(currentPassword)) !==
-              (await hash(env.ADMIN_PASSWORD))
+              (await hash(bootstrapPassword))
           ) {
             return fail(
               'كلمة المرور الحالية غير صحيحة',
@@ -638,7 +652,7 @@ export default {
 
         // Move embedded image data to R2 before writing the JSON to D1.
         // This keeps the database row small even when the admin uploads many images.
-        const bucket = env.BUCKET || env.Bucket;
+        const bucket = env.IMAGES || env.BUCKET || env.Bucket;
         const uploadedImages = new Map();
         async function externalizeImage(value) {
           if (typeof value !== 'string' || !value.startsWith('data:image/')) return value;
