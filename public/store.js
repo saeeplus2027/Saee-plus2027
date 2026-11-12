@@ -50,6 +50,41 @@ window.SiteStore = (() => {
     return "";
   };
 
+  // ---- المساعد سعي: إعدادات الشات بوت (تُحفظ مع محتوى الموقع وتُدار من الأدمن فقط) ----
+  const CHATBOT_DEFAULTS = {
+    name: "المساعد سعي",
+    greeting: "مرحبًا بك! أنا المساعد سعي 👋 اسألني عن سعي بلس وخدماتها وسأجيبك.",
+    fallback: "ليس لدي جواب، لمعرفة الجواب تواصل عبر الرقم التالي:",
+    phone: "",
+    qa: []
+  };
+
+  function normalizeChatbot(raw) {
+    const src = raw && typeof raw === "object" ? raw : {};
+    const text = (value, fallback, max) => {
+      const v = typeof value === "string" ? value.trim() : "";
+      return (v || fallback).slice(0, max);
+    };
+    const qa = (Array.isArray(src.qa) ? src.qa : [])
+      .filter((x) => x && typeof x === "object" &&
+        typeof x.q === "string" && typeof x.a === "string" &&
+        x.q.trim() && x.a.trim())
+      .slice(0, 300)
+      .map((x, i) => ({
+        id: /^[a-zA-Z0-9_-]{1,60}$/.test(String(x.id || "")) ? String(x.id) : "qa_" + i + "_" + Date.now().toString(36),
+        q: x.q.trim().slice(0, 300),
+        a: x.a.trim().slice(0, 2000),
+        keywords: typeof x.keywords === "string" ? x.keywords.trim().slice(0, 500) : ""
+      }));
+    return {
+      name: text(src.name, CHATBOT_DEFAULTS.name, 40),
+      greeting: text(src.greeting, CHATBOT_DEFAULTS.greeting, 300),
+      fallback: text(src.fallback, CHATBOT_DEFAULTS.fallback, 300),
+      phone: typeof src.phone === "string" ? src.phone.trim().slice(0, 40) : "",
+      qa
+    };
+  }
+
   function validate(data) {
     if (
       !data ||
@@ -180,6 +215,7 @@ window.SiteStore = (() => {
 
     data.notice = String(data.notice ?? "");
     data.mapNotice = String(data.mapNotice ?? "");
+    data.chatbot = normalizeChatbot(data.chatbot);
 
     return clone(data);
   }
