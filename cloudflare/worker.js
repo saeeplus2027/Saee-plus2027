@@ -610,6 +610,92 @@ export default {
       }
 
       // =========================================
+      // SAEE ASSISTANT: admin-managed FAQ + public deterministic matching
+      // =========================================
+      if (path === '/api/saee-assistant' || path === '/api/saee-assistant/ask' || path === '/api/saee-assistant/manage') {
+        await env.DB.prepare(`CREATE TABLE IF NOT EXISTS saee_assistant_questions (
+          id TEXT PRIMARY KEY, question TEXT NOT NULL, answer TEXT NOT NULL,
+          created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
+        )`).run();
+        await env.DB.prepare(`CREATE TABLE IF NOT EXISTS saee_assistant_settings (
+          id INTEGER PRIMARY KEY CHECK (id = 1), fallback_text TEXT NOT NULL,
+          phone TEXT NOT NULL DEFAULT '', updated_at INTEGER NOT NULL
+        )`).run();
+        await env.DB.prepare(`INSERT OR IGNORE INTO saee_assistant_settings (id,fallback_text,phone,updated_at)
+          VALUES (1,'ليس لدي جواب لمعرفة الجواب تواصل عبر الرقم التالي','',?)`).bind(Date.now()).run();
+
+        const user = await identity(req, env);
+        if (path === '/api/saee-assistant' && req.method === 'GET') {
+          const adminView = new URL(req.url).searchParams.get('admin') === '1';
+          if (adminView && !user?.is_admin) return fail('هذه الصفحة للإدارة فقط.', 403);
+          const settings = await env.DB.prepare('SELECT fallback_text, phone FROM saee_assistant_settings WHERE id = 1').first();
+          const rows = await env.DB.prepare('SELECT id, question, answer FROM saee_assistant_questions ORDER BY created_at DESC').all();
+          return reply({ settings: settings || { fallback_text: 'ليس لدي جواب لمعرفة الجواب تواصل عبر الرقم التالي', phone: '' }, questions: rows.results || [] });
+        }
+
+        if (path === '/api/saee-assistant/ask' && req.method === 'POST') {
+          if (!await throttle(env, 'assistant:' + (req.headers.get('cf-connecting-ip') || 'unknown'), 40)) return fail('تم إرسال عدد كبير من الأسئلة. حاول بعد قليل.', 429);
+          const body = await readBody(req);
+          const question = String(body.question || '').trim().slice(0, 500);
+          if (!question) return fail('اكتب سؤالك أولاً.');
+          const settings = await env.DB.prepare('SELECT fallback_text, phone FROM saee_assistant_settings WHERE id = 1').first();
+          const rows = await env.DB.prepare('SELECT id, question, answer FROM saee_assistant_questions').all();
+          const normalize = value => String(value || '')
+            .toLowerCase().replace(/[\u064B-\u065F\u0670\u0640]/g, '')
+            .replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه')
+            .replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
+          const stop = new Set(['كيف','ما','ماذا','هل','وين','اين','متى','كم','من','عن','في','على','الى','إلى','لي','بدي','اريد','ممكن','لو','سمحت','شو','هو','هي','هذا','هذه','منكم','عندكم','الموقع','سعي','بلس']);
+          const tokens = value => normalize(value).split(' ').filter(t => t.length > 1 && !stop.has(t));
+          const qNorm = normalize(question); const qTokens = tokens(question);
+          let best = null; let bestScore = 0;
+          for (const row of (rows.results || [])) {
+            const fNorm = normalize(row.question); const fTokens = tokens(row.question);
+            const overlap = qTokens.filter(t => fTokens.includes(t)).length;
+            const coverage = qTokens.length ? overlap / qTokens.length : 0;
+            const precision = fTokens.length ? overlap / fTokens.length : 0;
+            const score = qNorm === fNorm ? 1 : (qNorm.includes(fNorm) || fNorm.includes(qNorm) ? 0.92 : (coverage * 0.72 + precision * 0.28));
+            if (score > bestScore) { bestScore = score; best = row; }
+          }
+          const found = !!best && (bestScore >= 0.58 || bestScore === 1);
+          return reply(found
+            ? { found: true, answer: best.answer }
+            : { found: false, answer: settings?.fallback_text || 'ليس لدي جواب لمعرفة الجواب تواصل عبر الرقم التالي', phone: settings?.phone || '' });
+        }
+
+        if (path === '/api/saee-assistant/manage' && req.method === 'POST') {
+          if (!user?.is_admin) return fail('يجب تسجيل الدخول بحساب الإدارة أولاً.', 401);
+          const body = await readBody(req);
+          const action = String(body.action || '');
+          const now = Date.now();
+          if (action === 'settings') {
+            const fallbackText = String(body.fallback_text || '').trim().slice(0, 500);
+            const phone = String(body.phone || '').trim().slice(0, 40);
+            if (!fallbackText) return fail('عبارة عدم توفر الإجابة مطلوبة.');
+            if (phone && !/^[+0-9()\s-]{5,40}$/.test(phone)) return fail('رقم التواصل غير صالح.');
+            await env.DB.prepare(`UPDATE saee_assistant_settings SET fallback_text = ?, phone = ?, updated_at = ? WHERE id = 1`).bind(fallbackText, phone, now).run();
+            return reply({ success: true, message: 'تم حفظ عبارة عدم توفر الإجابة ورقم التواصل.' });
+          }
+          if (action === 'save') {
+            const id = String(body.id || crypto.randomUUID()).slice(0, 80);
+            const question = String(body.question || '').trim().slice(0, 300);
+            const answer = String(body.answer || '').trim().slice(0, 3000);
+            if (!question || !answer) return fail('السؤال والجواب مطلوبان.');
+            await env.DB.prepare(`INSERT INTO saee_assistant_questions (id,question,answer,created_at,updated_at)
+              VALUES (?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET question=excluded.question, answer=excluded.answer, updated_at=excluded.updated_at`)
+              .bind(id, question, answer, now, now).run();
+            return reply({ success: true, message: 'تم حفظ السؤال والجواب.' });
+          }
+          if (action === 'delete') {
+            const id = String(body.id || '').slice(0, 80);
+            if (!id) return fail('معرّف السؤال غير صالح.');
+            await env.DB.prepare('DELETE FROM saee_assistant_questions WHERE id = ?').bind(id).run();
+            return reply({ success: true, message: 'تم حذف السؤال.' });
+          }
+          return fail('عملية غير معروفة.');
+        }
+      }
+
+      // =========================================
       // SAVE SITE CONTENT
       // =========================================
 
