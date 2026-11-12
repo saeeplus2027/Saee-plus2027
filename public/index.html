@@ -669,29 +669,6 @@
         flex-direction: column;
       }
     }
-
-    #saee-inquiry-dialog { width:min(520px,calc(100% - 24px)); max-height:min(86dvh,760px); padding:18px; }
-    .saee-assistant-welcome { text-align:center; padding:18px 8px 24px; }
-    .saee-assistant-avatar { width:54px;height:54px;border-radius:18px;background:#075550;color:#fff;display:grid;place-items:center;font-size:25px;font-weight:800;box-shadow:0 8px 22px #0755502b; }
-    .saee-assistant-welcome .saee-assistant-avatar { margin:10px auto 14px; }
-    .saee-assistant-eyebrow { color:#8b9b8e;font-size:13px;font-weight:700; }
-    .saee-assistant-welcome p { color:#61736b;line-height:1.9;max-width:360px;margin:0 auto 22px; }
-    .saee-assistant-start { min-width:190px; }
-    .saee-assistant-chat { display:flex;flex-direction:column;min-height:480px;max-height:72dvh; }
-    .saee-assistant-chat-head { display:flex;align-items:center;gap:12px;padding:4px 2px 15px;border-bottom:1px solid #e1e9e2; }
-    .saee-assistant-chat-head h2 { margin:0!important;font-size:19px!important; }
-    .saee-assistant-chat-head small { color:#77867e; }
-    .saee-assistant-messages { flex:1;min-height:280px;overflow-y:auto;padding:18px 4px;display:flex;flex-direction:column;gap:11px; }
-    .saee-assistant-bubble { max-width:86%;padding:11px 14px;border-radius:16px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere; }
-    .saee-assistant-bubble.bot { align-self:flex-start;background:#edf3ed;color:#23443d;border-bottom-right-radius:5px; }
-    .saee-assistant-bubble.user { align-self:flex-end;background:#075550;color:#fff;border-bottom-left-radius:5px; }
-    .saee-assistant-phone { align-self:flex-start;color:#075550;font-weight:800;direction:ltr;margin-inline-start:8px;text-decoration:underline; }
-    .saee-assistant-compose { display:flex;gap:8px;padding-top:12px;border-top:1px solid #e1e9e2; }
-    .saee-assistant-compose input { flex:1;min-width:0;border:1px solid #d5e1d8;border-radius:13px;padding:12px;font:inherit;background:#fff;color:#173c39; }
-    .saee-assistant-compose button { border:0;border-radius:12px;padding:0 18px;background:#075550;color:#fff;font:inherit;font-weight:700;cursor:pointer; }
-    .saee-assistant-compose button:disabled { opacity:.55;cursor:wait; }
-    .saee-assistant-disclaimer { color:#849188;font-size:11px;text-align:center;margin:9px 0 0; }
-    @media(max-width:520px){.saee-assistant-chat{min-height:65dvh}.saee-assistant-messages{min-height:35dvh}}
   </style>
 
   <style id="saee-header-button-size-fix">
@@ -984,7 +961,11 @@
       <button type="button" id="saee-inquiries-toggle" aria-expanded="false" aria-controls="saee-inquiries-menu" aria-haspopup="true">استفسارات</button>
 
       <div id="saee-inquiries-menu" class="saee-inquiries-menu" hidden>
-        <button type="button" data-inquiry="assistant">المساعد سعي</button>
+        <button type="button" data-inquiry="loans">قروض ومنح ومكارم وأسئلة جامعية</button>
+        <button type="button" data-inquiry="opportunities">الفرص</button>
+        <button type="button" data-inquiry="talents">المواهب</button>
+        <button type="button" data-inquiry="expert">اسأل خبير</button>
+        <button type="button" data-inquiry="projects">المشاريع</button>
       </div>
     </div>
     <button type="button" class="statistics-nav-button" onclick="showStatistics()">الإحصائيات</button>
@@ -1176,7 +1157,7 @@
 <script src="content-data.js?v=20261029-loading-fix-v2"></script>
 <script src="store.js?v=20261030-nonblocking-load-v1"></script>
 <script src="app.js?v=20261030-statistics-nav-dedupe-v1"></script>
-<script src="admin.js?v=20261112-saee-assistant-v1"></script>
+<script src="admin.js?v=20261029-loading-fix-v2"></script>
 
 <script>
 (() => {
@@ -1538,50 +1519,100 @@
 <script id="saee-inquiries-script">
 (() => {
   'use strict';
+
   const toggle = document.getElementById('saee-inquiries-toggle');
   const menu = document.getElementById('saee-inquiries-menu');
   const dialog = document.getElementById('saee-inquiry-dialog');
   const content = document.getElementById('saee-inquiry-content');
-  const apiBase = String(window.SAI_API_BASE || 'https://saee-plus-api.ligagym.workers.dev').replace(/\/$/, '');
+
   if (!toggle || !menu || !dialog || !content) return;
 
-  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  async function loadSettings() {
-    try { const r = await fetch(apiBase + '/api/saee-assistant'); if (!r.ok) throw Error(); return await r.json(); }
-    catch (_) { return { settings: { fallback_text: 'ليس لدي جواب لمعرفة الجواب تواصل عبر الرقم التالي', phone: '' }, questions: [] }; }
+  const topics = {
+    loans: {
+      title: 'القروض والمنح والمكارم والأسئلة الجامعية',
+      contacts: [['عبد الرحمن', '0798245512'], ['محمد', '0786633026']]
+    },
+    opportunities: {
+      title: 'الفرص',
+      contacts: [['سلمى', '0782153883']]
+    },
+    talents: {
+      title: 'المواهب',
+      contacts: [['لجين', '0770368592']]
+    },
+    expert: {
+      title: 'اسأل خبير',
+      contacts: [['تقى', '0790730665'], ['حمزة', '0788872569']]
+    },
+    projects: {
+      title: 'المشاريع',
+      contacts: [['لين', '0771059050']]
+    }
+  };
+
+  const isOpenHours = () => {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Amman',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23'
+    }).formatToParts(new Date());
+
+    const hour = Number(parts.find(part => part.type === 'hour')?.value ?? 0);
+    return hour >= 9 && hour < 17;
+  };
+
+  function showDialog(key) {
+    if (!isOpenHours()) {
+      content.innerHTML =
+        '<h2 id="saee-inquiry-title">الاستفسارات مغلقة حاليًا</h2>' +
+        '<p>يمكنك التواصل خلال ساعات الاستفسارات من <strong>9:00 صباحًا حتى 5:00 مساءً</strong> بتوقيت الأردن.</p>' +
+        '<p class="saee-inquiry-note">يرجى العودة خلال أوقات الدوام.</p>';
+    } else {
+      const topic = topics[key];
+      if (!topic) return;
+
+      const contacts = topic.contacts.map(([name, phone]) =>
+        `<div class="saee-inquiry-contact"><strong>${name}</strong><a href="tel:${phone.replace(/\s/g, '')}">${phone}</a></div>`
+      ).join('');
+
+      content.innerHTML =
+        `<h2 id="saee-inquiry-title">${topic.title}</h2>` +
+        `<p>للاستفسار، تواصل مع:</p>${contacts}` +
+        `<p class="saee-inquiry-note">التواصل متاح من 9:00 صباحًا حتى 5:00 مساءً بتوقيت الأردن.</p>`;
+    }
+
+    if (typeof dialog.showModal === 'function') {
+      dialog.showModal();
+    } else {
+      alert(content.innerText);
+    }
   }
-  function startScreen() {
-    content.innerHTML = `<section class="saee-assistant-welcome"><div class="saee-assistant-avatar">س</div><span class="saee-assistant-eyebrow">مساعدك في سعي بلس</span><h2 id="saee-inquiry-title">المساعد سعي</h2><p>مرحبًا بك! اسألني عن خدمات سعي بلس، وسأساعدك بالوصول إلى المعلومة المناسبة.</p><button type="button" class="button saee-assistant-start" id="saee-assistant-start">ابدأ المحادثة</button></section>`;
-    document.getElementById('saee-assistant-start').addEventListener('click', openChat);
-  }
-  async function openChat() {
-    const data = await loadSettings();
-    content.innerHTML = `<div class="saee-assistant-chat"><header class="saee-assistant-chat-head"><div class="saee-assistant-avatar">س</div><div><h2 id="saee-inquiry-title">المساعد سعي</h2><small>متاح للإجابة عن استفسارات الموقع</small></div></header><div class="saee-assistant-messages" id="saee-assistant-messages" aria-live="polite"><div class="saee-assistant-bubble bot">أهلًا بك! كيف أستطيع مساعدتك اليوم؟</div></div><form class="saee-assistant-compose" id="saee-assistant-form"><input id="saee-assistant-question" name="question" maxlength="500" required placeholder="اكتب استفسارك هنا..." autocomplete="off"><button type="submit" aria-label="إرسال">إرسال</button></form><p class="saee-assistant-disclaimer">الإجابات مبنية على المعلومات التي أضافتها إدارة سعي بلس.</p></div>`;
-    const form = document.getElementById('saee-assistant-form');
-    const input = document.getElementById('saee-assistant-question');
-    const messages = document.getElementById('saee-assistant-messages');
-    const addMessage = (text, who, phone='') => {
-      const bubble = document.createElement('div'); bubble.className = 'saee-assistant-bubble ' + who;
-      bubble.textContent = text;
-      messages.appendChild(bubble);
-      if (phone) { const link = document.createElement('a'); link.className='saee-assistant-phone'; link.href='tel:'+phone.replace(/[^+0-9]/g,''); link.dir='ltr'; link.textContent=phone; messages.appendChild(link); }
-      messages.scrollTop = messages.scrollHeight;
-    };
-    form.addEventListener('submit', async e => {
-      e.preventDefault(); const question=input.value.trim(); if(!question)return;
-      addMessage(question,'user'); input.value=''; form.querySelector('button').disabled=true;
-      try {
-        const r=await fetch(apiBase+'/api/saee-assistant/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question})});
-        const result=await r.json(); if(!r.ok)throw Error(result.error||'تعذر إرسال السؤال.');
-        addMessage(result.answer || data.settings.fallback_text,'bot',result.found?'':(result.phone || data.settings.phone));
-      } catch(err) { addMessage('تعذر الاتصال بالمساعد حاليًا. حاول مرة أخرى بعد قليل.','bot'); }
-      finally { form.querySelector('button').disabled=false; input.focus(); }
+
+  toggle.addEventListener('click', () => {
+    const open = menu.hidden;
+    menu.hidden = !open;
+    toggle.setAttribute('aria-expanded', String(open));
+  });
+
+  menu.querySelectorAll('[data-inquiry]').forEach(button => {
+    button.addEventListener('click', () => {
+      menu.hidden = true;
+      toggle.setAttribute('aria-expanded', 'false');
+      showDialog(button.dataset.inquiry);
     });
-    input.focus();
-  }
-  function showAssistant() { startScreen(); if(typeof dialog.showModal==='function') dialog.showModal(); else alert('المساعد سعي'); }
-  toggle.addEventListener('click', () => { const open=menu.hidden; menu.hidden=!open; toggle.setAttribute('aria-expanded',String(open)); });
-  menu.querySelector('[data-inquiry="assistant"]')?.addEventListener('click',()=>{menu.hidden=true;toggle.setAttribute('aria-expanded','false');showAssistant();});
+  });
+
+  dialog.addEventListener('click', event => {
+    if (event.target === dialog) dialog.close();
+  });
+
+  document.addEventListener('click', event => {
+    if (!event.target.closest('.saee-inquiries-nav')) {
+      menu.hidden = true;
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+  });
 })();
 </script>
 
