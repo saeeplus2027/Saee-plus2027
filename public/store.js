@@ -17,7 +17,7 @@ window.SiteStore = (() => {
   // The static GitHub Pages frontend talks to the separately deployed Cloudflare Worker.
   // Set the real deployed Cloudflare Worker URL in remote-config.js.
   // Keep this fallback only for backwards compatibility; a wrong Worker URL causes HTTP 404.
-  const API_BASE = String(window.SAI_API_BASE || "https://saeeplus-projects.ligagym.workers.dev").replace(/\/$/, "");
+  const API_BASE = String(window.SAI_API_BASE || "https://saee-plus-api.ligagym.workers.dev").replace(/\/$/, "");
   const apiUrl = (path) => `${API_BASE}${path}`;
 
   // The validated bundled content is immediately usable. Remote refreshes replace
@@ -374,7 +374,13 @@ window.SiteStore = (() => {
     busy = true;
     try {
       const checked = await fitContentPayload(validate(next));
-      const payload = JSON.stringify({ content: checked });
+      // Send the content revision explicitly in the JSON body. This avoids
+      // relying only on the cross-origin If-Match header when saving from admin.
+      const expectedRevision = Number(state.revision);
+      if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) {
+        throw Error('تعذر تحديد نسخة المحتوى الحالية. حدّث صفحة الإدارة ثم حاول الحفظ مجددًا.');
+      }
+      const payload = JSON.stringify({ content: checked, expected_revision: expectedRevision });
       if (payload.length > 900000) throw Error('حجم المحتوى والصور أكبر من الحد المسموح للحفظ.');
       const response = await fetch(apiUrl('/api/content'), {
         method: 'PUT',
@@ -402,16 +408,11 @@ window.SiteStore = (() => {
 
 
   async function apiPost(path, payload = {}) {
-    let response;
-    try {
-      response = await fetch(apiUrl(path), {
-        method: 'POST', credentials: 'include', cache: 'no-store',
-        headers: authHeaders({ 'Content-Type': 'application/json', 'Accept': 'application/json' }),
-        body: JSON.stringify(payload)
-      });
-    } catch (networkError) {
-      throw Error('تعذر الاتصال بخادم سعي بلس. تحقق من نشر Cloudflare Worker ومن إعداد SITE_ORIGIN بالقيمة https://saeeplus2027.github.io. التفاصيل: ' + (networkError?.message || 'Network/CORS error'));
-    }
+    const response = await fetch(apiUrl(path), {
+      method: 'POST', credentials: 'include', cache: 'no-store',
+      headers: authHeaders({ 'Content-Type': 'application/json', 'Accept': 'application/json' }),
+      body: JSON.stringify(payload)
+    });
     let body = {};
     try { body = await response.json(); } catch (_) {}
     if (!response.ok) {
