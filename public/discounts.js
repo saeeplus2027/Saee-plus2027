@@ -76,6 +76,8 @@
   async function loadUsages() {
     if (loading) return loading;
     active.clear();
+    loaded = false;
+    if (loading) { loading = null; }
     if (!getToken()) {
       loaded = true;
       addButtons();
@@ -198,6 +200,8 @@
 
   window.addEventListener('sai-account-changed', () => {
     active.clear();
+    loaded = false;
+    loading = null;
     loadUsages().then(addButtons);
   });
 
