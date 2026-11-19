@@ -731,20 +731,23 @@ export default {
 
 
       // =========================================
-      // GLOBAL DISCOUNT USAGE (24 HOURS)
-      // One shared lock per discount ID, across all users and devices.
-      // This endpoint is intentionally public because the button is available
-      // without requiring each visitor to create an account.
+      // PER-ACCOUNT DISCOUNT USAGE (24 HOURS)
+      // Each authenticated account has an independent cooldown per discount.
       // =========================================
       if (
         path === '/api/discount-usage' &&
         (req.method === 'GET' || req.method === 'POST')
       ) {
+        const user = await identity(req, env);
+        if (!user) return fail('سجّل الدخول أولاً لاستخدام الخصم.', 401);
+
         await env.DB.prepare(`
-          CREATE TABLE IF NOT EXISTS discount_usage_global (
-            discount_id TEXT PRIMARY KEY,
+          CREATE TABLE IF NOT EXISTS discount_usage_accounts (
+            user_id TEXT NOT NULL,
+            discount_id TEXT NOT NULL,
             used_at INTEGER NOT NULL,
-            expires_at INTEGER NOT NULL
+            expires_at INTEGER NOT NULL,
+            PRIMARY KEY (user_id, discount_id)
           )
         `).run();
 
@@ -752,9 +755,9 @@ export default {
           const now = Date.now();
           const rows = await env.DB.prepare(`
             SELECT discount_id, used_at, expires_at
-            FROM discount_usage_global
-            WHERE expires_at > ?
-          `).bind(now).all();
+            FROM discount_usage_accounts
+            WHERE user_id = ? AND expires_at > ?
+          `).bind(user.id, now).all();
           const usages = {};
           for (const row of (rows.results || [])) {
             usages[row.discount_id] = {
@@ -779,19 +782,20 @@ export default {
         const now = Date.now();
         const expiresAt = now + 24 * 60 * 60 * 1000;
         const result = await env.DB.prepare(`
-          INSERT INTO discount_usage_global (discount_id, used_at, expires_at)
-          VALUES (?, ?, ?)
-          ON CONFLICT(discount_id) DO UPDATE SET
+          INSERT INTO discount_usage_accounts
+            (user_id, discount_id, used_at, expires_at)
+          VALUES (?, ?, ?, ?)
+          ON CONFLICT(user_id, discount_id) DO UPDATE SET
             used_at = excluded.used_at,
             expires_at = excluded.expires_at
-          WHERE discount_usage_global.expires_at <= ?
-        `).bind(discountId, now, expiresAt, now).run();
+          WHERE discount_usage_accounts.expires_at <= ?
+        `).bind(user.id, discountId, now, expiresAt, now).run();
 
         const row = await env.DB.prepare(`
           SELECT used_at, expires_at
-          FROM discount_usage_global
-          WHERE discount_id = ?
-        `).bind(discountId).first();
+          FROM discount_usage_accounts
+          WHERE user_id = ? AND discount_id = ?
+        `).bind(user.id, discountId).first();
 
         if (!result.meta.changes && row && Number(row.expires_at) > now) {
           return reply({
