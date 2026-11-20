@@ -32,3 +32,8 @@ body.admin [data-smart-section] {
 
 /* Password visibility toggle */
 .password-eye-wrap{position:relative!important;display:block!important;width:100%!important;min-width:0!important}.password-eye-wrap>input{width:100%!important;box-sizing:border-box!important;padding-inline-end:46px!important}.password-eye-toggle{position:absolute;inset-inline-end:8px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:7px;background:transparent;color:#668276;cursor:pointer;z-index:2}.password-eye-toggle:hover{background:#eaf1e9;color:#155e52}.password-eye-toggle:focus-visible{outline:2px solid #168477;outline-offset:2px}.password-eye-toggle svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+#about-video-list{display:grid;gap:10px;margin-top:18px}
+#about-video-list .about-admin-link{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px;border:1px solid var(--line,rgba(255,255,255,.12));border-radius:12px}
+#about-video-list .about-admin-link strong{flex:1}
+#about-video-progress{min-height:1.5em}
