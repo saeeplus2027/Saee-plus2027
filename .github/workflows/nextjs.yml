@@ -30,20 +30,18 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      # The live root index.html loads CSS, JavaScript and assets from
-      # the public/ directory. Stage public/ at the Pages root and then
-      # replace its older index with the current root index.html.
-      - name: Prepare GitHub Pages files
+      - name: Verify public website files
         run: |
-          rm -rf _site
-          mkdir -p _site
-          cp -a public/. _site/
-          cp index.html _site/index.html
+          test -f public/index.html
+          test -f public/app.js
+          test -f public/admin.js
+          test -f public/style.css
+          test -f public/remote-config.js
 
       - name: Upload website files
         uses: actions/upload-pages-artifact@v3
         with:
-          path: _site
+          path: public
 
       - name: Deploy website
         id: deployment
