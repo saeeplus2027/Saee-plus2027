@@ -1267,7 +1267,36 @@
   function bindConfirm(pId,cId){const p=$(pId),c=$(cId);const validate=()=>c.setCustomValidity(c.value&&c.value!==p.value?'كلمتا المرور غير متطابقتين.':'');p.addEventListener('input',validate);c.addEventListener('input',validate);return validate;}
   const validateRegister=bindConfirm('sai-register-password','sai-register-confirm');
   async function run(form, action){if(busy)return;busy=true;clearMessage();const submit=form.querySelector('[type="submit"]'),old=submit.textContent;submit.disabled=true;submit.textContent='جارٍ التنفيذ…';try{await action();}catch(e){showMessage(e.message||'تعذّرت العملية. حاول مرة أخرى.');}finally{busy=false;submit.disabled=false;submit.textContent=old;}}
-  async function updateHeader(){let user=null;try{const d=await api('/api/me');user=d.user||null;}catch(_){}if(user){try{localStorage.setItem(SESSION_KEY,user.email);}catch(_){}const displayName=String(user.name||'').trim()||user.email;accountLabel.textContent='مرحبًا، '+displayName;accountButton.setAttribute('aria-label','حساب '+displayName);accountButton.title='حساب سعي بلس: '+displayName;logoutButton.hidden=false;}else{try{localStorage.removeItem(SESSION_KEY);localStorage.removeItem(TOKEN_KEY);}catch(_){}accountLabel.textContent='تسجيل الدخول';accountButton.setAttribute('aria-label','تسجيل الدخول');accountButton.title='تسجيل الدخول';logoutButton.hidden=true;}window.dispatchEvent(new Event('sai-account-changed'));return user;}
+  async function updateHeader(){
+    let user=null, checked=false, authError=null;
+    try { const d=await api('/api/me'); user=d.user||null; checked=true; }
+    catch(e) { authError=e; }
+    if(user){
+      try{localStorage.setItem(SESSION_KEY,user.email);}catch(_){}
+      const displayName=String(user.name||'').trim()||user.email;
+      accountLabel.textContent='مرحبًا، '+displayName;
+      accountButton.setAttribute('aria-label','حساب '+displayName);
+      accountButton.title='حساب سعي بلس: '+displayName;
+      logoutButton.hidden=false;
+    } else if(checked || authError?.status===401 || authError?.status===403){
+      // Clear a session only when the API explicitly confirms it is invalid.
+      // Temporary network/CORS/5xx failures must not erase a successful login.
+      try{localStorage.removeItem(SESSION_KEY);localStorage.removeItem(TOKEN_KEY);}catch(_){}
+      accountLabel.textContent='تسجيل الدخول';
+      accountButton.setAttribute('aria-label','تسجيل الدخول');
+      accountButton.title='تسجيل الدخول';
+      logoutButton.hidden=true;
+    } else {
+      // Keep the bearer token during temporary API failures so the login gate
+      // does not send the user back to the login form on every click.
+      accountLabel.textContent='الحساب';
+      accountButton.setAttribute('aria-label','الحساب');
+      accountButton.title='تعذّر التحقق من الحساب مؤقتًا';
+      logoutButton.hidden=false;
+    }
+    window.dispatchEvent(new Event('sai-account-changed'));
+    return user;
+  }
   async function login(email,password){const d=await api('/api/login',{method:'POST',body:JSON.stringify({email,password})});if(!d.token)throw new Error('الخادم لم يُرجع جلسة. انشر تحديث Cloudflare Worker أولًا.');localStorage.setItem(TOKEN_KEY,d.token);localStorage.setItem(SESSION_KEY,email);await updateHeader();}
   accountButton.addEventListener('click',async()=>{if(busy)return;if(!authDialog.open)authDialog.showModal();const user=await updateHeader();if(user){showPage('account',false);}else{showPage('login',false);$('sai-login-email').focus();}});
   authDialog.querySelectorAll('[data-auth-go]').forEach(b=>b.addEventListener('click',()=>{const target=b.dataset.authGo;showPage(target);if(target==='forgot')$('sai-forgot-email').value=normalizeEmail($('sai-login-email').value);}));
