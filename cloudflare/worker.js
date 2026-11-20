@@ -48,6 +48,8 @@ async function derive(password, salt) {
 const cookie = (token, age) =>
   `saee_session=${token}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=${age}`;
 
+const strongPassword = p => typeof p === 'string' && p.length >= 8 && p.length <= 168 && /[A-Z]/.test(p) && /[a-z]/.test(p) && /[0-9]/.test(p) && /[^A-Za-z0-9]/.test(p);
+
 const emailOk = e =>
   typeof e === 'string' &&
   e.length <= 254 &&
@@ -819,6 +821,38 @@ export default {
       // LOGOUT
       // =========================================
 
+      // ACCOUNT PROFILE: rename account
+      if (path === '/api/account/name' && req.method === 'POST') {
+        const user = await identity(req, env);
+        if (!user) return fail('سجّل الدخول أولاً', 401);
+        const b = await readBody(req);
+        const name = String(b.name || '').trim();
+        if (!name || name.length > 100) return fail('الاسم مطلوب ويجب ألا يتجاوز 100 حرف');
+        await env.DB.prepare('UPDATE users SET name = ? WHERE id = ?').bind(name, user.id).run();
+        return reply({ success: true, name, message: 'تم تغيير اسم الحساب بنجاح.' });
+      }
+
+      // ACCOUNT PROFILE: permanently delete account and its sessions
+      if (path === '/api/account/delete' && req.method === 'POST') {
+        const user = await identity(req, env);
+        if (!user) return fail('سجّل الدخول أولاً', 401);
+        await env.DB.prepare(`CREATE TABLE IF NOT EXISTS resets (
+          token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires_at INTEGER NOT NULL,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )`).run();
+        await env.DB.prepare(`CREATE TABLE IF NOT EXISTS discount_usage_accounts (
+          user_id TEXT NOT NULL, discount_id TEXT NOT NULL, used_at INTEGER NOT NULL,
+          expires_at INTEGER NOT NULL, PRIMARY KEY (user_id, discount_id)
+        )`).run();
+        await env.DB.batch([
+          env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(user.id),
+          env.DB.prepare('DELETE FROM resets WHERE user_id = ?').bind(user.id),
+          env.DB.prepare('DELETE FROM discount_usage_accounts WHERE user_id = ?').bind(user.id),
+          env.DB.prepare('DELETE FROM users WHERE id = ?').bind(user.id)
+        ]);
+        return reply({ success: true, message: 'تم حذف الحساب نهائياً.' }, 200, { 'set-cookie': cookie('', 0) });
+      }
+
       if (path === '/api/logout' && req.method === 'POST') {
         const bearer = (req.headers.get('authorization') || '')
           .match(/^Bearer\s+([a-f0-9]{64})$/i)?.[1];
@@ -847,8 +881,8 @@ export default {
         const b = await readBody(req);
         const currentPassword = typeof b.currentPassword === 'string' ? b.currentPassword : '';
         const newPassword = typeof b.newPassword === 'string' ? b.newPassword : '';
-        if (newPassword.length < 12 || newPassword.length > 128) {
-          return fail('كلمة المرور الجديدة يجب أن تكون بين 12 و128 حرفاً');
+        if (!strongPassword(newPassword)) {
+          return fail('كلمة المرور يجب أن تكون بين 8 و168 حرفاً، وتتضمن حرفاً كبيراً وصغيراً ورقماً ورمزاً واحداً على الأقل.');
         }
         if (currentPassword === newPassword) {
           return fail('اختر كلمة مرور مختلفة عن الحالية');
@@ -913,12 +947,10 @@ export default {
       // SIGNUP
       if (path === '/api/signup') {
         if (
-          typeof b.password !== 'string' ||
-          b.password.length < 12 ||
-          b.password.length > 128
+          !strongPassword(b.password)
         ) {
           return fail(
-            'كلمة المرور يجب أن تكون بين 12 و128 حرفاً'
+            'كلمة المرور يجب أن تكون بين 8 و168 حرفاً، وتتضمن حرفاً كبيراً وصغيراً ورقماً ورمزاً واحداً على الأقل.'
           );
         }
 
@@ -951,9 +983,12 @@ export default {
           password_hash
         ).run();
 
-        return reply({
-          message: 'تم إنشاء الحساب. يمكنك تسجيل الدخول الآن.'
-        });
+        const newUser = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first();
+        const token = random();
+        await env.DB.prepare('INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)')
+          .bind(await hash(token), newUser.id, Date.now() + 7 * 86400000).run();
+        return reply({ message: 'تم إنشاء الحساب وتسجيل دخولك بنجاح.', token, expiresIn: 604800 }, 200,
+          { 'set-cookie': cookie(token, 604800) });
       }
 
       // NORMAL LOGIN
@@ -1062,9 +1097,7 @@ export default {
       if (path === '/api/reset-confirm') {
         if (
           !/^[a-f0-9]{64}$/.test(String(b.token || '')) ||
-          typeof b.password !== 'string' ||
-          b.password.length < 12 ||
-          b.password.length > 128
+          !strongPassword(b.password)
         ) {
           return fail('رابط أو كلمة مرور غير صالحة');
         }
