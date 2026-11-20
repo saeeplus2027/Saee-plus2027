@@ -68,43 +68,41 @@
       <h2>رؤيتنا لطلبة الفروع المهنية</h2>
       <div class="vision">أن يكون لكل طالب فرصة لإبراز موهبته وتحويل مهارته إلى إنجاز، وأن يجد الدعم الذي يساعده على الانتقال من مرحلة التعلّم إلى مرحلة الإنتاج والريادة، بما يعزز ثقته بقدراته ويفتح أمامه آفاقًا جديدة للمستقبل.</div>
     </section>
-    <section class="section" id="mentors">
-      <h2>المساعدون في المشاريع</h2>
-      <p>تعرّف إلى الأساتذة والمختصين الذين يمكنهم إرشادك وتقديم المساعدة في تطوير مشروعك.</p>
-      <div id="vocational-mentor-list" class="project-grid"><div class="empty-projects">جاري تحميل قائمة المساعدين...</div></div>
-    </section>
-    <section class="section" id="projects">
-      <h2>مشاريع الطلبة المعتمدة</h2>
-      <p>تظهر هنا المشاريع التي راجعتها الإدارة ووافقت على نشرها.</p>
-      <div id="vocational-project-list" class="project-grid"><div class="empty-projects">جاري تحميل المشاريع...</div></div>
-    </section>
     <section class="section" id="submit-project">
-      <h2>اعرض مشروعك</h2>
-      <p>أرسل مشروعك للمراجعة. لن يظهر للزوار إلا بعد موافقة الإدارة.</p>
+      <h2>شارك مهنتك أو مشروعك</h2>
+      <p>هل تمتلك مهنة أو مهارة، أو لديك مشروع أو منتج؟ شاركنا تفاصيله ليصل إلى فريق سعي بلس للمراجعة. لن يُنشر أي طلب قبل موافقة الإدارة.</p>
       <form id="vocational-project-form" class="project-form">
         <label>اسم الطالب *<input name="studentName" maxlength="100" required autocomplete="name"></label>
-        <label>اسم المشروع *<input name="title" maxlength="120" required></label>
+        <label>اسم المهنة أو المشروع *<input name="title" maxlength="120" required placeholder="مثال: تصميم جرافيكي أو مشروع حلويات منزلية"></label>
         <label>المجال المهني *<select name="field" required><option value="">اختر المجال</option><option>التصميم والإبداع</option><option>الخياطة والأزياء</option><option>التجميل والعناية</option><option>صيانة الأجهزة</option><option>الأعمال الحرفية</option><option>البرمجة والتقنية</option><option>مجال مهني آخر</option></select></label>
-        <label>نوع المشروع *<select name="projectType" required><option value="">اختر النوع</option><option>منتج</option><option>خدمة</option><option>فكرة إبداعية</option></select></label>
-        <label class="full">وصف المشروع *<textarea name="description" minlength="10" maxlength="2000" required placeholder="اشرح فكرتك أو المنتج أو الخدمة التي تقدمها..."></textarea></label>
+        <label>ماذا تريد أن تشارك؟ *<select name="projectType" required><option value="">اختر نوع المشاركة</option><option value="مهنة/مهارة">مهنة أو مهارة</option><option value="منتج">مشروع أو منتج</option><option value="خدمة">خدمة</option><option value="فكرة إبداعية">فكرة إبداعية</option></select></label>
+        <label class="full">وصف المشروع *<textarea name="description" minlength="10" maxlength="2000" required placeholder="عرّفنا بمهنتك أو مهارتك أو اشرح مشروعك وما الذي تقدمه..."></textarea></label>
         <label class="full">رابط صورة المشروع (اختياري)<input name="imageUrl" type="url" placeholder="https://..."></label>
-        <label class="full">وسيلة تواصل (اختياري)<input name="contact" maxlength="160" placeholder="بريد إلكتروني أو حساب تواصل عام"></label>
-        <div class="full"><button class="cta" type="submit">إرسال المشروع للمراجعة</button><p class="note">يتطلب الإرسال تسجيل الدخول إلى سعي بلس. لا تضع معلومات حساسة في وصف المشروع أو بيانات التواصل.</p><div id="vocational-form-status" class="form-status" role="status" aria-live="polite"></div></div>
+        <label>رقم الهاتف (اختياري)<input name="phone" maxlength="40" type="tel" placeholder="07XXXXXXXX" dir="ltr"></label>
+        <label>وسيلة تواصل إضافية (اختياري)<input name="contact" maxlength="160" placeholder="بريد إلكتروني"></label>
+        <label>رابط إنستغرام (اختياري)<input name="instagramUrl" type="url" maxlength="500" placeholder="https://instagram.com/..."></label>
+        <label>رابط فيسبوك (اختياري)<input name="facebookUrl" type="url" maxlength="500" placeholder="https://facebook.com/..."></label>
+        <div class="full"><button class="cta" type="submit">إرسال المشاركة للمراجعة</button><p class="note">يتطلب الإرسال تسجيل الدخول إلى سعي بلس. يمكنك إرسال مهنة أو مهارة أو مشروع. ستبقى المشاركة مخفية حتى موافقة الإدارة.</p><div id="vocational-form-status" class="form-status" role="status" aria-live="polite"></div></div>
       </form>
     </section>
     <section class="section"><h2>مهارتك تستحق أن تُرى</h2><p>ابدأ بتطوير فكرتك، وشارك مشروعك ضمن مساحة مهنتي إبداعي.</p><a class="cta" href="index.html">العودة إلى سعي بلس</a></section>
     <script>
     (()=>{
-      const VOCATIONAL_API_BASE=String(window.SAI_API_BASE||'https://saeeplus-projects.ligagym.workers.dev').replace(/\/$/,'');
-      const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-      const list=document.getElementById('vocational-project-list');
-      const mentorList=document.getElementById('vocational-mentor-list');
-      async function loadMentors(){try{const r=await fetch(`${VOCATIONAL_API_BASE}/api/vocational-mentors`,{credentials:'include'});const d=await r.json();if(!r.ok)throw Error(d.error||'تعذر تحميل المساعدين');const mentors=d.mentors||[];mentorList.innerHTML=mentors.length?mentors.map(m=>`<article class="project-card"><div class="project-body"><span class="project-meta">مساعد في المشاريع</span><h3>${esc(m.name)}</h3><p><strong>التخصص:</strong> ${esc(m.specialty)}</p>${m.bio?`<p>${esc(m.bio)}</p>`:''}<p><strong>رقم التواصل:</strong> <a href="tel:${esc(m.phone.replace(/[^+0-9٠-٩۰-۹]/g,''))}" dir="ltr">${esc(m.phone)}</a></p></div></article>`).join(''):'<div class="empty-projects">سيتم إضافة أسماء المساعدين وبياناتهم من إدارة سعي بلس قريبًا.</div>';}catch(e){mentorList.innerHTML='<div class="empty-projects">تعذر تحميل قائمة المساعدين حاليًا.</div>';}}
-      async function loadProjects(){try{const r=await fetch(`${VOCATIONAL_API_BASE}/api/vocational-projects`,{credentials:'include'});const d=await r.json();if(!r.ok)throw Error(d.error||'تعذر تحميل المشاريع');const projects=d.projects||[];list.innerHTML=projects.length?projects.map(p=>`<article class="project-card">${p.image_url?`<img src="${esc(p.image_url)}" alt="صورة ${esc(p.title)}" loading="lazy" referrerpolicy="no-referrer">`:''}<div class="project-body"><span class="project-meta">${esc(p.field)} · ${esc(p.project_type)}</span><h3>${esc(p.title)}</h3><p>${esc(p.description)}</p><div class="project-meta">بواسطة ${esc(p.student_name)}</div>${p.contact?`<p><a href="mailto:${esc(p.contact)}">تواصل مع صاحب المشروع</a></p>`:''}</div></article>`).join(''):'<div class="empty-projects">لا توجد مشاريع معتمدة حتى الآن. كن أول من يشارك مشروعه!</div>';}catch(e){list.innerHTML='<div class="empty-projects">تعذر تحميل المشاريع حاليًا. حاول تحديث الصفحة لاحقًا.</div>';}}
-      const form=document.getElementById('vocational-project-form'),status=document.getElementById('vocational-form-status');
-      form.addEventListener('submit',async e=>{e.preventDefault();const btn=form.querySelector('button[type="submit"]');btn.disabled=true;status.className='form-status';status.textContent='جارٍ إرسال المشروع...';status.classList.add('show');const data=Object.fromEntries(new FormData(form));try{const r=await fetch(`${VOCATIONAL_API_BASE}/api/vocational-projects`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const d=await r.json();if(!r.ok){if(r.status===401){status.className='form-status show error';status.innerHTML='سجّل الدخول إلى سعي بلس أولًا، ثم ارجع وأرسل مشروعك. <a href="/signin-with-chatgpt?return_to=%2Fvocational.html%23submit-project" target="_top" rel="noopener">تسجيل الدخول</a>';return;}throw Error(d.error||'تعذر إرسال المشروع.');}status.className='form-status show success';status.textContent=d.message||'تم إرسال المشروع للمراجعة.';form.reset();}catch(err){status.className='form-status show error';status.textContent=err.message||'حدث خطأ، حاول مرة أخرى.';}finally{btn.disabled=false;}});
-      loadProjects();
-      loadMentors();
+      const API=String(window.SAI_API_BASE||'https://saeeplus-projects.ligagym.workers.dev').replace(/\/$/, '');
+      const form=document.getElementById('vocational-project-form');
+      const status=document.getElementById('vocational-form-status');
+      form.addEventListener('submit',async e=>{
+        e.preventDefault();const btn=form.querySelector('button[type="submit"]');btn.disabled=true;
+        status.className='form-status show';status.textContent='جارٍ إرسال المشاركة...';
+        const data=Object.fromEntries(new FormData(form));
+        try{
+          const r=await fetch(`${API}/api/vocational-projects`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+          const d=await r.json();
+          if(!r.ok){if(r.status===401){status.className='form-status show error';status.innerHTML='سجّل الدخول إلى سعي بلس أولًا، ثم ارجع وأرسل مشاركتك. <a href="/signin-with-chatgpt?return_to=%2Fvocational.html%23submit-project" target="_top" rel="noopener">تسجيل الدخول</a>';return;}throw Error(d.error||'تعذر إرسال المشاركة.');}
+          status.className='form-status show success';status.textContent=d.message||'تم إرسال مشاركتك للمراجعة.';form.reset();
+        }catch(err){status.className='form-status show error';status.textContent=err.message||'حدث خطأ، حاول مرة أخرى.';}
+        finally{btn.disabled=false;}
+      });
     })();
     </script>
   </main>
