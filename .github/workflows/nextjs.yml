@@ -1,5 +1,4 @@
-```yaml
-name: Deploy Saee Plus to GitHub Pages
+name: Build and Deploy Saee Plus to Cloudflare
 
 on:
   push:
@@ -9,34 +8,48 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: saee-plus-production
   cancel-in-progress: true
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload website files
-        uses: actions/upload-pages-artifact@v3
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          path: .
+          version: 11.25.0
 
-      - name: Deploy website
-        id: deployment
-        uses: actions/deploy-pages@v4
-```
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build application
+        run: pnpm build
+
+      - name: Verify Cloudflare build output
+        run: |
+          test -f dist/server/wrangler.json || {
+            echo "Build did not produce dist/server/wrangler.json"
+            find dist -maxdepth 3 -type f | head -100 || true
+            exit 1
+          }
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --config dist/server/wrangler.json
