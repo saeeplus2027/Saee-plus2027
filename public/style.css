@@ -88,3 +88,21 @@ iframe[src*="watermark" i],iframe[title*="watermark" i]{display:none!important;v
 /* تأكيد: لا شارات ولا نجمة زخرفية على صورة الواجهة */
 .visual-star,.join-banner:after{display:none!important;content:none!important}
 .about-link-copy{display:none!important}
+
+/* ترتيب المربعات البيضاء على صورة الواجهة: مستقيمة، بنفس الحجم، ومحاذية داخل الصورة */
+.floating{transform:none!important;box-sizing:border-box;width:262px;min-height:78px;padding:15px 18px;gap:14px;border-radius:16px;background:#fff;border:1px solid #edeee9;box-shadow:0 8px 24px rgba(22,63,58,.12)}
+.floating>div:not(.bubble){flex:1;min-width:0;text-align:right}
+.floating .bubble{flex:0 0 46px;width:46px;height:46px}
+.floating b{display:block;font-size:14px;line-height:1.5}
+.floating small{font-size:12px;line-height:1.5;margin-top:2px}
+.float-one{right:44px!important;left:auto!important;top:56px!important}
+.float-two{left:26px!important;right:auto!important;bottom:150px!important}
+@media(max-width:1050px){.float-one{right:36px!important}.float-two{left:20px!important}}
+@media(max-width:700px){
+  .floating{width:206px;min-height:62px;padding:10px 12px;gap:10px;border-radius:13px}
+  .floating .bubble{flex:0 0 36px;width:36px;height:36px}
+  .floating b{font-size:12px}
+  .floating small{font-size:10px}
+  .float-one{right:28px!important;top:40px!important}
+  .float-two{left:28px!important;bottom:128px!important}
+}
