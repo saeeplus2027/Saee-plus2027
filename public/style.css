@@ -59,7 +59,28 @@ header nav .statistics-nav-button:focus-visible {
 /* صفحة من نحن وإدارة روابطها */
 .about-page{padding-top:48px;padding-bottom:70px;min-height:48vh}.about-page-card{max-width:900px;margin:0 auto;background:#fff;border:1px solid #e8eee7;border-radius:24px;padding:clamp(24px,5vw,52px);box-shadow:0 18px 50px rgba(26,67,57,.07)}.about-page-card h1{color:var(--green);font-size:clamp(28px,4vw,42px);margin:12px 0 24px}.about-page-body{font-size:17px;line-height:2.1;color:#596b63;white-space:normal}.about-page-links{border-top:1px solid #e8eee7;margin-top:32px;padding-top:24px}.about-page-links h2{font-size:20px;color:var(--green);margin:0 0 16px}.about-links-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.about-link-card{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:16px 18px;border:1px solid #dce8df;border-radius:14px;background:#f8fbf7;color:var(--green);font-weight:700;text-decoration:none;transition:.2s}.about-link-card:hover{transform:translateY(-2px);border-color:var(--green);box-shadow:0 8px 20px rgba(26,67,57,.08)}.about-admin-links-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:22px 0 12px}.about-admin-links-head h3{margin:0;color:var(--green)}.about-admin-link{border:1px solid #e1e9e2;border-radius:14px;padding:16px;margin:12px 0;background:#fbfcfa}.about-admin-link-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;color:var(--green)}.admin-compact.danger{color:#a33b35;border-color:#efd5d2}.about-admin-links-head button:disabled{opacity:.5;cursor:not-allowed}@media(max-width:700px){.about-links-grid{grid-template-columns:1fr}.about-page{padding-top:24px}.about-page-card{border-radius:16px}}
 
-/* روابط منصات التواصل في صفحة من نحن */
-.about-links-grid{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}.about-link-card{min-width:0;min-height:190px;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;gap:10px;padding:18px 14px;text-align:center}.about-link-title{display:block;width:100%;font-size:16px;line-height:1.5;color:var(--green);overflow-wrap:anywhere}.about-link-icon{width:58px;height:58px;flex:0 0 58px;display:grid;place-items:center;border-radius:17px;background:#e8f1eb;font-size:30px;font-weight:800}.about-link-copy{display:flex;min-width:0;width:100%;flex-direction:column;align-items:center;gap:6px}.about-link-platform{font-size:14px;font-weight:800;color:#344f43}.about-link-copy small{font-size:12px;font-weight:500;color:#66766c}.about-link-copy .about-link-url{max-width:100%;overflow-wrap:anywhere;word-break:break-word;color:#78877d;font-size:10px}.about-link-instagram .about-link-icon{background:#f8e9f1;color:#b83278}.about-link-facebook .about-link-icon{background:#e8efff;color:#2463c7}.about-link-google .about-link-icon{background:#fff1e8;color:#d64a35}.about-link-youtube .about-link-icon{background:#ffebeb;color:#d92727}.about-link-whatsapp .about-link-icon{background:#e5f7ec;color:#168348}.about-link-instagram .about-link-icon{background:#f8e9f1;color:#b83278}.about-link-facebook .about-link-icon{background:#e8efff;color:#2463c7}.about-link-google .about-link-icon{background:#fff1e8;color:#d64a35}.about-link-youtube .about-link-icon{background:#ffebeb;color:#d92727}.about-link-whatsapp .about-link-icon{background:#e5f7ec;color:#168348}
-/* إزالة عناصر العلامة المائية/اعتمادات القوالب إن أضيفت كعناصر مستقلة */
-[class*="watermark" i],[id*="watermark" i],[class*="made-with" i],[id* ="made-with" i]{display:none!important;visibility:hidden!important;pointer-events:none!important}
+/* روابط منصات التواصل في صفحة من نحن: العنوان مستقل، والشعار وحده قابل للضغط */
+.about-links-grid{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
+.about-link-card{min-width:0;min-height:205px;display:flex;flex-direction:column;justify-content:flex-start;align-items:center;gap:14px;padding:20px 14px;text-align:center;border:1px solid #dce8df;border-radius:14px;background:#f8fbf7;color:var(--green)}
+.about-link-title{display:block;width:100%;font-size:16px;line-height:1.6;color:var(--green);overflow-wrap:anywhere;min-height:26px}
+.about-link-icon-link{width:76px;height:76px;flex:0 0 76px;display:grid;place-items:center;border-radius:20px;background:#e8f1eb;color:var(--green);text-decoration:none;transition:transform .2s,box-shadow .2s;cursor:pointer}
+.about-link-icon-link svg{width:43px;height:43px;display:block}
+.about-link-icon-link:hover,.about-link-icon-link:focus-visible{transform:translateY(-3px);box-shadow:0 8px 20px rgba(26,67,57,.15);outline:2px solid var(--green);outline-offset:3px}
+.about-link-copy{display:flex;min-width:0;width:100%;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
+.about-link-platform{font-size:14px;font-weight:800;color:#344f43}
+.about-link-copy .about-link-url{max-width:100%;overflow-wrap:anywhere;word-break:break-word;color:#78877d;font-size:10px;font-weight:500}
+.about-link-instagram .about-link-icon-link{background:#f8e9f1;color:#b83278}
+.about-link-facebook .about-link-icon-link{background:#e8efff;color:#2463c7}
+.about-link-google .about-link-icon-link{background:#fff1e8;color:#d64a35}
+.about-link-youtube .about-link-icon-link{background:#ffebeb;color:#d92727}
+.about-link-whatsapp .about-link-icon-link{background:#e5f7ec;color:#168348}
+.about-link-tiktok .about-link-icon-link{background:#e9e9ed;color:#151515}
+.about-link-linkedin .about-link-icon-link{background:#e7f1f8;color:#0a66c2}
+.about-link-x .about-link-icon-link{background:#ececec;color:#111}
+@media(max-width:700px){.about-links-grid{grid-template-columns:1fr}.about-link-card{min-height:190px}}
+
+/* إزالة شارات العلامة المائية واعتمادات منصات البناء من جميع صفحات الموقع */
+[id*="watermark" i],[class*="watermark" i],[data-watermark],[data-testid*="watermark" i],
+[id*="made-with" i],[class*="made-with" i],[id*="branding-badge" i],[class*="branding-badge" i],
+[id*="powered-by" i],[class*="powered-by" i],a[href*="lovable.dev"],a[href*="v0.dev"],
+iframe[src*="watermark" i],iframe[title*="watermark" i]{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;width:0!important;height:0!important}
