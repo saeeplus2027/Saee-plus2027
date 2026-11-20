@@ -7,7 +7,7 @@ workers_dev = true
 [[d1_databases]]
 binding = "DB"
 database_name = "saee-plus-shared"
-database_id = "REPLACE_WITH_YOUR_CLOUDFLARE_D1_DATABASE_ID"
+database_id = "7f42f628-0162-432e-ab26-6bbcfb5ef9b1"
 
 [vars]
 # Use the website's ORIGIN only, with no path; add comma-separated origins if needed.
