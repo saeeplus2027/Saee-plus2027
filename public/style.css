@@ -89,20 +89,37 @@ iframe[src*="watermark" i],iframe[title*="watermark" i]{display:none!important;v
 .visual-star,.join-banner:after{display:none!important;content:none!important}
 .about-link-copy{display:none!important}
 
-/* ترتيب المربعات البيضاء على صورة الواجهة: مستقيمة، بنفس الحجم، ومحاذية داخل الصورة */
-.floating{transform:none!important;box-sizing:border-box;width:262px;min-height:78px;padding:15px 18px;gap:14px;border-radius:16px;background:#fff;border:1px solid #edeee9;box-shadow:0 8px 24px rgba(22,63,58,.12)}
-.floating>div:not(.bubble){flex:1;min-width:0;text-align:right}
-.floating .bubble{flex:0 0 46px;width:46px;height:46px}
-.floating b{display:block;font-size:14px;line-height:1.5}
-.floating small{font-size:12px;line-height:1.5;margin-top:2px}
-.float-one{right:44px!important;left:auto!important;top:56px!important}
-.float-two{left:26px!important;right:auto!important;bottom:150px!important}
-@media(max-width:1050px){.float-one{right:36px!important}.float-two{left:20px!important}}
+/* بطاقات الواجهة العائمة: مستقيمة ومتوازنة بصرياً */
+.hero-visual .floating{
+  transform:none;
+  min-height:82px;
+  min-width:252px;
+  padding:17px 20px;
+  gap:14px;
+  border:1px solid rgba(225,231,220,.95);
+  border-radius:16px;
+  box-shadow:0 10px 28px rgba(25,57,48,.10);
+  transition:box-shadow .2s ease, border-color .2s ease;
+}
+.hero-visual .floating:hover{
+  transform:none;
+  box-shadow:0 14px 34px rgba(25,57,48,.14);
+  border-color:#d8e3d7;
+}
+.hero-visual .floating .bubble{flex:0 0 44px;width:44px;height:44px}
+.hero-visual .floating b{font-size:14px;line-height:1.6;color:#174c45}
+.hero-visual .floating small{font-size:10px;line-height:1.7;margin-top:4px}
+.hero-visual .float-one{top:17%;right:-12px;left:auto}
+.hero-visual .float-two{bottom:24%;left:-10px;right:auto}
+@media(max-width:1050px){
+  .hero-visual .float-one{right:0}
+  .hero-visual .float-two{left:0}
+}
 @media(max-width:700px){
-  .floating{width:206px;min-height:62px;padding:10px 12px;gap:10px;border-radius:13px}
-  .floating .bubble{flex:0 0 36px;width:36px;height:36px}
-  .floating b{font-size:12px}
-  .floating small{font-size:10px}
-  .float-one{right:28px!important;top:40px!important}
-  .float-two{left:28px!important;bottom:128px!important}
+  .hero-visual .floating{min-width:0;width: min(235px, calc(100% - 12px));min-height:68px;padding:11px 13px;gap:9px;border-radius:13px}
+  .hero-visual .floating .bubble{flex-basis:36px;width:36px;height:36px}
+  .hero-visual .floating b{font-size:11px}
+  .hero-visual .floating small{font-size:9px}
+  .hero-visual .float-one{top:13%;right:-5px;left:auto}
+  .hero-visual .float-two{bottom:27%;left:-5px;right:auto}
 }
