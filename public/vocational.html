@@ -93,7 +93,10 @@
         <label>نوع المشروع *<select name="projectType" required><option value="">اختر النوع</option><option>منتج</option><option>خدمة</option><option>فكرة إبداعية</option></select></label>
         <label class="full">وصف المشروع *<textarea name="description" minlength="10" maxlength="2000" required placeholder="اشرح فكرتك أو المنتج أو الخدمة التي تقدمها..."></textarea></label>
         <label class="full">رابط صورة المشروع (اختياري)<input name="imageUrl" type="url" placeholder="https://..."></label>
-        <label class="full">وسيلة تواصل (اختياري)<input name="contact" maxlength="160" placeholder="بريد إلكتروني أو حساب تواصل عام"></label>
+        <label>رقم للتواصل (اختياري)<input name="phone" type="tel" maxlength="40" placeholder="07XXXXXXXX" dir="ltr"></label>
+        <label>رابط إنستغرام (اختياري)<input name="instagramUrl" type="url" placeholder="https://instagram.com/..."></label>
+        <label>رابط فيسبوك (اختياري)<input name="facebookUrl" type="url" placeholder="https://facebook.com/..."></label>
+        <label class="full">وسيلة تواصل إضافية (اختياري)<input name="contact" maxlength="160" placeholder="بريد إلكتروني أو وسيلة تواصل أخرى"></label>
         <div class="full"><button class="cta" type="submit">إرسال المشروع للمراجعة</button><p class="note">يتطلب الإرسال تسجيل الدخول إلى سعي بلس. لا تضع معلومات حساسة في وصف المشروع أو بيانات التواصل.</p><div id="vocational-form-status" class="form-status" role="status" aria-live="polite"></div></div>
       </form>
     </section>
@@ -106,7 +109,7 @@
       const myList=document.getElementById('my-vocational-project-list');
       const mentorList=document.getElementById('vocational-mentor-list');
       async function loadMentors(){try{const r=await fetch(`${VOCATIONAL_API_BASE}/api/vocational-mentors`,{credentials:'include'});const d=await r.json();if(!r.ok)throw Error(d.error||'تعذر تحميل المساعدين');const mentors=d.mentors||[];mentorList.innerHTML=mentors.length?mentors.map(m=>`<article class="project-card"><div class="project-body"><span class="project-meta">مساعد في المشاريع</span><h3>${esc(m.name)}</h3><p><strong>التخصص:</strong> ${esc(m.specialty)}</p>${m.bio?`<p>${esc(m.bio)}</p>`:''}<p><strong>رقم التواصل:</strong> <a href="tel:${esc(m.phone.replace(/[^+0-9٠-٩۰-۹]/g,''))}" dir="ltr">${esc(m.phone)}</a></p></div></article>`).join(''):'<div class="empty-projects">سيتم إضافة أسماء المساعدين وبياناتهم من إدارة سعي بلس قريبًا.</div>';}catch(e){mentorList.innerHTML='<div class="empty-projects">تعذر تحميل قائمة المساعدين حاليًا.</div>';}}
-      async function loadProjects(){try{const r=await fetch(`${VOCATIONAL_API_BASE}/api/vocational-projects`,{credentials:'include'});const d=await r.json();if(!r.ok)throw Error(d.error||'تعذر تحميل المشاريع');const projects=d.projects||[];list.innerHTML=projects.length?projects.map(p=>`<article class="project-card">${p.image_url?`<img src="${esc(p.image_url)}" alt="صورة ${esc(p.title)}" loading="lazy" referrerpolicy="no-referrer">`:''}<div class="project-body"><span class="project-meta">${esc(p.field)} · ${esc(p.project_type)}</span><h3>${esc(p.title)}</h3><p>${esc(p.description)}</p><div class="project-meta">بواسطة ${esc(p.student_name)}</div>${p.contact?`<p><a href="mailto:${esc(p.contact)}">تواصل مع صاحب المشروع</a></p>`:''}</div></article>`).join(''):'<div class="empty-projects">لا توجد مشاريع معتمدة حتى الآن. كن أول من يشارك مشروعه!</div>';}catch(e){list.innerHTML='<div class="empty-projects">تعذر تحميل المشاريع حاليًا. حاول تحديث الصفحة لاحقًا.</div>';}}
+      async function loadProjects(){try{const r=await fetch(`${VOCATIONAL_API_BASE}/api/vocational-projects`,{credentials:'include'});const d=await r.json();if(!r.ok)throw Error(d.error||'تعذر تحميل المشاريع');const projects=d.projects||[];list.innerHTML=projects.length?projects.map(p=>`<article class="project-card">${p.image_url?`<img src="${esc(p.image_url)}" alt="صورة ${esc(p.title)}" loading="lazy" referrerpolicy="no-referrer">`:''}<div class="project-body"><span class="project-meta">${esc(p.field)} · ${esc(p.project_type)}</span><h3>${esc(p.title)}</h3><p>${esc(p.description)}</p><div class="project-meta">بواسطة ${esc(p.student_name)}</div>${p.phone?`<p>رقم التواصل: <a href="tel:${esc(p.phone.replace(/[^+0-9٠-٩۰-۹]/g,''))}" dir="ltr">${esc(p.phone)}</a></p>`:''}${p.instagram_url?`<p><a href="${esc(p.instagram_url)}" target="_blank" rel="noopener noreferrer">إنستغرام</a></p>`:''}${p.facebook_url?`<p><a href="${esc(p.facebook_url)}" target="_blank" rel="noopener noreferrer">فيسبوك</a></p>`:''}${p.contact?`<p>تواصل: ${esc(p.contact)}</p>`:''}</div></article>`).join(''):'<div class="empty-projects">لا توجد مشاريع معتمدة حتى الآن. كن أول من يشارك مشروعه!</div>';}catch(e){list.innerHTML='<div class="empty-projects">تعذر تحميل المشاريع حاليًا. حاول تحديث الصفحة لاحقًا.</div>';}}
       const statusLabel=s=>s==='approved'?'مقبول ومنشور':s==='rejected'?'مرفوض':'بانتظار مراجعة الإدارة';
       async function loadMyProjects(){
         try{
@@ -127,8 +130,11 @@
         const projectType=ask('نوع المشروع (منتج / خدمة / فكرة إبداعية)',p.project_type);if(projectType===null)return;
         const description=ask('وصف المشروع',p.description);if(description===null)return;
         const imageUrl=ask('رابط صورة المشروع (اختياري)',p.image_url);if(imageUrl===null)return;
-        const contact=ask('وسيلة التواصل (اختياري)',p.contact);if(contact===null)return;
-        try{const r=await fetch(`${VOCATIONAL_API_BASE}/api/vocational-projects`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'update',id,studentName,title,field,projectType,description,imageUrl,contact})});const d=await r.json();if(!r.ok)throw Error(d.error||'تعذر التعديل');alert(d.message||'تم التعديل');await loadMyProjects();await loadProjects();}catch(e){alert(e.message||'تعذر التعديل');}
+        const contact=ask('وسيلة تواصل إضافية (اختياري)',p.contact);if(contact===null)return;
+        const phone=ask('رقم التواصل (اختياري)',p.phone);if(phone===null)return;
+        const instagramUrl=ask('رابط إنستغرام (اختياري)',p.instagram_url);if(instagramUrl===null)return;
+        const facebookUrl=ask('رابط فيسبوك (اختياري)',p.facebook_url);if(facebookUrl===null)return;
+        try{const r=await fetch(`${VOCATIONAL_API_BASE}/api/vocational-projects`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'update',id,studentName,title,field,projectType,description,imageUrl,contact,phone,instagramUrl,facebookUrl})});const d=await r.json();if(!r.ok)throw Error(d.error||'تعذر التعديل');alert(d.message||'تم التعديل');await loadMyProjects();await loadProjects();}catch(e){alert(e.message||'تعذر التعديل');}
       };
       window.deleteMyVocationalProject=async id=>{
         if(!confirm('هل تريد حذف مشروعك نهائيًا؟'))return;
