@@ -22,11 +22,20 @@ const localBindingConfig = {
     ? [
         {
           binding: d1,
-          database_name: "saee-projects-db",
-          database_id: "ضع_DATABASE_ID_الحقيقي_هنا",
+          database_name: "site-creator-d1",
+          database_id: SITE_CREATOR_PLACEHOLDER_DATABASE_ID,
         },
       ]
     : [],
+  r2_buckets: r2
+    ? [
+        {
+          binding: r2,
+          bucket_name: "site-creator-bucket",
+        },
+      ]
+    : [],
+};
 
 export default defineConfig(async ({ command }) => {
   configureToolEnvironment(process.cwd());
