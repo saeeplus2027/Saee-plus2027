@@ -9,7 +9,7 @@ let communityDisplayItems=[];
 let items=[...base,...additions],favorites=JSON.parse(localStorage.getItem('sai-favorites')||'[]'),route='',category='الكل',query='';
 const main=document.getElementById('main');
 const COMMUNITY_API=String(window.SAI_API_BASE||'https://saee-plus-api.ligagym.workers.dev').replace(/\/$/,'');
-function accountType(){return window.SAI_CURRENT_USER?.accountType||'';}
+function isSignedIn(){return !!window.SAI_CURRENT_USER;}
 function accountToken(){try{return localStorage.getItem('saee-auth-token-v1')||'';}catch(_){return '';}}
 async function communityRequest(path,options={}){
   const headers=new Headers(options.headers||{});
@@ -46,10 +46,10 @@ window.addEventListener('focus',()=>{refreshCommunityProjects();});
 setInterval(()=>{if(document.visibilityState==='visible')refreshCommunityProjects();},60000);
 function serviceCards(){return services.filter(s=>!SiteStore.state.hidden.includes(s[0])).map(s=>`<a class="service-card" href="#${s[0]}"><div class="service-icon">${icon(s[1])}</div><h3>${escapeHtml(s[2])}</h3><p>${escapeHtml(s[3])}</p><span class="card-arrow">↖</span></a>`).join('')}
 function card(x){return `<article class="offer-card"><div class="photo-wrap">${x.image?`<img src="${escapeHtml(SiteStore.imageSrc(x.image))}" alt="${escapeHtml(x.title)}" loading="lazy">`:`<div class="expert-avatar">${escapeHtml(x.emoji||'✦')}</div>`}<span class="offer-tag">${escapeHtml(x.badge||'إضافة مجتمعية')}</span><button class="heart ${favorites.includes(x.id)?'saved':''}" onclick="saveFavorite('${x.id}',this)" aria-label="حفظ ${escapeHtml(x.title)} في المفضلة" aria-pressed="${favorites.includes(x.id)}">${icon('heart')}</button>${x.isCommunityProject&&x.isOwner?`<button type="button" class="community-edit-card" onclick="editCommunityProject('${escapeHtml(x.communityId)}')" style="position:absolute;left:10px;bottom:10px;border:0;border-radius:9px;padding:7px 10px;background:#075550;color:white;font-weight:700;cursor:pointer">تعديل مشروعي</button>`:''}</div><div class="card-body"><h3>${escapeHtml(x.title)}</h3><p>${escapeHtml(x.desc)}</p><div class="card-foot"><span class="${x.price?'price':'tag'}">${escapeHtml(x.price||x.meta||x.cat)}</span><button class="details-btn" onclick="details('${x.id}')">التفاصيل ↖</button></div></div></article>`}
-function home(){main.innerHTML=`<div class="container"><section class="hero"><div class="hero-copy"><div class="eyebrow"><span class="dot"></span> من جامعتك.. لمجتمعك</div><h1>كل احتياجاتك،<br>وفرصك <em>في مكان واحد.</em></h1><p>سعي بلس يجمع عالمك الجامعي ومجتمعك المحلي في مساحة واحدة. اكتشف، تواصل، وشارك.. لأن كل سعي صغير يصنع فرقًا.</p><div class="hero-buttons"><a class="button" href="#services">اكتشف خدماتنا <span>↖</span></a><a class="button light" href="#about">تعرّف على سعي بلس</a></div><div class="hero-trust"><div class="avatar-stack"><i>🌱</i><i>🎓</i><i>☕</i></div><span>للطلاب، والمبدعين، وكل من يسعى للأفضل.</span></div></div><div class="hero-visual"><img class="campus-photo" src="assets/campus.jpg" alt="مساحة جامعية خضراء ومباني تعليمية"><div class="visual-tint"></div><div class="floating float-one"><span class="bubble">${icon('book')}</span><div><b>كتابك فرصة لغيرك</b><small>شارك المعرفة، واصنع أثرًا.</small></div></div><div class="floating float-two"><span class="bubble">${icon('percent')}</span><div><b>عروض تناسب يومك</b><small>خصومات من محيط جامعتك</small></div></div><div class="visual-caption"><small>خطوتك الجاية تبدأ من هنا</small><p>أقرب لجامعتك.<br>أقرب لفرصك.</p></div></div></section><div class="community-strip"><div>${icon('grad')}<span><strong>حياة جامعية أسهل</strong><small>خدمات ترافقك كل يوم</small></span></div><div>${icon('users')}<span><strong>مجتمع أقرب لك</strong><small>تواصل، تعلّم، وشارك</small></span></div><div>${icon('leaf')}<span><strong>أثر يبدأ بخطوة</strong><small>فرص صغيرة، أثر كبير</small></span></div></div><section class="services"><div class="section-head"><div><span class="kicker">مساحات صُممت لك</span><h2>وش حاب تسعى له اليوم؟</h2><p>ست خدمات، وكل خدمة تفتح لك بابًا جديدًا.</p></div><span class="arrow-link">كل احتياجاتك، هنا ${icon('leaf')}</span></div><div class="services-grid">${serviceCards()}</div></section></div><section class="offers-section"><div class="container"><div class="section-head"><div><span class="kicker">فرص قريبة، وفائدة أكبر</span><h2>وفّر أكثر، واستمتع بيومك</h2></div><a class="arrow-link" href="#discounts">كل الخصومات <span>←</span></a></div><div class="offers-grid">${items.filter(x=>x.type==='discounts').slice(0,3).map(card).join('')}</div><p style="color:#8b947f;font-size:10px;margin:14px 0 0">العروض المعروضة أمثلة توضيحية لتجربة الموقع.</p></div></section><div class="container"><section id="about" class="intro"><span class="kicker">لماذا سعي بلس؟</span><h2>لأن الفرص تكبر، عندما نتشاركها.</h2><p>سعي بلس منصة تجمع الطالب ومجتمعه المحلي: من الوصول إلى مرافق الجامعة، إلى تبادل الكتب، ودعم المشاريع الصغيرة والاستفادة من خبرات الآخرين. نؤمن أن المعرفة أقرب عندما تُشارك، وأن لكل فكرة فرصة تستحقها.</p></section><section class="join-banner"><div><h2>عندك شيء يستحق المشاركة؟</h2><p>كتاب، منتج، خبرة أو فكرة مشروع.. خلّ سعيك يوصل لغيرك.</p></div>${accountType()==='project_owner'?'<button class="button" onclick="addForm(\'projects\')">شاركنا سعيك <span>↖</span></button>':'<a class="button light" href="#projects">استكشف المشاريع <span>↖</span></a>'}</section></div>`}
+function home(){main.innerHTML=`<div class="container"><section class="hero"><div class="hero-copy"><div class="eyebrow"><span class="dot"></span> من جامعتك.. لمجتمعك</div><h1>كل احتياجاتك،<br>وفرصك <em>في مكان واحد.</em></h1><p>سعي بلس يجمع عالمك الجامعي ومجتمعك المحلي في مساحة واحدة. اكتشف، تواصل، وشارك.. لأن كل سعي صغير يصنع فرقًا.</p><div class="hero-buttons"><a class="button" href="#services">اكتشف خدماتنا <span>↖</span></a><a class="button light" href="#about">تعرّف على سعي بلس</a></div><div class="hero-trust"><div class="avatar-stack"><i>🌱</i><i>🎓</i><i>☕</i></div><span>للطلاب، والمبدعين، وكل من يسعى للأفضل.</span></div></div><div class="hero-visual"><img class="campus-photo" src="assets/campus.jpg" alt="مساحة جامعية خضراء ومباني تعليمية"><div class="visual-tint"></div><div class="floating float-one"><span class="bubble">${icon('book')}</span><div><b>كتابك فرصة لغيرك</b><small>شارك المعرفة، واصنع أثرًا.</small></div></div><div class="floating float-two"><span class="bubble">${icon('percent')}</span><div><b>عروض تناسب يومك</b><small>خصومات من محيط جامعتك</small></div></div><div class="visual-caption"><small>خطوتك الجاية تبدأ من هنا</small><p>أقرب لجامعتك.<br>أقرب لفرصك.</p></div></div></section><div class="community-strip"><div>${icon('grad')}<span><strong>حياة جامعية أسهل</strong><small>خدمات ترافقك كل يوم</small></span></div><div>${icon('users')}<span><strong>مجتمع أقرب لك</strong><small>تواصل، تعلّم، وشارك</small></span></div><div>${icon('leaf')}<span><strong>أثر يبدأ بخطوة</strong><small>فرص صغيرة، أثر كبير</small></span></div></div><section class="services"><div class="section-head"><div><span class="kicker">مساحات صُممت لك</span><h2>وش حاب تسعى له اليوم؟</h2><p>ست خدمات، وكل خدمة تفتح لك بابًا جديدًا.</p></div><span class="arrow-link">كل احتياجاتك، هنا ${icon('leaf')}</span></div><div class="services-grid">${serviceCards()}</div></section></div><section class="offers-section"><div class="container"><div class="section-head"><div><span class="kicker">فرص قريبة، وفائدة أكبر</span><h2>وفّر أكثر، واستمتع بيومك</h2></div><a class="arrow-link" href="#discounts">كل الخصومات <span>←</span></a></div><div class="offers-grid">${items.filter(x=>x.type==='discounts').slice(0,3).map(card).join('')}</div><p style="color:#8b947f;font-size:10px;margin:14px 0 0">العروض المعروضة أمثلة توضيحية لتجربة الموقع.</p></div></section><div class="container"><section id="about" class="intro"><span class="kicker">لماذا سعي بلس؟</span><h2>لأن الفرص تكبر، عندما نتشاركها.</h2><p>سعي بلس منصة تجمع الطالب ومجتمعه المحلي: من الوصول إلى مرافق الجامعة، إلى تبادل الكتب، ودعم المشاريع الصغيرة والاستفادة من خبرات الآخرين. نؤمن أن المعرفة أقرب عندما تُشارك، وأن لكل فكرة فرصة تستحقها.</p></section><section class="join-banner"><div><h2>عندك شيء يستحق المشاركة؟</h2><p>كتاب، منتج، خبرة أو فكرة مشروع.. خلّ سعيك يوصل لغيرك.</p></div>${isSignedIn()?'<button class="button" onclick="addForm(\'projects\')">أضف مشروعك <span>↖</span></button>':'<a class="button light" href="#projects">استكشف المشاريع <span>↖</span></a>'}</section></div>`}
 function headerPage(name,desc,action=''){return `<div class="page-head"><div class="breadcrumbs"><a href="#home">الرئيسية</a> / ${escapeHtml(name)}</div><div class="page-title-row"><div><span class="kicker">من جامعتك، إلى مجتمعك</span><h1>${escapeHtml(name)}</h1><p>${escapeHtml(desc)}</p></div>${action}</div></div>`}
 let descriptions=SiteStore.state.descriptions;
-function listing(){const cats=['الكل',...new Set(items.filter(x=>x.type===route).map(x=>x.cat))];let add='';if(route==='projects'){add=accountType()==='project_owner'?`<button class="button small" onclick="addForm('projects')">+ أضف مشروعك</button>`:'';}else if(route!=='discounts'){add=`<button class="button small" onclick="addForm('${route}')">+ ${route==='library'?'أضف كتابك':route==='market'?'أضف منتجك':'شارك خبرتك'}</button>`;}main.innerHTML=`<div class="container">${headerPage(titles[route],descriptions[route],add)}${SiteStore.state.notice?`<div class="demo-note">${escapeHtml(SiteStore.state.notice)}</div>`:""}<div class="toolbar"><div class="chips">${cats.map((c,ci)=>`<button class="chip ${c===category?'selected':''}" onclick="filterCategoryByIndex(${ci})">${escapeHtml(c)}</button>`).join('')}</div><label class="search-box">${icon('search')}<input aria-label="البحث" placeholder="ابحث في ${escapeHtml(titles[route])}..." id="search" value="${escapeHtml(query)}" oninput="query=this.value;renderItems()"></label></div><div class="list-grid" id="results"></div></div>`;renderItems()}
+function listing(){const cats=['الكل',...new Set(items.filter(x=>x.type===route).map(x=>x.cat))];let add='';if(route==='projects'){add=`<button class="button small" onclick="addForm('projects')">+ أضف مشروعك</button>`;}else if(route!=='discounts'){add=`<button class="button small" onclick="addForm('${route}')">+ ${route==='library'?'أضف كتابك':route==='market'?'أضف منتجك':'شارك خبرتك'}</button>`;}main.innerHTML=`<div class="container">${headerPage(titles[route],descriptions[route],add)}${SiteStore.state.notice?`<div class="demo-note">${escapeHtml(SiteStore.state.notice)}</div>`:""}<div class="toolbar"><div class="chips">${cats.map((c,ci)=>`<button class="chip ${c===category?'selected':''}" onclick="filterCategoryByIndex(${ci})">${escapeHtml(c)}</button>`).join('')}</div><label class="search-box">${icon('search')}<input aria-label="البحث" placeholder="ابحث في ${escapeHtml(titles[route])}..." id="search" value="${escapeHtml(query)}" oninput="query=this.value;renderItems()"></label></div><div class="list-grid" id="results"></div></div>`;renderItems()}
 function renderItems(){let filtered=items.filter(x=>x.type===route&&(route!=='projects'||!x.status||x.status==='approved')&&(category==='الكل'||x.cat===category)&&`${x.title} ${x.desc}`.includes(query));document.getElementById('results').innerHTML=filtered.length?filtered.map(card).join(''):'<div class="empty">لا توجد نتائج مطابقة. جرّب كلمة أخرى أو اختر «الكل».</div>'}
 function filterCategoryByIndex(i){let cats=['الكل',...new Set(items.filter(x=>x.type===route).map(x=>x.cat))];filterCategory(cats[i])}
 function filterCategory(c){category=c;listing()}
@@ -157,8 +157,7 @@ function openShopLocation(id){const x=items.find(item=>String(item.id)===String(
 function showFavorites(){favorites=favorites.filter(id=>items.some(x=>x.id===id));modal(`<span class="kicker">اختياراتك، في مكان واحد</span><h2>المفضلة</h2>${favorites.length?favorites.map(id=>items.find(x=>x.id===id)).filter(Boolean).map(x=>`<button class="place-card" onclick="details('${x.id}')"><h3>${escapeHtml(x.title)}</h3><p>${titles[x.type]} ←</p></button>`).join(''):'<p>مفضلتك فارغة حتى الآن. اضغط على القلب بجانب أي عرض أو كتاب أو منتج لحفظه هنا.</p>'}`)}
 function addForm(type){
   if(type==='projects'){
-    if(!window.SAI_CURRENT_USER){const authButton=document.getElementById('sai-open-auth');if(authButton)authButton.click();toast('سجّل الدخول بحساب صاحب مشروع لإضافة مشروعك.');return;}
-    if(accountType()!=='project_owner'){toast('إضافة المشاريع متاحة لحساب صاحب مشروع فقط.');return;}
+    if(!window.SAI_CURRENT_USER){const authButton=document.getElementById('sai-open-auth');if(authButton)authButton.click();toast('سجّل الدخول أولاً حتى تتمكن من إضافة مشروعك.');return;}
     communityProjectForm();return;
   }
   if(type==='market'||type==='library'){
@@ -237,7 +236,7 @@ async function uploadCommunityProjectImage(input){
 }
 async function submitCommunityProject(event,id=''){
   event.preventDefault();
-  if(accountType()!=='project_owner'){toast('هذه الميزة مخصصة لحساب صاحب مشروع.');return;}
+  if(!window.SAI_CURRENT_USER){toast('انتهت جلسة الدخول. سجّل الدخول ثم حاول مجددًا.');return;}
   const form=event.currentTarget,button=form.querySelector('[type="submit"]');button.disabled=true;
   const f=new FormData(form);
   const payload={title:String(f.get('title')||'').trim(),field:String(f.get('field')||'').trim(),projectType:String(f.get('projectType')||''),description:String(f.get('description')||'').trim(),imageUrl:String(f.get('imageUrl')||'').trim(),entityName:String(f.get('entityName')||'').trim(),placement:String(f.get('placement')||'projects'),phone:String(f.get('phone')||'').trim(),contact:String(f.get('contact')||'').trim(),instagramUrl:String(f.get('instagramUrl')||'').trim(),facebookUrl:String(f.get('facebookUrl')||'').trim()};
@@ -251,7 +250,7 @@ async function submitCommunityProject(event,id=''){
   }catch(error){toast(error.message||'تعذر حفظ المشروع.');button.disabled=false;}
 }
 async function showMyProjects(){
-  if(accountType()!=='project_owner'){toast('هذه الصفحة متاحة لحساب صاحب مشروع فقط.');return;}
+  if(!window.SAI_CURRENT_USER){toast('سجّل الدخول أولاً لعرض مشاريعك.');return;}
   try{
     const data=await communityRequest('/api/community-projects?mine=1');
     const projects=data.projects||[];
@@ -261,7 +260,7 @@ async function showMyProjects(){
 }
 async function editCommunityProject(id){
   try{
-    if(accountType()!=='project_owner')throw Error('تعديل المشاريع متاح لحساب صاحب مشروع فقط.');
+    if(!window.SAI_CURRENT_USER)throw Error('سجّل الدخول أولاً لتعديل مشاريعك.');
     const data=await communityRequest('/api/community-projects?mine=1');
     const project=(data.projects||[]).find(p=>p.id===id);
     if(!project)throw Error('لم يتم العثور على هذا المشروع في حسابك.');
@@ -293,15 +292,16 @@ async function showStatistics() {
       <span class="kicker">سعي بلس</span>
       <h2>الإحصائيات</h2>
       <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px">
-        <div style="padding:18px;border:1px solid #dce6dd;border-radius:14px;background:#f5f8f3"><p>الحسابات العادية</p><strong id="site-regular-users-count" aria-live="polite">جارٍ التحميل...</strong><small>مستخدم عادي</small></div>
-        <div style="padding:18px;border:1px solid #dce6dd;border-radius:14px;background:#f5f8f3"><p>حسابات أصحاب المشاريع</p><strong id="site-project-owner-count" aria-live="polite">جارٍ التحميل...</strong><small>صاحب مشروع</small></div>
+        <div style="padding:18px;border:1px solid #dce6dd;border-radius:14px;background:#f5f8f3"><p>إجمالي الحسابات</p><strong id="site-users-total-count" aria-live="polite">جارٍ التحميل...</strong><small>جميع حسابات المستخدمين</small></div>
+        <div style="padding:18px;border:1px solid #dce6dd;border-radius:14px;background:#f5f8f3"><p>حسابات أضافت مشروعًا</p><strong id="site-project-accounts-count" aria-live="polite">جارٍ التحميل...</strong><small id="site-project-accounts-note">من إجمالي الحسابات</small></div>
       </div>
       <small id="site-users-note" style="display:block;margin-top:12px">الأعداد من الحسابات المسجلة فعليًا في قاعدة البيانات.</small>
     </div>
   `);
 
-  const regularCount = document.getElementById('site-regular-users-count');
-  const ownerCount = document.getElementById('site-project-owner-count');
+  const usersTotalCount = document.getElementById('site-users-total-count');
+  const projectAccountsCount = document.getElementById('site-project-accounts-count');
+  const projectAccountsNote = document.getElementById('site-project-accounts-note');
   const note = document.getElementById('site-users-note');
   try {
     const response = await fetch(`${DISCOUNT_API}/api/statistics`, {
@@ -310,15 +310,19 @@ async function showStatistics() {
       headers: { Accept: 'application/json' }
     });
     const data = await response.json();
-    if (!response.ok || !Number.isFinite(Number(data.regularUsers)) || !Number.isFinite(Number(data.projectOwners))) {
+    if (!response.ok || !Number.isFinite(Number(data.usersTotal)) || !Number.isFinite(Number(data.accountsWithProjects))) {
       throw new Error('تعذر تحميل الإحصائيات');
     }
-    regularCount.textContent = Number(data.regularUsers).toLocaleString('ar-JO');
-    ownerCount.textContent = Number(data.projectOwners).toLocaleString('ar-JO');
-    note.textContent = 'تُحدّث الأعداد عند فتح الإحصائيات، ولا تشمل حساب الإدارة.';
+    const usersTotal = Math.max(0, Number(data.usersTotal));
+    const accountsWithProjects = Math.min(usersTotal, Math.max(0, Number(data.accountsWithProjects)));
+    usersTotalCount.textContent = usersTotal.toLocaleString('ar-JO');
+    projectAccountsCount.textContent = accountsWithProjects.toLocaleString('ar-JO');
+    projectAccountsNote.textContent = `من أصل ${usersTotal.toLocaleString('ar-JO')} حساب`;
+    note.textContent = 'يُحتسب الحساب مرة واحدة إذا أضاف مشروعًا واحدًا على الأقل، سواء كان المشروع بانتظار الموافقة أو منشورًا. الرقم الثاني جزء من إجمالي الحسابات وليس عددًا إضافيًا.';
   } catch (error) {
-    regularCount.textContent = '—';
-    ownerCount.textContent = '—';
+    usersTotalCount.textContent = '—';
+    projectAccountsCount.textContent = '—';
+    projectAccountsNote.textContent = '—';
     note.textContent = 'تعذر تحميل الأعداد حالياً. حاول مرة أخرى.';
   }
 }
