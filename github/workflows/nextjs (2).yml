@@ -1,0 +1,57 @@
+name: Deploy Saee Plus to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: saee-plus-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Verify website files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s public/index.html
+          test -s public/app.js
+          test -s public/admin.js
+          test -s public/style.css
+          test -s public/remote-config.js
+          echo "All required website files are ready."
+
+      - name: Upload complete website
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - name: Wait for Pages artifact metadata
+        run: sleep 10
+
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@v4
