@@ -98,27 +98,64 @@ function home(){main.innerHTML=`<div class="container"><section class="hero"><di
 function headerPage(name,desc,action=''){return `<div class="page-head"><div class="breadcrumbs"><a href="#home">الرئيسية</a> / ${escapeHtml(name)}</div><div class="page-title-row"><div><span class="kicker">من جامعتك، إلى مجتمعك</span><h1>${escapeHtml(name)}</h1><p>${escapeHtml(desc)}</p></div>${action}</div></div>`}
 let descriptions=SiteStore.state.descriptions;
 function listingItemsForRoute(){
+  // Use the latest public API records as the source of truth. This prevents
+  // approved projects from disappearing when the local display cache is stale.
   const normal=[...base,...additions].filter(item=>item&&item.type===route);
-  const community=(route==='projects'||route==='discounts')
-    ?communityDisplayItems.filter(item=>item&&item.type===route)
-    :[];
+  if(route!=='projects'&&route!=='discounts')return normal;
+
+  const isPublicProject=project=>{
+    const status=normalizeProjectFilterText(project?.status||'');
+    return !status||['approved','مقبول','مقبول ومنشور'].includes(status);
+  };
+  const apiItems=(Array.isArray(communityProjects)?communityProjects:[])
+    .filter(project=>project&&isPublicProject(project)&&placementSections(project.placement).includes(route))
+    .map(project=>mapCommunityProject(project,route));
+  const cachedItems=(Array.isArray(communityDisplayItems)?communityDisplayItems:[])
+    .filter(item=>item&&item.type===route);
+
+  // De-duplicate API and cached copies by their stable community project id.
+  const merged=new Map();
+  for(const item of [...cachedItems,...apiItems])merged.set(String(item.id),item);
+  const community=[...merged.values()];
   return route==='projects'?[...community,...normal]:[...normal,...community];
 }
 function communityProjectTypeLabel(value){
   const raw=String(value||'').trim();
   const normalized=normalizeProjectFilterText(raw);
-  const labels={'منتج':'منتجات','منتجات':'منتجات','خدمة':'خدمات','خدمات':'خدمات','فكرة إبداعية':'أفكار إبداعية','أفكار إبداعية':'أفكار إبداعية','مبادرة':'مبادرات','مبادرات':'مبادرات'};
+  const labels={
+    'منتج':'منتجات','منتجات':'منتجات',
+    'خدمة':'خدمات','خدمات':'خدمات',
+    'فكرة إبداعية':'أفكار إبداعية','أفكار إبداعية':'أفكار إبداعية',
+    'مبادرة':'مبادرات','مبادرات':'مبادرات'
+  };
   return labels[normalized]||raw;
+}
+function canonicalProjectCategory(value){
+  const normalized=normalizeProjectFilterText(value);
+  if(['منتج','منتجات'].includes(normalized))return 'منتجات';
+  if(['خدمة','خدمات'].includes(normalized))return 'خدمات';
+  if(['مبادرة','مبادرات'].includes(normalized))return 'مبادرات';
+  if(['فكرة ابداعية','افكار ابداعية'].includes(normalized))return 'أفكار إبداعية';
+  return normalized;
 }
 function listingCategoriesForItem(item){
   if(item?.isCommunityProject){
-    return [...new Set(['مشاريع شبابية',String(item.field||item.cat||'').trim(),communityProjectTypeLabel(item.projectType||item.meta)].filter(Boolean))];
+    const candidates=[
+      'مشاريع شبابية',item.field,item.cat,
+      communityProjectTypeLabel(item.projectType||item.meta),
+      item.projectType,item.meta
+    ];
+    return [...new Set(candidates.map(value=>String(value||'').trim()).filter(Boolean))];
   }
   return [String(item?.cat||'').trim()].filter(Boolean);
 }
 function listingCategoryValues(){
   const values=[];
-  for(const item of listingItemsForRoute()) for(const label of listingCategoriesForItem(item)) if(!values.includes(label)) values.push(label);
+  for(const item of listingItemsForRoute()){
+    for(const label of listingCategoriesForItem(item)){
+      if(!values.some(existing=>canonicalProjectCategory(existing)===canonicalProjectCategory(label)))values.push(label);
+    }
+  }
   return ['الكل',...values];
 }
 function listing(){const cats=listingCategoryValues();let add='';if(route==='projects'){add=`<button class="button small" onclick="addForm('projects')">+ أضف مشروعك</button>`;}else if(route!=='discounts'){add=`<button class="button small" onclick="addForm('${route}')">+ ${route==='library'?'أضف كتابك':route==='market'?'أضف منتجك':'شارك خبرتك'}</button>`;}main.innerHTML=`<div class="container">${headerPage(titles[route],descriptions[route],add)}${SiteStore.state.notice?`<div class="demo-note">${escapeHtml(SiteStore.state.notice)}</div>`:""}<div class="toolbar"><div class="chips">${cats.map((c,ci)=>`<button class="chip ${c===category?'selected':''}" onclick="filterCategoryByIndex(${ci})">${escapeHtml(c)}</button>`).join('')}</div><label class="search-box">${icon('search')}<input aria-label="البحث" placeholder="ابحث في ${escapeHtml(titles[route])}..." id="search" value="${escapeHtml(query)}" oninput="query=this.value;renderItems()"></label></div><div class="list-grid" id="results"></div></div>`;renderItems()}
@@ -130,13 +167,16 @@ function normalizeProjectFilterText(value){
 function renderItems(){
   const host=document.getElementById('results');
   if(!host)return;
-  const wantedCategory=normalizeProjectFilterText(category);
+  const wantedCategory=canonicalProjectCategory(category);
   const wantedQuery=normalizeProjectFilterText(query);
   const filtered=listingItemsForRoute().filter(item=>{
-    if(route==='projects'&&item.isCommunityProject&&item.status!=='approved')return false;
-    const itemCategories=listingCategoriesForItem(item).map(normalizeProjectFilterText);
-    if(wantedCategory&&wantedCategory!==normalizeProjectFilterText('الكل')&&!itemCategories.includes(wantedCategory))return false;
-    const searchable=normalizeProjectFilterText([item.title,item.desc,item.cat,item.meta,item.projectType,item.phone,item.contact,item.entityName,item.ownerName].filter(Boolean).join(' '));
+    if(route==='projects'&&item.isCommunityProject&&item.status&&!['approved','مقبول','مقبول ومنشور'].includes(normalizeProjectFilterText(item.status)))return false;
+    const itemCategories=listingCategoriesForItem(item).map(canonicalProjectCategory);
+    if(wantedCategory&&wantedCategory!==canonicalProjectCategory('الكل')&&!itemCategories.includes(wantedCategory))return false;
+    const searchable=normalizeProjectFilterText([
+      item.title,item.desc,item.cat,item.field,item.meta,item.projectType,
+      item.phone,item.contact,item.entityName,item.ownerName
+    ].filter(Boolean).join(' '));
     return !wantedQuery||searchable.includes(wantedQuery);
   });
   host.innerHTML=filtered.length?filtered.map(card).join(''):'<div class="empty">لا توجد نتائج مطابقة. جرّب كلمة أخرى أو اختر «الكل».</div>';
@@ -268,7 +308,17 @@ async function markDiscountUsed(id){
 window.addEventListener('sai-account-changed',()=>{discountUnauthorizedToken='';discountLastSync=0;syncDiscountUsage(true);});
 setInterval(()=>syncDiscountUsage(false),15000);
 window.addEventListener('focus',()=>syncDiscountUsage(true));
-function details(id){let x=items.find(x=>x.id===id);if(!x)return;const isDiscount=x.type==='discounts';const isCommunity=!!x.isCommunityProject;const displayTitle=titles[x.type]||(x.type==='opportunities'?'فرص سعي':'المحتوى');const locationUrl=String(x.shopLocation||'').trim();const safeLocation=/^https?:\/\//i.test(locationUrl)?locationUrl:'';const socialUrl=String(x.socialLink||'').trim();const safeSocial=/^https?:\/\//i.test(socialUrl)&&!/[<>\"']/.test(socialUrl)?socialUrl:'';const shopPhotos=(Array.isArray(x.shopImages)&&x.shopImages.length?x.shopImages:[x.shopImage1,x.shopImage2]).filter(Boolean);modal(`<span class="kicker">${displayTitle} · التفاصيل</span><h2>${escapeHtml(x.title)}</h2>${x.image?`<img src="${escapeHtml(SiteStore.imageSrc(x.image))}" alt="${escapeHtml(x.title)}" style="width:100%;height:180px;object-fit:cover;border-radius:12px;margin-bottom:12px">`:''}<p>${escapeHtml(x.extra||x.desc)}</p>${isCommunity?`<div style="display:grid;gap:7px;margin:12px 0;padding:12px;border:1px solid #e4ebe1;border-radius:12px">${x.field?`<p><strong>المجال:</strong> ${escapeHtml(x.field)}</p>`:''}${x.projectType?`<p><strong>نوع المشروع:</strong> ${escapeHtml(communityProjectTypeLabel(x.projectType))}</p>`:''}${x.entityName?`<p><strong>الجهة:</strong> ${escapeHtml(x.entityName)}</p>`:''}${x.ownerName?`<p><strong>صاحب المشروع:</strong> ${escapeHtml(x.ownerName)}</p>`:''}</div>`:''}${isDiscount&&shopPhotos.length?`<div class="discount-shop-photos" style="display:grid;grid-template-columns:repeat(${shopPhotos.length===1?1:2},minmax(0,1fr));gap:10px;margin:14px 0">${shopPhotos.map((src,i)=>`<img src="${escapeHtml(SiteStore.imageSrc(src))}" alt="صورة ${i+1} من ${escapeHtml(x.title)}" style="width:100%;height:160px;object-fit:cover;border-radius:12px;border:1px solid #e1e8df">`).join('')}</div>`:''}${isDiscount?`<p><button type="button" class="button light shop-location-btn" onclick="openShopLocation('${escapeHtml(String(id))}')" ${safeLocation?'':'title="لم يضف المضيف رابط الموقع بعد"'}>📍 ${safeLocation?'عرض موقع المحل':'موقع المحل غير مضاف'}</button></p>`:''}${safeSocial?`<p><a class="button light" href="${escapeHtml(safeSocial)}" target="_blank" rel="noopener noreferrer">↗ زيارة صفحة المتجر / التواصل</a></p>`:''}${x.instagramUrl?`<p><a href="${escapeHtml(x.instagramUrl)}" target="_blank" rel="noopener noreferrer">صفحة إنستغرام</a></p>`:''}${x.facebookUrl?`<p><a href="${escapeHtml(x.facebookUrl)}" target="_blank" rel="noopener noreferrer">صفحة فيسبوك</a></p>`:''}${x.phone?`<p>رقم التواصل: <a href="tel:${escapeHtml(x.phone.replace(/[^+0-9٠-٩۰-۹]/g,''))}" dir="ltr">${escapeHtml(x.phone)}</a></p>`:''}${x.entityName?`<p><strong>الجهة:</strong> ${escapeHtml(x.entityName)}</p>`:''}${x.ownerName?`<p><strong>صاحب المشروع:</strong> ${escapeHtml(x.ownerName)}</p>`:''}${x.price?`<p class="price">السعر التوضيحي: ${escapeHtml(x.price)}</p>`:''}${x.contact?`<p><strong>وسيلة تواصل إضافية:</strong> ${escapeHtml(x.contact)}</p>`:(!x.phone?`<p>لم تُضف بيانات تواصل لهذا الإعلان بعد.</p>`:'')}${x.isCommunityProject&&x.isOwner?`<button type="button" class="button light" onclick="editCommunityProject('${escapeHtml(x.communityId)}')">تعديل مشروعي</button>`:''}<button class="button" onclick="saveFavorite('${id}');this.textContent=favorites.includes('${id}')?'محفوظ في المفضلة ✓':'حفظ في المفضلة'">${favorites.includes(id)?'محفوظ في المفضلة ✓':'حفظ في المفضلة ♡'}</button>`);if(isDiscount)updateDiscountButton(String(id))}
+function details(id){
+  let x=items.find(item=>String(item.id)===String(id));
+  if(!x){
+    const match=String(id).match(/^community_(.+)_(projects|discounts)$/);
+    if(match){
+      const record=(communityProjects||[]).find(project=>String(project.id)===match[1]);
+      if(record){x=mapCommunityProject(record,match[2]);items.unshift(x);}
+    }
+  }
+  if(!x){toast('تعذر فتح تفاصيل المشروع. حدّث الصفحة وحاول مرة أخرى.');return;}
+  const isDiscount=x.type==='discounts';const isCommunity=!!x.isCommunityProject;const displayTitle=titles[x.type]||(x.type==='opportunities'?'فرص سعي':'المحتوى');const locationUrl=String(x.shopLocation||'').trim();const safeLocation=/^https?:\/\//i.test(locationUrl)?locationUrl:'';const socialUrl=String(x.socialLink||'').trim();const safeSocial=/^https?:\/\//i.test(socialUrl)&&!/[<>\"']/.test(socialUrl)?socialUrl:'';const shopPhotos=(Array.isArray(x.shopImages)&&x.shopImages.length?x.shopImages:[x.shopImage1,x.shopImage2]).filter(Boolean);modal(`<span class="kicker">${displayTitle} · التفاصيل</span><h2>${escapeHtml(x.title)}</h2>${x.image?`<img src="${escapeHtml(SiteStore.imageSrc(x.image))}" alt="${escapeHtml(x.title)}" style="width:100%;height:180px;object-fit:cover;border-radius:12px;margin-bottom:12px">`:''}<p>${escapeHtml(x.extra||x.desc)}</p>${isCommunity?`<div style="display:grid;gap:7px;margin:12px 0;padding:12px;border:1px solid #e4ebe1;border-radius:12px">${x.field?`<p><strong>المجال:</strong> ${escapeHtml(x.field)}</p>`:''}${x.projectType?`<p><strong>نوع المشروع:</strong> ${escapeHtml(communityProjectTypeLabel(x.projectType))}</p>`:''}${x.entityName?`<p><strong>الجهة:</strong> ${escapeHtml(x.entityName)}</p>`:''}${x.ownerName?`<p><strong>صاحب المشروع:</strong> ${escapeHtml(x.ownerName)}</p>`:''}</div>`:''}${isDiscount&&shopPhotos.length?`<div class="discount-shop-photos" style="display:grid;grid-template-columns:repeat(${shopPhotos.length===1?1:2},minmax(0,1fr));gap:10px;margin:14px 0">${shopPhotos.map((src,i)=>`<img src="${escapeHtml(SiteStore.imageSrc(src))}" alt="صورة ${i+1} من ${escapeHtml(x.title)}" style="width:100%;height:160px;object-fit:cover;border-radius:12px;border:1px solid #e1e8df">`).join('')}</div>`:''}${isDiscount?`<p><button type="button" class="button light shop-location-btn" onclick="openShopLocation('${escapeHtml(String(id))}')" ${safeLocation?'':'title="لم يضف المضيف رابط الموقع بعد"'}>📍 ${safeLocation?'عرض موقع المحل':'موقع المحل غير مضاف'}</button></p>`:''}${safeSocial?`<p><a class="button light" href="${escapeHtml(safeSocial)}" target="_blank" rel="noopener noreferrer">↗ زيارة صفحة المتجر / التواصل</a></p>`:''}${x.instagramUrl?`<p><a href="${escapeHtml(x.instagramUrl)}" target="_blank" rel="noopener noreferrer">صفحة إنستغرام</a></p>`:''}${x.facebookUrl?`<p><a href="${escapeHtml(x.facebookUrl)}" target="_blank" rel="noopener noreferrer">صفحة فيسبوك</a></p>`:''}${x.phone?`<p>رقم التواصل: <a href="tel:${escapeHtml(x.phone.replace(/[^+0-9٠-٩۰-۹]/g,''))}" dir="ltr">${escapeHtml(x.phone)}</a></p>`:''}${x.entityName?`<p><strong>الجهة:</strong> ${escapeHtml(x.entityName)}</p>`:''}${x.ownerName?`<p><strong>صاحب المشروع:</strong> ${escapeHtml(x.ownerName)}</p>`:''}${x.price?`<p class="price">السعر التوضيحي: ${escapeHtml(x.price)}</p>`:''}${x.contact?`<p><strong>وسيلة تواصل إضافية:</strong> ${escapeHtml(x.contact)}</p>`:(!x.phone?`<p>لم تُضف بيانات تواصل لهذا الإعلان بعد.</p>`:'')}${x.isCommunityProject&&x.isOwner?`<button type="button" class="button light" onclick="editCommunityProject('${escapeHtml(x.communityId)}')">تعديل مشروعي</button>`:''}<button class="button" onclick="saveFavorite('${id}');this.textContent=favorites.includes('${id}')?'محفوظ في المفضلة ✓':'حفظ في المفضلة'">${favorites.includes(id)?'محفوظ في المفضلة ✓':'حفظ في المفضلة ♡'}</button>`);if(isDiscount)updateDiscountButton(String(id))}
 function openShopLocation(id){const x=items.find(item=>String(item.id)===String(id));const url=String(x?.shopLocation||'').trim();if(!/^https?:\/\//i.test(url)){toast('لم يضف المضيف موقع هذا المحل بعد.');return;}window.open(url,'_blank','noopener,noreferrer')}
 function showFavorites(){favorites=favorites.filter(id=>items.some(x=>x.id===id));modal(`<span class="kicker">اختياراتك، في مكان واحد</span><h2>المفضلة</h2>${favorites.length?favorites.map(id=>items.find(x=>x.id===id)).filter(Boolean).map(x=>`<button class="place-card" onclick="details('${x.id}')"><h3>${escapeHtml(x.title)}</h3><p>${titles[x.type]} ←</p></button>`).join(''):'<p>مفضلتك فارغة حتى الآن. اضغط على القلب بجانب أي عرض أو كتاب أو منتج لحفظه هنا.</p>'}`)}
 function addForm(type){
