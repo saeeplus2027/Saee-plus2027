@@ -3,20 +3,10 @@ function icon(name){return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="t
 let services=SiteStore.state.services;
 let titles=Object.fromEntries(services.map(s=>[s[0],s[2]]));
 let base=SiteStore.state.items;
-function readStoredArray(key){
-  try{
-    const value=JSON.parse(localStorage.getItem(key)||'[]');
-    return Array.isArray(value)?value:[];
-  }catch(error){
-    console.warn('Saee Plus: تجاهل بيانات محلية قديمة غير صالحة:',key,error);
-    try{localStorage.removeItem(key);}catch(_){/* Storage may be read-only. */}
-    return [];
-  }
-}
-let additions=SiteStore.remote?[]:readStoredArray('sai-additions');
+let additions=SiteStore.remote?[]:JSON.parse(localStorage.getItem('sai-additions')||'[]');
 let communityProjects=[];
 let communityDisplayItems=[];
-let items=[...base,...additions],favorites=readStoredArray('sai-favorites'),route='',category='الكل',query='';
+let items=[...base,...additions],favorites=JSON.parse(localStorage.getItem('sai-favorites')||'[]'),route='',category='الكل',query='';
 const main=document.getElementById('main');
 const COMMUNITY_API=String(window.SAI_API_BASE||'https://saee-plus-api.ligagym.workers.dev').replace(/\/$/,'');
 function isSignedIn(){return !!window.SAI_CURRENT_USER;}
@@ -31,7 +21,8 @@ async function communityRequest(path,options={}){
   return data;
 }
 function hasSaeeDiscount(){
-  return Array.isArray(base)&&base.some(item=>item&&item.type==='discounts');
+  const currentItems = Array.isArray(SiteStore.state?.items) ? SiteStore.state.items : base;
+  return currentItems.some(item => item && item.type === 'discounts');
 }
 function placementSections(placement){
   // All community projects appear in Youth Projects. The second option also
@@ -57,7 +48,7 @@ async function refreshCommunityProjects(){
 }
 window.addEventListener('sai-account-changed',()=>{refreshCommunityProjects();});
 window.addEventListener('focus',()=>{refreshCommunityProjects();});
-setInterval(()=>{if(document.visibilityState==='visible')refreshCommunityProjects();},60000);
+setInterval(()=>{if(document.visibilityState==='visible')refreshCommunityProjects();},30000);
 function serviceCards(){return services.filter(s=>!SiteStore.state.hidden.includes(s[0])).map(s=>`<a class="service-card" href="#${s[0]}"><div class="service-icon">${icon(s[1])}</div><h3>${escapeHtml(s[2])}</h3><p>${escapeHtml(s[3])}</p><span class="card-arrow">↖</span></a>`).join('')}
 function card(x){return `<article class="offer-card"><div class="photo-wrap">${x.image?`<img src="${escapeHtml(SiteStore.imageSrc(x.image))}" alt="${escapeHtml(x.title)}" loading="lazy">`:`<div class="expert-avatar">${escapeHtml(x.emoji||'✦')}</div>`}<span class="offer-tag">${escapeHtml(x.badge||'إضافة مجتمعية')}</span><button class="heart ${favorites.includes(x.id)?'saved':''}" onclick="saveFavorite('${x.id}',this)" aria-label="حفظ ${escapeHtml(x.title)} في المفضلة" aria-pressed="${favorites.includes(x.id)}">${icon('heart')}</button>${x.isCommunityProject&&x.isOwner?`<button type="button" class="community-edit-card" onclick="editCommunityProject('${escapeHtml(x.communityId)}')" style="position:absolute;left:10px;bottom:10px;border:0;border-radius:9px;padding:7px 10px;background:#075550;color:white;font-weight:700;cursor:pointer">تعديل مشروعي</button>`:''}</div><div class="card-body"><h3>${escapeHtml(x.title)}</h3><p>${escapeHtml(x.desc)}</p><div class="card-foot"><span class="${x.price?'price':'tag'}">${escapeHtml(x.price||x.meta||x.cat)}</span><button class="details-btn" onclick="details('${x.id}')">التفاصيل ↖</button></div></div></article>`}
 function home(){main.innerHTML=`<div class="container"><section class="hero"><div class="hero-copy"><div class="eyebrow"><span class="dot"></span> من جامعتك.. لمجتمعك</div><h1>كل احتياجاتك،<br>وفرصك <em>في مكان واحد.</em></h1><p>سعي بلس يجمع عالمك الجامعي ومجتمعك المحلي في مساحة واحدة. اكتشف، تواصل، وشارك.. لأن كل سعي صغير يصنع فرقًا.</p><div class="hero-buttons"><a class="button" href="#services">اكتشف خدماتنا <span>↖</span></a><a class="button light" href="#about">تعرّف على سعي بلس</a></div><div class="hero-trust"><div class="avatar-stack"><i>🌱</i><i>🎓</i><i>☕</i></div><span>للطلاب، والمبدعين، وكل من يسعى للأفضل.</span></div></div><div class="hero-visual"><img class="campus-photo" src="assets/campus.jpg" alt="مساحة جامعية خضراء ومباني تعليمية"><div class="visual-tint"></div><div class="floating float-one"><span class="bubble">${icon('book')}</span><div><b>كتابك فرصة لغيرك</b><small>شارك المعرفة، واصنع أثرًا.</small></div></div><div class="floating float-two"><span class="bubble">${icon('percent')}</span><div><b>عروض تناسب يومك</b><small>خصومات من محيط جامعتك</small></div></div><div class="visual-caption"><small>خطوتك الجاية تبدأ من هنا</small><p>أقرب لجامعتك.<br>أقرب لفرصك.</p></div></div></section><div class="community-strip"><div>${icon('grad')}<span><strong>حياة جامعية أسهل</strong><small>خدمات ترافقك كل يوم</small></span></div><div>${icon('users')}<span><strong>مجتمع أقرب لك</strong><small>تواصل، تعلّم، وشارك</small></span></div><div>${icon('leaf')}<span><strong>أثر يبدأ بخطوة</strong><small>فرص صغيرة، أثر كبير</small></span></div></div><section class="services"><div class="section-head"><div><span class="kicker">مساحات صُممت لك</span><h2>وش حاب تسعى له اليوم؟</h2><p>ست خدمات، وكل خدمة تفتح لك بابًا جديدًا.</p></div><span class="arrow-link">كل احتياجاتك، هنا ${icon('leaf')}</span></div><div class="services-grid">${serviceCards()}</div></section></div><section class="offers-section"><div class="container"><div class="section-head"><div><span class="kicker">فرص قريبة، وفائدة أكبر</span><h2>وفّر أكثر، واستمتع بيومك</h2></div><a class="arrow-link" href="#discounts">كل الخصومات <span>←</span></a></div><div class="offers-grid">${items.filter(x=>x.type==='discounts').slice(0,3).map(card).join('')}</div><p style="color:#8b947f;font-size:10px;margin:14px 0 0">العروض المعروضة أمثلة توضيحية لتجربة الموقع.</p></div></section><div class="container"><section id="about" class="intro"><span class="kicker">لماذا سعي بلس؟</span><h2>لأن الفرص تكبر، عندما نتشاركها.</h2><p>سعي بلس منصة تجمع الطالب ومجتمعه المحلي: من الوصول إلى مرافق الجامعة، إلى تبادل الكتب، ودعم المشاريع الصغيرة والاستفادة من خبرات الآخرين. نؤمن أن المعرفة أقرب عندما تُشارك، وأن لكل فكرة فرصة تستحقها.</p></section><section class="join-banner"><div><h2>عندك شيء يستحق المشاركة؟</h2><p>كتاب، منتج، خبرة أو فكرة مشروع.. خلّ سعيك يوصل لغيرك.</p></div>${isSignedIn()?'<button class="button" onclick="addForm(\'projects\')">أضف مشروعك <span>↖</span></button>':'<a class="button light" href="#projects">استكشف المشاريع <span>↖</span></a>'}</section></div>`}
@@ -76,7 +67,14 @@ function aboutPage(){const a=SiteStore.state.aboutPage||{};const links=Array.isA
 async function opportunitiesPage(){const d=SiteStore.state;const safeUrl=/^https?:\/\//i.test(d.nahnoUrl||'')?d.nahnoUrl:'';const community=communityDisplayItems.filter(x=>x.type==='opportunities');const adminOpportunities=(d.opportunities||[]).map(o=>`<article class="offer-card"><div class="card-body"><h3>${escapeHtml(o.title)}</h3><p>📍 ${escapeHtml(o.city||'')} ${escapeHtml(o.place||'')}</p><p>📅 ${escapeHtml(o.date||'')}</p><p>🕒 ${escapeHtml(o.start||'')} – ${escapeHtml(o.end||'')}</p></div></article>`).join('');main.innerHTML=`<div class="container"><div class="page-head"><span class="kicker">فرص سعي</span><h1>فرص سعي</h1><p>اكتشف الفرص المتاحة ومواعيدها وأماكن إقامتها، وتعرّف إلى المشاريع والجهات المشاركة.</p></div><section class="about-page-card" style="text-align:center;margin-bottom:24px"><h1 style="font-size:clamp(26px,4vw,42px)">للتسجيل على هذه الفرص على منصة نحن</h1>${safeUrl?`<a class="button" href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">رابط منصة نحن ↗</a>`:'<p>سيتم إضافة رابط منصة نحن قريبًا.</p>'}</section><div class="list-grid">${adminOpportunities}${community.map(card).join('')||(!adminOpportunities?'<div class="empty">لا توجد فرص منشورة حاليًا.</div>':'')}</div></div>`}
 async function siteRatingPage(){main.innerHTML=`<div class="container"><div class="page-head"><span class="kicker">رأيك يهمنا</span><h1>تقييم الموقع</h1><p>ساعدنا على تطوير سعي بلس من خلال تقييمك وملاحظاتك.</p></div><section class="about-page-card" style="max-width:680px;margin:auto"><form id="site-rating-form" class="admin-form"><label>تقييمك بالنجوم</label><div id="rating-stars" style="display:flex;gap:10px;justify-content:center;font-size:40px;direction:ltr"><button type="button" data-star="1" aria-label="نجمة واحدة">☆</button><button type="button" data-star="2" aria-label="نجمتان">☆</button><button type="button" data-star="3" aria-label="ثلاث نجوم">☆</button><button type="button" data-star="4" aria-label="أربع نجوم">☆</button><button type="button" data-star="5" aria-label="خمس نجوم">☆</button></div><input type="hidden" name="stars" value="0"><label>ملاحظاتك<textarea name="comment" rows="5" maxlength="1500" placeholder="اكتب ملاحظاتك أو اقتراحاتك..."></textarea></label><button class="button" type="submit">إرسال التقييم</button><p id="rating-feedback" role="status"></p></form></section></div>`;let selected=0;const form=document.getElementById('site-rating-form');const buttons=[...document.querySelectorAll('[data-star]')];function paint(n){buttons.forEach(b=>b.textContent=Number(b.dataset.star)<=n?'★':'☆');form.elements.stars.value=n;}buttons.forEach(b=>b.addEventListener('click',()=>{selected=Number(b.dataset.star);paint(selected)}));form.addEventListener('submit',async e=>{e.preventDefault();const feedback=document.getElementById('rating-feedback');if(!selected){feedback.textContent='يرجى اختيار تقييم من نجمة إلى خمس نجوم.';return;}try{const r=await fetch(`${String(window.SAI_API_BASE||'https://saee-plus-api.ligagym.workers.dev').replace(/\/$/,'')}/api/ratings`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stars:selected,comment:form.elements.comment.value.trim()})});const data=await r.json();if(!r.ok)throw Error(data.error||'تعذر إرسال التقييم');form.reset();selected=0;paint(0);feedback.textContent='شكرًا لك! تم استلام تقييمك.';}catch(err){feedback.textContent=err.message+' — تأكد من نشر تحديث الخادم.';}})}
 function render(){route=location.hash.slice(1)||'home';if(route==='about'){aboutPage()}else if(route==='opportunities'){opportunitiesPage()}else if(route==='site-rating'){siteRatingPage()}else if(route==='home')home();else if(route==='services'){main.innerHTML=`<div class="container">${headerPage('خدمات سعي بلس','كل احتياجاتك وفرصك في مكان واحد. اختر المساحة التي تناسبك.')}<div class="services-grid" style="margin:20px 0 65px">${serviceCards()}</div></div>`}else if(route==='map')mapPage();else if(titles[route])listing();else home();document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('active',a.hash===location.hash||(!location.hash&&a.hash==='#home')));document.querySelector('nav').classList.remove('open');hydrate()}
-window.addEventListener('hashchange',()=>{category='الكل';query='';render();if(route!=='about')window.scrollTo(0,0)});document.getElementById('year').textContent=new Date().getFullYear();
+window.addEventListener('hashchange',()=>{
+  category='الكل';
+  query='';
+  render();
+  if(route==='projects'||route==='discounts') refreshCommunityProjects();
+  if(route!=='about') window.scrollTo(0,0);
+});
+ document.getElementById('year').textContent=new Date().getFullYear();
 // Initial page render: the app previously defined render() but did not call it on first load.
 // Keep the visible UI in sync when SiteStore finishes loading remote or fallback content.
 function syncSiteStoreAndRender(){
@@ -85,6 +83,11 @@ function syncSiteStoreAndRender(){
     titles = Object.fromEntries(services.map(s => [s[0], s[2]]));
     base = SiteStore.state.items || [];
     additions = SiteStore.remote ? [] : JSON.parse(localStorage.getItem('sai-additions') || '[]');
+    // Re-map approved community projects after the central content refreshes,
+    // so the optional Discounts placement is evaluated against the latest discounts.
+    communityDisplayItems = (communityProjects || []).flatMap(project =>
+      placementSections(project.placement).map(type => mapCommunityProject(project, type))
+    );
     rebuildVisibleItems();
   } catch (error) {
     console.error('Saee Plus: failed to sync visible content from SiteStore.', error);
