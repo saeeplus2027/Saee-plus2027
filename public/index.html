@@ -1956,7 +1956,7 @@
     if (!(element instanceof Element)) return null;
 
     return element.closest(
-      'button, input[type="submit"], input[type="button"], a, [role="button"]'
+      'button, input[type="submit"], input[type="button"], input[type="reset"], a[href], [role="button"], [role="link"], summary'
     );
   }
 
@@ -2073,9 +2073,11 @@
     const title = document.getElementById('sai-auth-title');
     const description = document.getElementById('sai-auth-description');
 
-    const text =
-      'لإضافة ' + (actionName || 'المحتوى') +
-      ' إلى سعي بلس، يجب تسجيل الدخول أو إنشاء حساب جديد أولًا.';
+    const isGeneralAction = !actionName || actionName === 'استخدام الموقع';
+    const text = isGeneralAction
+      ? 'لاستخدام أزرار وخدمات سعي بلس، يجب تسجيل الدخول أو إنشاء حساب جديد أولًا.'
+      : 'لإضافة ' + actionName +
+        ' إلى سعي بلس، يجب تسجيل الدخول أو إنشاء حساب جديد أولًا.';
 
     if (!dialog) {
       alert(text);
@@ -2104,24 +2106,29 @@
     if (email) setTimeout(() => email.focus(), 50);
   }
 
-  // Browse the website normally without an account. Only guard actions
-  // that actually submit user content (projects, books, products, etc.).
+  // Public visitors may view the homepage and its content. Any action control
+  // (button, button-like link, navigation link, or role=button) requires login.
+  // The account opener and controls inside the authentication dialog remain available.
   document.addEventListener('click', event => {
     if (hasAccountSession()) return;
     const target = event.target instanceof Element ? event.target : null;
-    if (!target || target.closest('#' + AUTH_DIALOG_ID) || target.closest('#sai-open-auth')) return;
+    if (!target || target.closest('#' + AUTH_DIALOG_ID)) return;
 
-    const protectedAction = isProtectedAction(target);
-    if (!protectedAction) return;
+    const control = getActionElement(target);
+    if (!control) return;
+    if (control.id === 'sai-open-auth' || control.closest('#sai-open-auth')) return;
+    if (control.hasAttribute('data-public-action')) return;
 
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
-    requestLogin(protectedAction.type);
+
+    const protectedAction = isProtectedAction(control);
+    requestLogin(protectedAction ? protectedAction.type : 'استخدام الموقع');
   }, true);
 
-  // Let ordinary site forms (such as inquiries and ratings) work as designed.
-  // Only content-submission forms require an authenticated account.
+  // Forms outside the login/register dialog also require an authenticated account.
+  // This covers submit buttons and Enter-key submissions consistently.
 
   window.addEventListener('sai-account-changed', () => {
     if (!hasAccountSession() || !window.SAEE_PENDING_PROJECT_ADD) return;
@@ -2140,9 +2147,10 @@
     const form = event.target;
 
     if (!(form instanceof HTMLFormElement)) return;
+    // Signup/login/recovery forms must remain usable by guests.
     if (form.closest('#' + AUTH_DIALOG_ID)) return;
     if (hasAccountSession()) return;
-    if (!isProtectedForm(form)) return;
+    if (form.hasAttribute('data-public-action')) return;
 
     event.preventDefault();
     event.stopPropagation();
@@ -2153,9 +2161,9 @@
       form.textContent,
       form.id,
       form.getAttribute('aria-label')
-    ].filter(Boolean).join(' '))) || 'المحتوى';
+    ].filter(Boolean).join(' ')));
 
-    requestLogin(type);
+    requestLogin(type || 'استخدام الموقع');
   }, true);
 
 })();
@@ -2222,6 +2230,6 @@
     new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => { if (node.nodeType === 1) scan(node); }))).observe(document.documentElement, {childList:true,subtree:true});
   })();
   </script>
-  <script src="discounts.js?v=20261029-loading-fix-v2"></script>
+  <script src="discounts.js?v=20261121-login-gate-24h-v1"></script>
 </body>
 </html>
