@@ -16,7 +16,11 @@ return `<div class="smart-chat"><h2>المساعد الذكي — Saee AI Assist
 }
 function page(){main.innerHTML=`<div class="container smart-page">${headerPage('سعي الذكي','اكتشف ما يناسبك، وافهم سبب كل اقتراح.')}<div class="smart-tabs" role="group" aria-label="خدمات سعي الذكية">${[['recommend','توصيات لك'],['search','البحث الذكي'],['assistant','المساعد الذكي']].map(([k,v])=>`<button class="chip ${view===k?'selected':''}" aria-pressed="${view===k}" data-view="${k}">${v}</button>`).join('')}</div>${content()}<section id="smart-share" class="join-banner" aria-labelledby="smart-share-title"><div><h2 id="smart-share-title">عندك شيء يستحق المشاركة؟</h2><p>كتاب، منتج، خبرة أو فكرة مشروع.. خلّ سعيك يوصل لغيرك.</p></div><button type="button" class="button" onclick="addForm('projects')">شاركنا سعيك <span aria-hidden="true">↖</span></button></section></div>`;document.querySelector('nav')?.classList.remove('open');applyContent();}
 // Existing per-section searches use the same Arabic engine.
+const originalRenderItems=renderItems;
 renderItems=function(){
+ // Community (user-submitted) projects come from the public API, not SiteStore, so the
+ // original renderer in app.js must handle the projects/discounts pages.
+ if(route==='projects'||route==='discounts')return originalRenderItems();
  const found=E.search(SiteStore.state,query,{type:route}).filter(x=>x.kind==='item'&&(category==='الكل'||x.cat===category));
  const target=document.getElementById('results');
  if(target)target.innerHTML=found.length?found.map(x=>card(x)).join(''):'<div class="empty">لا توجد نتائج مطابقة. جرّب كلمة أخرى أو اختر «الكل».</div>';
