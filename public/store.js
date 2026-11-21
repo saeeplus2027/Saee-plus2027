@@ -216,6 +216,8 @@ window.SiteStore = (() => {
     data.notice = String(data.notice ?? "");
     data.mapNotice = String(data.mapNotice ?? "");
     data.chatbot = normalizeChatbot(data.chatbot);
+    data.opportunities = Array.isArray(data.opportunities) ? data.opportunities.filter(x => x && typeof x.title === "string").slice(0, 10) : [];
+    data.nahnoUrl = typeof data.nahnoUrl === "string" ? data.nahnoUrl.slice(0, 1000) : "";
 
     return clone(data);
   }
