@@ -3,10 +3,20 @@ function icon(name){return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="t
 let services=SiteStore.state.services;
 let titles=Object.fromEntries(services.map(s=>[s[0],s[2]]));
 let base=SiteStore.state.items;
-let additions=SiteStore.remote?[]:JSON.parse(localStorage.getItem('sai-additions')||'[]');
+function readStoredArray(key){
+  try{
+    const value=JSON.parse(localStorage.getItem(key)||'[]');
+    return Array.isArray(value)?value:[];
+  }catch(error){
+    console.warn('Saee Plus: تجاهل بيانات محلية قديمة غير صالحة:',key,error);
+    try{localStorage.removeItem(key);}catch(_){/* Storage may be read-only. */}
+    return [];
+  }
+}
+let additions=SiteStore.remote?[]:readStoredArray('sai-additions');
 let communityProjects=[];
 let communityDisplayItems=[];
-let items=[...base,...additions],favorites=JSON.parse(localStorage.getItem('sai-favorites')||'[]'),route='',category='الكل',query='';
+let items=[...base,...additions],favorites=readStoredArray('sai-favorites'),route='',category='الكل',query='';
 const main=document.getElementById('main');
 const COMMUNITY_API=String(window.SAI_API_BASE||'https://saee-plus-api.ligagym.workers.dev').replace(/\/$/,'');
 function isSignedIn(){return !!window.SAI_CURRENT_USER;}
