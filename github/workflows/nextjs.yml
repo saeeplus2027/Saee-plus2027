@@ -11,8 +11,6 @@ permissions:
   pages: write
   id-token: write
 
-# Keep only the latest requested deployment. Older runs are cancelled when
-# another commit arrives, preventing an older snapshot from overwriting newer files.
 concurrency:
   group: saee-plus-pages
   cancel-in-progress: true
@@ -26,9 +24,6 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      # GitHub may create several commits while files are being uploaded one by one.
-      # Wait briefly, then check out the CURRENT main branch (not an intermediate
-      # push snapshot) so the final deployment contains the latest complete website.
       - name: Wait for grouped file uploads
         run: sleep 15
 
