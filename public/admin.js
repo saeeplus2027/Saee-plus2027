@@ -1,4 +1,6 @@
 let adminTab='dashboard',adminFilter='all',adminQuery='',textQuery='';
+let adminCommunityContentProjects=[];
+let adminCommunityContentRequest=0;
 const vocationalApiUrl = path => `${String(window.SAI_API_BASE || 'https://saee-plus-api.ligagym.workers.dev').replace(/\/$/, '')}${path}`;
 const vocationalFetch = (path, options = {}) => { const headers = SiteStore.authHeaders ? SiteStore.authHeaders(options.headers || {}) : new Headers(options.headers || {}); return fetch(vocationalApiUrl(path), { ...options, headers, credentials: 'include' }); };
 const originalRender=render;
@@ -72,8 +74,134 @@ function adminChangePassword(){
 
 function renderAdmin(){if(SiteStore.remote&&!SiteStore.canEdit){main.innerHTML=`<section class="admin-password-screen"><form id="admin-server-login-form" class="admin-password-card"><div class="admin-password-icon">🔐</div><span class="kicker">سعي بلس · صلاحية المالك</span><h1>تسجيل دخول الإدارة</h1><p>أدخل كلمة مرور الإدارة المعتمدة على الخادم لتفعيل صلاحية الحفظ والنشر. كلمة مرور حماية هذه الصفحة وحدها لا تمنح صلاحية التعديل.</p><label for="admin-server-password">كلمة مرور الإدارة</label><input id="admin-server-password" name="password" type="password" autocomplete="current-password" required placeholder="أدخل كلمة مرور الإدارة"><p id="admin-server-login-error" class="admin-password-error" role="alert"></p><button class="button" type="submit">تسجيل الدخول وتفعيل التعديل</button><a href="#home" class="admin-password-back">العودة إلى الموقع</a></form></section>`;const form=document.getElementById('admin-server-login-form');form.addEventListener('submit',async e=>{e.preventDefault();const button=form.querySelector('button[type="submit"]');const error=document.getElementById('admin-server-login-error');button.disabled=true;error.textContent='';try{await SiteStore.loginAdmin(form.elements.password.value);renderAdmin();}catch(err){error.textContent=err.message||'تعذر تسجيل الدخول إلى الإدارة.';button.disabled=false;form.elements.password.focus();}});return;}const nav=[['dashboard','leaf','نظرة عامة'],['items','book','إدارة المحتوى'],['services','store','الأقسام والخدمات'],['places','pin','أماكن الخريطة'],['opportunities','grad','فرص سعي'],['ratings','check','تقييمات الموقع'],['communityProjects','users','مراجعة مشاريع المستخدمين'],['vocational','users','مراجعة مشاريع مهنتي إبداعي'],['texts','grad','نصوص الموقع'],['about','leaf','من نحن'],['chatbot','bulb','المساعد سعي'],['settings','bulb','الهوية والإعدادات'],['backup','check','التصدير والنسخ الاحتياطي']];main.innerHTML=`<div class="admin-shell"><aside class="admin-sidebar"><div class="admin-logo">${escapeHtml(SiteStore.state.siteName)}<small>مساحة إدارة الموقع</small></div><div class="admin-nav">${nav.map(([id,ico,label])=>`<button class="${adminTab===id?'selected':''}" onclick="goAdmin('${id}')">${icon(ico)} ${label}</button>`).join('')}</div><a href="#home">↗ العودة إلى الموقع</a><button class="admin-password-logout" onclick="adminChangePassword()">🔑 تغيير كلمة المرور</button><button class="admin-password-logout" onclick="adminPasswordLogout()">🔒 قفل لوحة الإدارة</button></aside><section class="admin-main"><div class="admin-top"><div><span class="kicker">أهلًا بك في لوحة التحكم</span><h1>${nav.find(n=>n[0]===adminTab)?.[2]||'إدارة الموقع'}</h1><p>محتواك، بطريقتك. أضف وعدّل واحذف من مكان واحد.</p></div><span class="admin-status">${SiteStore.remote?"● حفظ مباشر ومتزامن":"● محرر ملفات محلي"}</span></div><div id="admin-content"></div></section></div>`;const fn={dashboard:adminDashboard,items:adminItems,services:adminServices,places:adminPlaces,opportunities:adminOpportunities,ratings:adminRatings,communityProjects:adminCommunityProjects,vocational:adminVocational,texts:adminTexts,about:adminAbout,chatbot:adminChatbot,settings:adminSettings,backup:adminBackup}[adminTab]||adminDashboard;fn();}
 function adminDashboard(){const d=SiteStore.state;document.getElementById('admin-content').innerHTML=`<div class="admin-notice">${SiteStore.remote?"تعديلاتك تُحفظ مركزيًا وتظهر على الموقع تلقائيًا بعد الحفظ، بما في ذلك النصوص والصور والإضافات والحذف. انتظر رسالة تأكيد الحفظ قبل مغادرة الصفحة.":"هذه لوحة تحرير محلية. صدّر نسخة محدثة لنشر التغييرات."}</div><div class="admin-stats"><div class="admin-stat"><strong>${d.items.length}</strong><span>عنصر محتوى</span></div><div class="admin-stat"><strong>${d.services.length}</strong><span>قسم وخدمة</span></div><div class="admin-stat"><strong>${d.places.length}</strong><span>مكان في الخريطة</span></div></div><div class="admin-panel"><h2>ماذا تريد أن تغيّر اليوم؟</h2><p>ابدأ بإضافة محتوى جديد، أو حرّر النصوص والصور في واجهة الموقع نفسها.</p><div class="admin-actions"><button class="button" onclick="editItem()">+ إضافة محتوى</button><button class="button light" onclick="startVisual()">تعديل مباشر على الموقع ↖</button><button class="button light" onclick="exportWebsite(this)">تحميل الموقع بعد التعديل ↓</button></div></div><div class="admin-tips"><div class="admin-panel"><span class="kicker">من فكرة إلى محتوى</span><h3>كل الأقسام تحت إدارتك</h3><p>خصومات، كتب، خبراء، منتجات ومشاريع. عدّل التفاصيل والتصنيفات والأسعار والصور وبيانات التواصل.</p><button class="text-btn" onclick="goAdmin('items')">إدارة المحتوى ←</button></div><div class="admin-panel"><span class="kicker">تصميم يعكس هويتك</span><h3>اسم الموقع، صوره وألوانه</h3><p>حدّث الهوية والنصوص وأظهر أو أخفِ مساحات الصفحة الرئيسية، واحتفظ بنسخة احتياطية من عملك.</p><button class="text-btn" onclick="goAdmin('settings')">إعدادات الموقع ←</button></div></div>`;}
-function adminItems(){document.getElementById('admin-content').innerHTML=`<div class="admin-panel"><div class="admin-toolbar"><div class="admin-actions"><select aria-label="تصفية حسب القسم" onchange="adminFilter=this.value;adminItemsRows()"><option value="all">كل الأقسام</option>${SiteStore.state.services.filter(s=>s[0]!=='map').map(s=>`<option value="${s[0]}" ${adminFilter===s[0]?'selected':''}>${escapeHtml(s[2])}</option>`).join('')}</select><input aria-label="بحث المحتوى" placeholder="ابحث بعنوان أو تصنيف..." value="${escapeHtml(adminQuery)}" oninput="adminQuery=this.value;adminItemsRows()"></div><button class="button small" onclick="editItem()">+ إضافة محتوى</button></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>العنصر</th><th>القسم</th><th>التصنيف</th><th>الإجراءات</th></tr></thead><tbody id="admin-rows"></tbody></table></div></div>`;adminItemsRows();}
-function adminItemsRows(){let list=SiteStore.state.items.map((x,i)=>({...x,index:i})).filter(x=>(adminFilter==='all'||x.type===adminFilter)&&`${x.title} ${x.cat}`.includes(adminQuery));document.getElementById('admin-rows').innerHTML=list.map(x=>`<tr><td><div class="admin-item-title">${x.image?`<img src="${escapeHtml(SiteStore.imageSrc(x.image))}" alt="">`:icon('book')}<strong>${escapeHtml(x.title)}</strong></div>${x.type==='projects'?`<p>${escapeHtml(x.desc||'')}</p>${x.phone?`<p>الهاتف: ${escapeHtml(x.phone)}</p>`:''}${x.instagramUrl?`<p><a href="${escapeHtml(x.instagramUrl)}" target="_blank" rel="noopener">إنستغرام</a></p>`:''}${x.facebookUrl?`<p><a href="${escapeHtml(x.facebookUrl)}" target="_blank" rel="noopener">فيسبوك</a></p>`:''}<p><strong>الحالة:</strong> ${x.status==='approved'?'مقبول':x.status==='rejected'?'مرفوض':x.status==='pending'?'بانتظار الموافقة':'منشور سابقًا'}</p>`:''}</td><td>${escapeHtml(serviceLabel(x.type))}</td><td>${escapeHtml(x.cat)}</td><td><div class="admin-actions"><button onclick="editItem(${x.index})">تعديل</button>${x.type==='projects'&&x.status!=='approved'?`<button onclick="reviewCommunityProject(${x.index},'approved')">قبول ونشر</button>`:''}${x.type==='projects'&&x.status!=='rejected'?`<button class="danger" onclick="reviewCommunityProject(${x.index},'rejected')">رفض</button>`:''}<button class="danger" onclick="deleteItem(${x.index})">حذف</button></div></td></tr>`).join('')||'<tr><td colspan="4">لا يوجد محتوى مطابق. يمكنك إضافة عنصر جديد.</td></tr>';}
+function adminItems(){
+  document.getElementById('admin-content').innerHTML=`
+    <div class="admin-notice">تظهر هنا أيضًا المشاريع التي يرسلها المستخدمون من الموقع. يمكنك مراجعتها وقبولها أو رفضها وتعديل بياناتها دون التأثير على بقية المحتوى.</div>
+    <div class="admin-panel" id="admin-community-content-panel">
+      <div class="admin-toolbar">
+        <div><h2>مشاريع المستخدمين</h2><p class="admin-help">طلبات المستخدمين وحالة النشر على الموقع.</p></div>
+        <button type="button" class="button small" onclick="loadCommunityProjectsIntoItems()">تحديث المشاريع</button>
+      </div>
+      <div id="admin-community-content-status" class="admin-help">جاري تحميل مشاريع المستخدمين...</div>
+      <div class="admin-table-wrap"><table class="admin-table">
+        <thead><tr><th>المشروع والتفاصيل</th><th>صاحب المشروع</th><th>التصنيف والنشر</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
+        <tbody id="admin-community-content-rows"><tr><td colspan="5">جاري التحميل...</td></tr></tbody>
+      </table></div>
+    </div>
+    <div class="admin-panel">
+      <div class="admin-toolbar">
+        <div class="admin-actions">
+          <select aria-label="تصفية حسب القسم" onchange="adminFilter=this.value;adminItemsRows()"><option value="all">كل الأقسام</option>${SiteStore.state.services.filter(s=>s[0]!=='map').map(s=>`<option value="${s[0]}" ${adminFilter===s[0]?'selected':''}>${escapeHtml(s[2])}</option>`).join('')}</select>
+          <input aria-label="بحث المحتوى" placeholder="ابحث بعنوان أو تصنيف..." value="${escapeHtml(adminQuery)}" oninput="adminQuery=this.value;adminItemsRows()">
+        </div>
+        <button class="button small" onclick="editItem()">+ إضافة محتوى</button>
+      </div>
+      <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>العنصر</th><th>القسم</th><th>التصنيف</th><th>الإجراءات</th></tr></thead><tbody id="admin-rows"></tbody></table></div>
+    </div>`;
+  adminItemsRows();
+  loadCommunityProjectsIntoItems();
+}
+
+async function loadCommunityProjectsIntoItems(){
+  const requestId=++adminCommunityContentRequest;
+  const host=document.getElementById('admin-community-content-rows');
+  const status=document.getElementById('admin-community-content-status');
+  if(!host||!status)return;
+  status.textContent='جاري تحميل مشاريع المستخدمين...';
+  try{
+    const response=await vocationalFetch('/api/community-projects?admin=1',{method:'GET',cache:'no-store'});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw Error(data.error||'تعذر تحميل مشاريع المستخدمين.');
+    if(requestId!==adminCommunityContentRequest||!document.getElementById('admin-community-content-rows'))return;
+    adminCommunityContentProjects=Array.isArray(data.projects)?data.projects:[];
+    const pending=adminCommunityContentProjects.filter(p=>p.status==='pending').length;
+    status.textContent=`${adminCommunityContentProjects.length} مشروع · ${pending} بانتظار المراجعة`;
+    const statusLabel=s=>s==='approved'?'مقبول ومنشور':s==='rejected'?'مرفوض':'بانتظار المراجعة';
+    const placementLabel=p=>p==='projects_discounts'?'المشاريع الشبابية + خصم سعي':'المشاريع الشبابية فقط';
+    host.innerHTML=adminCommunityContentProjects.map(p=>{
+      const safeId=String(p.id||'');
+      if(!/^cp_[a-f0-9]{1,24}$/.test(safeId))return '';
+      return `<tr>
+        <td><div class="admin-item-title">${p.image_url?`<img src="${escapeHtml(p.image_url)}" alt="صورة ${escapeHtml(p.title)}">`:'<span class="admin-community-no-image">✦</span>'}<strong>${escapeHtml(p.title)}</strong></div>
+          <p>${escapeHtml(p.description||'')}</p>${p.phone?`<p>الهاتف: ${escapeHtml(p.phone)}</p>`:''}${p.contact?`<p>التواصل: ${escapeHtml(p.contact)}</p>`:''}
+          ${p.image_url?`<a href="${escapeHtml(p.image_url)}" target="_blank" rel="noopener noreferrer">عرض الصورة</a>`:''}
+          <small>تاريخ الإرسال: ${new Date(Number(p.created_at)||Date.now()).toLocaleString('ar-JO')}</small>${p.admin_note?`<p>ملاحظة الإدارة: ${escapeHtml(p.admin_note)}</p>`:''}
+        </td>
+        <td>${escapeHtml(p.owner_name||'—')}<br><small>${escapeHtml(p.owner_email||'')}</small></td>
+        <td>${escapeHtml(p.field||'مشاريع شبابية')}<br><small>${escapeHtml(p.project_type||'')} · ${placementLabel(p.placement)}</small></td>
+        <td><strong>${statusLabel(p.status)}</strong></td>
+        <td><div class="admin-actions">
+          <button type="button" onclick="editAdminCommunityProject('${safeId}')">تعديل</button>
+          ${p.status!=='approved'?`<button type="button" onclick="moderateCommunityProject('${safeId}','approve')">قبول ونشر</button>`:''}
+          ${p.status!=='rejected'?`<button type="button" class="danger" onclick="moderateCommunityProject('${safeId}','reject')">رفض</button>`:''}
+          <button type="button" class="danger" onclick="moderateCommunityProject('${safeId}','delete')">حذف</button>
+        </div></td>
+      </tr>`;
+    }).join('')||'<tr><td colspan="5">لا توجد مشاريع مرسلة من المستخدمين حتى الآن.</td></tr>';
+  }catch(error){
+    if(requestId!==adminCommunityContentRequest)return;
+    status.textContent='تعذر تحميل مشاريع المستخدمين.';
+    host.innerHTML=`<tr><td colspan="5"><strong>${escapeHtml(error.message||'حدث خطأ غير متوقع.')}</strong><br><button type="button" class="button small" onclick="loadCommunityProjectsIntoItems()">إعادة المحاولة</button></td></tr>`;
+  }
+}
+
+async function editAdminCommunityProject(id){
+  let p=adminCommunityContentProjects.find(x=>x.id===id);
+  if(!p){
+    try{
+      const response=await vocationalFetch('/api/community-projects?admin=1',{method:'GET',cache:'no-store'});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw Error(data.error||'تعذر تحميل المشروع.');
+      adminCommunityContentProjects=Array.isArray(data.projects)?data.projects:[];
+      p=adminCommunityContentProjects.find(x=>x.id===id);
+    }catch(error){toast(error.message||'تعذر تحميل المشروع.');return;}
+  }
+  if(!p){toast('لم يتم العثور على المشروع. حدّث القائمة وحاول مرة أخرى.');return;}
+  const selectedPlacement=(p.placement==='projects_discounts'||p.placement==='opportunities_discounts')?'projects_discounts':'projects';
+  modal(`<span class="kicker">إدارة مشاريع المستخدمين</span><h2>تعديل مشروع: ${escapeHtml(p.title)}</h2>
+    <p class="admin-help">تعديل البيانات لا يغيّر حالة المشروع. استخدم أزرار القبول أو الرفض بشكل مستقل.</p>
+    <form class="admin-form" onsubmit="saveAdminCommunityProject(event,'${escapeHtml(p.id)}')">
+      <label>اسم المشروع<input name="title" required maxlength="120" value="${escapeHtml(p.title||'')}"></label>
+      <label>التصنيف / المجال<input name="field" required maxlength="100" value="${escapeHtml(p.field||'')}"></label>
+      <label>نوع المشروع<select name="projectType" required>${['منتج','خدمة','فكرة إبداعية','مبادرة'].map(v=>`<option value="${v}" ${p.project_type===v?'selected':''}>${v}</option>`).join('')}</select></label>
+      <label>وصف المشروع<textarea name="description" required rows="4" maxlength="2000">${escapeHtml(p.description||'')}</textarea></label>
+      <label>صورة المشروع (رابط)<input name="imageUrl" type="url" maxlength="1000" value="${escapeHtml(p.image_url||'')}" placeholder="https://..." oninput="previewCommunityProjectImage(this)"><img id="community-project-image-preview" class="admin-image-preview" src="${escapeHtml(p.image_url||'')}" alt="معاينة صورة المشروع" ${p.image_url?'':'hidden'}></label>
+      <label>أو رفع صورة من الجهاز<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onchange="uploadCommunityProjectImage(this)"><small>الصيغ المدعومة PNG وJPG وWebP وGIF، حتى 15 ميغابايت.</small></label>
+      <label>طريقة الظهور<select name="placement"><option value="projects" ${selectedPlacement==='projects'?'selected':''}>المشاريع الشبابية فقط</option><option value="projects_discounts" ${selectedPlacement==='projects_discounts'?'selected':''}>المشاريع الشبابية + خصم سعي</option></select></label>
+      <label>اسم الجهة (اختياري)<input name="entityName" maxlength="120" value="${escapeHtml(p.entity_name||'')}"></label>
+      <label>رقم الهاتف<input name="phone" type="tel" maxlength="40" value="${escapeHtml(p.phone||'')}"></label>
+      <label>بيانات التواصل<input name="contact" maxlength="160" value="${escapeHtml(p.contact||'')}"></label>
+      <label>رابط إنستغرام<input name="instagramUrl" type="url" maxlength="1000" value="${escapeHtml(p.instagram_url||'')}"></label>
+      <label>رابط فيسبوك<input name="facebookUrl" type="url" maxlength="1000" value="${escapeHtml(p.facebook_url||'')}"></label>
+      <button class="button" type="submit">حفظ التعديلات ✓</button>
+    </form>`);
+}
+
+async function saveAdminCommunityProject(event,id){
+  event.preventDefault();
+  const form=event.currentTarget;
+  const button=form.querySelector('[type="submit"]');
+  button.disabled=true;
+  const f=new FormData(form);
+  const payload={action:'admin_update',id,
+    title:String(f.get('title')||'').trim(),field:String(f.get('field')||'').trim(),
+    projectType:String(f.get('projectType')||''),description:String(f.get('description')||'').trim(),
+    imageUrl:String(f.get('imageUrl')||'').trim(),placement:String(f.get('placement')||'projects'),
+    entityName:String(f.get('entityName')||'').trim(),phone:String(f.get('phone')||'').trim(),
+    contact:String(f.get('contact')||'').trim(),instagramUrl:String(f.get('instagramUrl')||'').trim(),
+    facebookUrl:String(f.get('facebookUrl')||'').trim()};
+  try{
+    const response=await vocationalFetch('/api/community-projects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw Error(data.error||'تعذر حفظ التعديلات.');
+    document.getElementById('dialog').close();
+    toast(data.message||'تم تحديث المشروع.');
+    if(adminTab==='items')loadCommunityProjectsIntoItems();
+    else adminCommunityProjects();
+  }catch(error){toast(error.message||'تعذر حفظ التعديلات.');button.disabled=false;}
+}
+
+function adminItemsRows(){let list=SiteStore.state.items.map((x,i)=>({...x,index:i})).filter(x=>(adminFilter==='all'||x.type===adminFilter)&&`${x.title} ${x.cat}`.includes(adminQuery));document.getElementById('admin-rows').innerHTML=list.map(x=>`<tr><td><div class="admin-item-title">${x.image?`<img src="${escapeHtml(SiteStore.imageSrc(x.image))}" alt="">`:icon('book')}<strong>${escapeHtml(x.title)}</strong></div>${x.type==='projects'?`<p>${escapeHtml(x.desc||'')}</p>${x.phone?`<p>الهاتف: ${escapeHtml(x.phone)}</p>`:''}${x.instagramUrl?`<p><a href="${escapeHtml(x.instagramUrl)}" target="_blank" rel="noopener">إنستغرام</a></p>`:''}${x.facebookUrl?`<p><a href="${escapeHtml(x.facebookUrl)}" target="_blank" rel="noopener">فيسبوك</a></p>`:''}<p><strong>الحالة:</strong> ${x.status==='approved'?'مقبول':x.status==='rejected'?'مرفوض':x.status==='pending'?'بانتظار الموافقة':'منشور سابقًا'}</p>`:''}</td><td>${escapeHtml(serviceLabel(x.type))}</td><td>${escapeHtml(x.cat)}</td><td><div class="admin-actions"><button onclick="editItem(${x.index})">تعديل</button>${x.type==='projects'&&x.status!=='approved'?`<button onclick="reviewCommunityProject(${x.index},'approved')">قبول ونشر</button>`:''}${x.type==='projects'&&x.status!=='rejected'?`<button type="button" class="danger" title="رفض المشروع" aria-label="رفض المشروع" style="background:#c62828;color:#fff;border-color:#c62828" onclick="reviewCommunityProject(${x.index},'rejected')">✕ رفض</button>`:''}<button class="danger" onclick="deleteItem(${x.index})">حذف</button></div></td></tr>`).join('')||'<tr><td colspan="4">لا يوجد محتوى مطابق. يمكنك إضافة عنصر جديد.</td></tr>';}
 
 function inputField(label,name,value='',opts=''){return `<label>${label}<input name="${name}" value="${escapeHtml(value)}" ${opts}></label>`;}
 function imageField(name,value='',label='الصورة'){return `<label>${label}<input name="${name}" value="${escapeHtml(value)}" placeholder="رابط https أو اختر صورة من جهازك" oninput="previewImage(this)"><img class="admin-image-preview" ${value?`src="${escapeHtml(SiteStore.imageSrc(value))}"`:''} alt="معاينة الصورة" ${value?'':'hidden'}><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onchange="uploadImage(this,'${name}')"><small>تُصغّر الصور الكبيرة تلقائيًا لتسهيل الحفظ. امسح الحقل لإزالة الصورة.</small></label>`;}
@@ -238,7 +366,7 @@ async function adminVocational(){
   if(!r.ok)throw Error(d.error||'تعذر تحميل الطلبات');
   const projects=d.projects||[];
   const badge=s=>s==='approved'?'مقبول':s==='rejected'?'مرفوض':'بانتظار المراجعة';
-  host.innerHTML=`<div class="admin-notice">راجع طلبات المهن والمهارات والمشاريع. تبقى المشاركات مخفية حتى اختيار «موافقة ونشر».</div><div class="admin-panel"><div class="admin-toolbar"><h2>طلبات الطلبة (${projects.filter(p=>p.status==='pending').length} بانتظار المراجعة)</h2><button class="button small" onclick="adminVocational()">تحديث</button></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>المشروع</th><th>الطالب</th><th>المجال والنوع</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>${projects.map(p=>`<tr><td><strong>${escapeHtml(p.title)}</strong><p>${escapeHtml(p.description)}</p>${p.image_url?`<a href="${escapeHtml(p.image_url)}" target="_blank" rel="noopener">عرض الصورة</a>`:''}${p.phone?`<p>الهاتف: ${escapeHtml(p.phone)}</p>`:''}${p.instagram_url?`<p><a href="${escapeHtml(p.instagram_url)}" target="_blank" rel="noopener">إنستغرام</a></p>`:''}${p.facebook_url?`<p><a href="${escapeHtml(p.facebook_url)}" target="_blank" rel="noopener">فيسبوك</a></p>`:''}${p.contact?`<p>تواصل: ${escapeHtml(p.contact)}</p>`:''}<small>${new Date(Number(p.created_at)).toLocaleString('ar-JO')}</small>${p.admin_note?`<p>ملاحظة الإدارة: ${escapeHtml(p.admin_note)}</p>`:''}</td><td>${escapeHtml(p.student_name)}<br><small>${escapeHtml(p.email)}</small></td><td>${escapeHtml(p.field)}<br>${escapeHtml(p.project_type)}</td><td>${badge(p.status)}</td><td><div class="admin-actions"><button onclick="editVocationalProject('${p.id}')">تعديل</button><button class="danger" onclick="deleteVocationalProject('${p.id}')">حذف</button>${p.status!=='approved'?`<button onclick="reviewVocationalProject('${p.id}','approved')">موافقة ونشر</button>`:''}${p.status!=='rejected'?`<button class="danger" onclick="reviewVocationalProject('${p.id}','rejected')">رفض</button>`:''}${p.status!=='pending'?`<button onclick="reviewVocationalProject('${p.id}','pending')">إعادة للانتظار</button>`:''}</div></td></tr>`).join('')||'<tr><td colspan="5">لا توجد مشاريع مرسلة حتى الآن.</td></tr>'}</tbody></table></div></div>`
+  host.innerHTML=`<div class="admin-notice">راجع طلبات المهن والمهارات والمشاريع. تبقى المشاركات مخفية حتى اختيار «موافقة ونشر».</div><div class="admin-panel"><div class="admin-toolbar"><h2>طلبات الطلبة (${projects.filter(p=>p.status==='pending').length} بانتظار المراجعة)</h2><button class="button small" onclick="adminVocational()">تحديث</button></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>المشروع</th><th>الطالب</th><th>المجال والنوع</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>${projects.map(p=>`<tr><td><strong>${escapeHtml(p.title)}</strong><p>${escapeHtml(p.description)}</p>${p.image_url?`<a href="${escapeHtml(p.image_url)}" target="_blank" rel="noopener">عرض الصورة</a>`:''}${p.phone?`<p>الهاتف: ${escapeHtml(p.phone)}</p>`:''}${p.instagram_url?`<p><a href="${escapeHtml(p.instagram_url)}" target="_blank" rel="noopener">إنستغرام</a></p>`:''}${p.facebook_url?`<p><a href="${escapeHtml(p.facebook_url)}" target="_blank" rel="noopener">فيسبوك</a></p>`:''}${p.contact?`<p>تواصل: ${escapeHtml(p.contact)}</p>`:''}<small>${new Date(Number(p.created_at)).toLocaleString('ar-JO')}</small>${p.admin_note?`<p>ملاحظة الإدارة: ${escapeHtml(p.admin_note)}</p>`:''}</td><td>${escapeHtml(p.student_name)}<br><small>${escapeHtml(p.email)}</small></td><td>${escapeHtml(p.field)}<br>${escapeHtml(p.project_type)}</td><td>${badge(p.status)}</td><td><div class="admin-actions"><button onclick="editVocationalProject('${p.id}')">تعديل</button><button class="danger" onclick="deleteVocationalProject('${p.id}')">حذف</button>${p.status!=='approved'?`<button onclick="reviewVocationalProject('${p.id}','approved')">موافقة ونشر</button>`:''}${p.status!=='rejected'?`<button type="button" class="danger" title="رفض المشروع" aria-label="رفض المشروع" style="background:#c62828;color:#fff;border-color:#c62828" onclick="reviewVocationalProject('${p.id}','rejected')">✕ رفض</button>`:''}${p.status!=='pending'?`<button onclick="reviewVocationalProject('${p.id}','pending')">إعادة للانتظار</button>`:''}</div></td></tr>`).join('')||'<tr><td colspan="5">لا توجد مشاريع مرسلة حتى الآن.</td></tr>'}</tbody></table></div></div>`
  }catch(e){host.innerHTML=`<div class="admin-panel"><h2>تعذر تحميل مشاريع المبادرة</h2><p>${escapeHtml(e.message)}</p><p>تأكد من نشر تحديث الخادم وتسجيل الدخول بحساب الإدارة.</p><button class="button" onclick="adminVocational()">إعادة المحاولة</button></div>`;}
 }
 async function editVocationalProject(id){
@@ -307,7 +435,7 @@ async function adminCommunityProjects(){
       <td>${escapeHtml(p.owner_name||'')}<br><small>${escapeHtml(p.owner_email||'')}</small></td>
       <td>${escapeHtml(placementLabel(p.placement))}<br><small>${escapeHtml(p.field)} · ${escapeHtml(p.project_type)}</small></td>
       <td>${statusLabel(p.status)}</td>
-      <td><div class="admin-actions">${p.status!=='approved'?`<button type="button" onclick="moderateCommunityProject('${p.id}','approve')">موافقة ونشر</button>`:''}${p.status!=='rejected'?`<button type="button" class="danger" onclick="moderateCommunityProject('${p.id}','reject')">رفض</button>`:''}<button type="button" class="danger" onclick="moderateCommunityProject('${p.id}','delete')">حذف المشروع</button></div></td></tr>`).join('')||'<tr><td colspan="5">لا توجد مشاريع مرسلة من المستخدمين.</td></tr>'}
+      <td><div class="admin-actions"><button type="button" onclick="editAdminCommunityProject('${p.id}')">تعديل</button>${p.status!=='approved'?`<button type="button" onclick="moderateCommunityProject('${p.id}','approve')">موافقة ونشر</button>`:''}${p.status!=='rejected'?`<button type="button" class="danger" title="رفض المشروع" aria-label="رفض المشروع" style="background:#c62828;color:#fff;border-color:#c62828" onclick="moderateCommunityProject('${p.id}','reject')">✕ رفض</button>`:''}<button type="button" class="danger" onclick="moderateCommunityProject('${p.id}','delete')">حذف المشروع</button></div></td></tr>`).join('')||'<tr><td colspan="5">لا توجد مشاريع مرسلة من المستخدمين.</td></tr>'}
       </tbody></table></div></div>`;
   }catch(error){
     host.innerHTML=`<div class="admin-panel"><h2>تعذر تحميل المشاريع</h2><p>${escapeHtml(error.message)}</p><p class="admin-help">تأكد من نشر نسخة Worker المحدثة، ثم أعد المحاولة.</p><button class="button" onclick="adminCommunityProjects()">إعادة المحاولة</button></div>`;
@@ -324,6 +452,7 @@ async function moderateCommunityProject(id,action){
     if(!response.ok)throw Error(data.error||'تعذر تنفيذ الإجراء.');
     toast(data.message||'تم حفظ الإجراء.');
     await refreshCommunityProjects();
-    adminCommunityProjects();
+    if(adminTab==='items')loadCommunityProjectsIntoItems();
+    else adminCommunityProjects();
   }catch(error){toast(error.message||'تعذر تنفيذ الإجراء.');}
 }
