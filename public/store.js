@@ -17,7 +17,7 @@ window.SiteStore = (() => {
   // The static GitHub Pages frontend talks to the separately deployed Cloudflare Worker.
   // Set the real deployed Cloudflare Worker URL in remote-config.js.
   // Keep this fallback only for backwards compatibility; a wrong Worker URL causes HTTP 404.
-  const API_BASE = String(window.SAI_API_BASE || "https://saee-plus-api.ligagym.workers.dev").replace(/\/$/, "");
+  const API_BASE = String(window.SAI_API_BASE || "https://saeeplus-projects.ligagym.workers.dev").replace(/\/$/, "");
   const apiUrl = (path) => `${API_BASE}${path}`;
 
   // The validated bundled content is immediately usable. Remote refreshes replace
