@@ -1148,12 +1148,7 @@
       <label for="sai-register-name">الاسم</label>
       <input id="sai-register-name" name="name" type="text" autocomplete="name" maxlength="100" required>
 
-      <label for="sai-register-account-type">نوع الحساب</label>
-      <select id="sai-register-account-type" name="accountType" required>
-        <option value="user">مستخدم عادي — تصفح الموقع والاستفادة من الخدمات والخصومات</option>
-        <option value="project_owner">صاحب مشروع — إضافة مشروع وإدارته بعد النشر</option>
-      </select>
-      <p class="auth-note" style="margin:0 0 12px">الحساب العادي يتيح لك استخدام الموقع والخصومات والاستفسارات. حساب صاحب المشروع يضيف هذه المزايا وإمكانية إرسال المشاريع بعد مراجعة الإدارة.</p>
+      <p class="auth-note" style="margin:0 0 12px">أنشئ حسابك وادخل مباشرة إلى سعي بلس. يمكنك تصفح الموقع والاستفادة من خدماته، وإضافة مشروعك لاحقًا من قسم المشاريع بعد تسجيل الدخول.</p>
 
       <label for="sai-register-email">البريد الإلكتروني</label>
       <input id="sai-register-email" name="email" type="email" dir="ltr" placeholder="example@email.com" autocomplete="email" maxlength="254" required>
@@ -1251,11 +1246,11 @@
 
 <div id="toast" role="status"></div>
 
-<script src="remote-config.js?v=20261121-signup-autologin-fix-v2"></script>
+<script src="remote-config.js?v=20261121-unified-accounts-project-statistics-v3-v2"></script>
 <script src="content-data.js?v=20261029-loading-fix-v2"></script>
-<script src="store.js?v=20261121-signup-autologin-fix-v2"></script>
-<script src="app.js?v=20261121-signup-autologin-fix-v2"></script>
-<script src="admin.js?v=20261121-signup-autologin-fix-v2"></script>
+<script src="store.js?v=20261121-unified-accounts-project-statistics-v3-v2"></script>
+<script src="app.js?v=20261121-unified-accounts-project-statistics-v3-v2"></script>
+<script src="admin.js?v=20261121-unified-accounts-project-statistics-v3-v2"></script>
 
 <script>
 (() => {
@@ -1311,8 +1306,8 @@
     if(user){
       try{localStorage.setItem(SESSION_KEY,user.email);}catch(_){}
       const displayName=String(user.name||'').trim()||user.email;
-      if(accountTypeLabel) accountTypeLabel.textContent = user.accountType === 'project_owner' ? 'نوع الحساب: صاحب مشروع' : 'نوع الحساب: مستخدم عادي';
-      if(myProjectsButton) myProjectsButton.hidden = user.accountType !== 'project_owner';
+      if(accountTypeLabel) accountTypeLabel.textContent = 'حساب سعي بلس';
+      if(myProjectsButton) myProjectsButton.hidden = false;
       accountLabel.textContent='مرحبًا، '+displayName;
       accountButton.setAttribute('aria-label','حساب '+displayName);
       accountButton.title='حساب سعي بلس: '+displayName;
@@ -1343,8 +1338,8 @@
     const accountTypeLabel=$('sai-account-type-label');
     const myProjectsButton=$('sai-account-projects');
     const displayName=String(user.name||'').trim()||user.email;
-    if(accountTypeLabel)accountTypeLabel.textContent=user.accountType==='project_owner'?'نوع الحساب: صاحب مشروع':'نوع الحساب: مستخدم عادي';
-    if(myProjectsButton)myProjectsButton.hidden=user.accountType!=='project_owner';
+    if(accountTypeLabel)accountTypeLabel.textContent='حساب سعي بلس';
+    if(myProjectsButton)myProjectsButton.hidden=false;
     accountLabel.textContent='مرحبًا، '+displayName;
     accountButton.setAttribute('aria-label','حساب '+displayName);
     accountButton.title='حساب سعي بلس: '+displayName;
@@ -1359,7 +1354,7 @@
     // created atomically in D1. Use that server-confirmed payload immediately;
     // do not make signup depend on a second /api/me round trip.
     if(knownUser&&knownUser.id&&knownUser.email){
-      return applyAuthenticatedUser({...knownUser,accountType:knownUser.accountType==='project_owner'?'project_owner':'user',admin:!!knownUser.admin});
+      return applyAuthenticatedUser({...knownUser,admin:!!knownUser.admin});
     }
     const user=await updateHeader();
     if(!user)throw new Error('تم استلام رمز الدخول لكن تعذّر التحقق من الجلسة. حاول تسجيل الدخول مرة واحدة.');
@@ -1372,7 +1367,9 @@
   authDialog.addEventListener('cancel',e=>{if(busy||!getToken()){e.preventDefault();showMessage('سجّل الدخول أو أنشئ حسابًا للمتابعة.');}});
   authDialog.addEventListener('close',()=>{resetForms();clearMessage();});
   function passwordIsStrong(p){return p.length>=8&&p.length<=168&&/[A-Z]/.test(p)&&/[a-z]/.test(p)&&/[0-9]/.test(p)&&/[^A-Za-z0-9]/.test(p);}
-  $('sai-register-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;validateRegister();if(!f.reportValidity())return;const name=$('sai-register-name').value.trim(),email=normalizeEmail($('sai-register-email').value),password=$('sai-register-password').value,accountType=$('sai-register-account-type').value;if(!name){showMessage('أدخل اسمك.');return;}if(!passwordIsStrong(password)){showMessage('كلمة المرور يجب أن تكون بين 8 و168 حرفًا وتتضمن حرفًا كبيرًا وصغيرًا ورقمًا ورمزًا.');return;}run(f,async()=>{const d=await api('/api/signup',{method:'POST',body:JSON.stringify({name,email,password,accountType})});if(!d.token)throw new Error(d.error||d.message||'لم يُرجع الخادم رمز جلسة بعد إنشاء الحساب.');const user=d.user||{id:'signup-session',email,name,accountType,admin:false};await activateSession(d.token,email,user);f.reset();authDialog.close();});});
+  $('sai-register-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;validateRegister();if(!f.reportValidity())return;const name=$('sai-register-name').value.trim(),email=normalizeEmail($('sai-register-email').value),password=$('sai-register-password').value;if(!name){showMessage('أدخل اسمك.');return;}if(!passwordIsStrong(password)){showMessage('كلمة المرور يجب أن تكون بين 8 و168 حرفًا وتتضمن حرفًا كبيرًا وصغيرًا ورقمًا ورمزًا.');return;}run(f,async()=>{let d;try{d=await api('/api/signup',{method:'POST',body:JSON.stringify({name,email,password})});}catch(signupError){if(signupError.status===409){try{await login(email,password);f.reset();authDialog.close();return;}catch(loginError){throw new Error('هذا البريد مسجل مسبقًا، لكن كلمة المرور لا تطابق الحساب الحالي. استخدم كلمة المرور الأصلية أو استعادة كلمة المرور.');}}throw signupError;}if(d.token){const user=d.user||{id:'signup-session',email,name,admin:false};await activateSession(d.token,email,user);}else{ // Compatibility with older Worker deployments that created the account but did not return a token.
+      try{await login(email,password);}catch(loginError){if(loginError.status===401)throw new Error('هذا البريد الإلكتروني مسجل مسبقًا، لكن كلمة المرور لا تطابق الحساب الحالي. استخدم كلمة المرور الأصلية أو استعادة كلمة المرور.');throw new Error('تم إنشاء الحساب، لكن تعذّر تفعيل الدخول تلقائيًا. تأكد من نشر Worker المحدّث ثم حاول مرة أخرى.');}
+    }f.reset();authDialog.close();});});
   $('sai-login-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;if(!f.reportValidity())return;const email=normalizeEmail($('sai-login-email').value),password=$('sai-login-password').value;run(f,async()=>{await login(email,password);authDialog.close();});});
   $('sai-forgot-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;if(!f.reportValidity())return;const email=normalizeEmail($('sai-forgot-email').value),recoveryCode=$('sai-recovery-code').value.trim(),newPassword=$('sai-forgot-new-password').value;if(!/^\d{8}$/.test(recoveryCode)){showMessage('أدخل رمز الاستعادة المكوّن من 8 أرقام.');return;}if(!passwordIsStrong(newPassword)){showMessage('كلمة المرور يجب أن تكون بين 8 و168 حرفًا وتتضمن حرفًا كبيرًا وصغيرًا ورقمًا ورمزًا.');return;}run(f,async()=>{const d=await api('/api/reset-with-code',{method:'POST',body:JSON.stringify({email,recoveryCode,newPassword})});f.reset();showPage('login',false,true);$('sai-login-email').value=email;showMessage(d.message||'تم تغيير كلمة المرور بنجاح. سجّل الدخول بكلمة المرور الجديدة.');});});
   $('sai-recovery-code-issue-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;run(f,async()=>{const d=await api('/api/recovery-code',{method:'POST',body:JSON.stringify({})});showPage('recovery-code',false,true);$('sai-recovery-code-display').textContent=d.recoveryCode;$('sai-recovery-code-form').hidden=false;$('sai-recovery-return-account').hidden=false;showMessage(d.message||'احفظ رمز الاستعادة في مكان آمن.');});});
