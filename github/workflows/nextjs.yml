@@ -11,40 +11,63 @@ permissions:
   pages: write
   id-token: write
 
+# Keep only the latest requested deployment. Older runs are cancelled when
+# another commit arrives, preventing an older snapshot from overwriting newer files.
 concurrency:
-  group: pages
+  group: saee-plus-pages
   cancel-in-progress: true
 
 jobs:
   deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
 
-    runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
+      # GitHub may create several commits while files are being uploaded one by one.
+      # Wait briefly, then check out the CURRENT main branch (not an intermediate
+      # push snapshot) so the final deployment contains the latest complete website.
+      - name: Wait for grouped file uploads
+        run: sleep 15
+
+      - name: Checkout latest main
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Verify public website files
+      - name: Verify website files
+        shell: bash
         run: |
-          test -f public/index.html
-          test -f public/app.js
-          test -f public/admin.js
-          test -f public/style.css
-          test -f public/remote-config.js
+          set -euo pipefail
+          if [ ! -d public ]; then
+            echo "ERROR: public/ directory is missing."
+            exit 1
+          fi
+          missing=0
+          for file in index.html app.js admin.js style.css remote-config.js; do
+            if [ ! -s "public/$file" ]; then
+              echo "ERROR: public/$file is missing or empty."
+              missing=1
+            else
+              echo "OK: public/$file"
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "Deployment stopped because the website files are incomplete. Upload the complete public files, then push/commit again."
+            exit 1
+          fi
+          echo "All required website files are ready."
 
-      - name: Upload website files
+      - name: Upload complete website
         uses: actions/upload-pages-artifact@v3
         with:
           path: public
-
-      - name: Wait for Pages artifact metadata to propagate
-        run: sleep 10
 
       - name: Deploy website
         id: deployment
