@@ -79,20 +79,29 @@ setInterval(()=>{if(document.visibilityState==='visible')refreshCommunityProject
 function serviceCards(){return services.filter(s=>!SiteStore.state.hidden.includes(s[0])).map(s=>`<a class="service-card" href="#${s[0]}"><div class="service-icon">${icon(s[1])}</div><h3>${escapeHtml(s[2])}</h3><p>${escapeHtml(s[3])}</p><span class="card-arrow">↖</span></a>`).join('')}
 function card(x){
   const community=!!x.isCommunityProject;
+  const imageHtml=x.image
+    ?`<img src="${escapeHtml(SiteStore.imageSrc(x.image))}" alt="${escapeHtml(x.title)}" loading="lazy">`
+    :`<div class="expert-avatar" aria-label="لا توجد صورة للمشروع">${escapeHtml(x.emoji||'✦')}</div>`;
+  const heartHtml=`<button class="heart ${favorites.includes(x.id)?'saved':''}" onclick="saveFavorite('${x.id}',this)" aria-label="حفظ ${escapeHtml(x.title)} في المفضلة" aria-pressed="${favorites.includes(x.id)}">${icon('heart')}</button>`;
+
+  // Approved user projects use the same card layout as the reference design:
+  // image/badge/heart, title and summary, then category + a clear details button.
+  // Full contact and project information is shown in the Details dialog.
+  if(community){
+    const categoryLabel=String(x.field||x.cat||'عام').trim()||'عام';
+    return `<article class="offer-card community-offer-card">
+      <div class="photo-wrap">${imageHtml}<span class="offer-tag">إضافة مجتمعية</span>${heartHtml}</div>
+      <div class="card-body">
+        <h3>${escapeHtml(x.title||'مشروع شبابي')}</h3>
+        <p>${escapeHtml(x.desc||'مشروع مجتمعي أُضيف بواسطة أحد المستخدمين.')}</p>
+        <div class="card-foot"><span class="tag">${escapeHtml(categoryLabel)}</span><button type="button" class="details-btn" onclick="details('${escapeHtml(x.id)}')">التفاصيل ↖</button></div>
+      </div>
+    </article>`;
+  }
+
   const phone=String(x.phone||'').trim();
   const safePhone=phone.replace(/[^+0-9٠-٩۰-۹]/g,'');
-  const contact=String(x.contact||'').trim();
-  const projectFacts=community?`<div class="community-project-facts" style="display:grid;gap:6px;margin-top:12px;padding-top:10px;border-top:1px solid #e8eee5;color:#52675e;font-size:13px;line-height:1.7">
-    ${x.field?`<div><strong>المجال:</strong> ${escapeHtml(x.field)}</div>`:''}
-    ${x.projectType?`<div><strong>نوع المشروع:</strong> ${escapeHtml(communityProjectTypeLabel(x.projectType))}</div>`:''}
-    ${x.entityName?`<div><strong>الجهة:</strong> ${escapeHtml(x.entityName)}</div>`:''}
-    ${x.ownerName?`<div><strong>صاحب المشروع:</strong> ${escapeHtml(x.ownerName)}</div>`:''}
-    ${phone?`<div><strong>رقم التواصل:</strong> <a href="tel:${escapeHtml(safePhone)}" dir="ltr">${escapeHtml(phone)}</a></div>`:''}
-    ${contact?`<div><strong>وسيلة تواصل إضافية:</strong> ${escapeHtml(contact)}</div>`:''}
-    ${x.instagramUrl?`<div><a href="${escapeHtml(x.instagramUrl)}" target="_blank" rel="noopener noreferrer">إنستغرام ↗</a></div>`:''}
-    ${x.facebookUrl?`<div><a href="${escapeHtml(x.facebookUrl)}" target="_blank" rel="noopener noreferrer">فيسبوك ↗</a></div>`:''}
-  </div>`:'';
-  return `<article class="offer-card"><div class="photo-wrap">${x.image?`<img src="${escapeHtml(SiteStore.imageSrc(x.image))}" alt="${escapeHtml(x.title)}" loading="lazy">`:`<div class="expert-avatar">${escapeHtml(x.emoji||'✦')}</div>`}<span class="offer-tag">${escapeHtml(x.badge||'إضافة مجتمعية')}</span><button class="heart ${favorites.includes(x.id)?'saved':''}" onclick="saveFavorite('${x.id}',this)" aria-label="حفظ ${escapeHtml(x.title)} في المفضلة" aria-pressed="${favorites.includes(x.id)}">${icon('heart')}</button>${x.isCommunityProject&&x.isOwner?`<button type="button" class="community-edit-card" onclick="editCommunityProject('${escapeHtml(x.communityId)}')" style="position:absolute;left:10px;bottom:10px;border:0;border-radius:9px;padding:7px 10px;background:#075550;color:white;font-weight:700;cursor:pointer">تعديل مشروعي</button>`:''}</div><div class="card-body"><h3>${escapeHtml(x.title)}</h3><p>${escapeHtml(x.desc)}</p>${projectFacts}<div class="card-foot"><span class="${x.price?'price':'tag'}">${escapeHtml(x.price||x.meta||x.cat)}</span><button class="details-btn" onclick="details('${x.id}')">التفاصيل ↖</button></div></div></article>`
+  return `<article class="offer-card"><div class="photo-wrap">${imageHtml}<span class="offer-tag">${escapeHtml(x.badge||'إضافة مجتمعية')}</span>${heartHtml}</div><div class="card-body"><h3>${escapeHtml(x.title)}</h3><p>${escapeHtml(x.desc)}</p><div class="card-foot"><span class="${x.price?'price':'tag'}">${escapeHtml(x.price||x.meta||x.cat)}</span><button type="button" class="details-btn" onclick="details('${escapeHtml(x.id)}')">التفاصيل ↖</button></div></div></article>`;
 }
 function home(){main.innerHTML=`<div class="container"><section class="hero"><div class="hero-copy"><div class="eyebrow"><span class="dot"></span> من جامعتك.. لمجتمعك</div><h1>كل احتياجاتك،<br>وفرصك <em>في مكان واحد.</em></h1><p>سعي بلس يجمع عالمك الجامعي ومجتمعك المحلي في مساحة واحدة. اكتشف، تواصل، وشارك.. لأن كل سعي صغير يصنع فرقًا.</p><div class="hero-buttons"><a class="button" href="#services">اكتشف خدماتنا <span>↖</span></a><a class="button light" href="#about">تعرّف على سعي بلس</a></div><div class="hero-trust"><div class="avatar-stack"><i>🌱</i><i>🎓</i><i>☕</i></div><span>للطلاب، والمبدعين، وكل من يسعى للأفضل.</span></div></div><div class="hero-visual"><img class="campus-photo" src="assets/campus.jpg" alt="مساحة جامعية خضراء ومباني تعليمية"><div class="visual-tint"></div><div class="floating float-one"><span class="bubble">${icon('book')}</span><div><b>كتابك فرصة لغيرك</b><small>شارك المعرفة، واصنع أثرًا.</small></div></div><div class="floating float-two"><span class="bubble">${icon('percent')}</span><div><b>عروض تناسب يومك</b><small>خصومات من محيط جامعتك</small></div></div><div class="visual-caption"><small>خطوتك الجاية تبدأ من هنا</small><p>أقرب لجامعتك.<br>أقرب لفرصك.</p></div></div></section><div class="community-strip"><div>${icon('grad')}<span><strong>حياة جامعية أسهل</strong><small>خدمات ترافقك كل يوم</small></span></div><div>${icon('users')}<span><strong>مجتمع أقرب لك</strong><small>تواصل، تعلّم، وشارك</small></span></div><div>${icon('leaf')}<span><strong>أثر يبدأ بخطوة</strong><small>فرص صغيرة، أثر كبير</small></span></div></div><section class="services"><div class="section-head"><div><span class="kicker">مساحات صُممت لك</span><h2>وش حاب تسعى له اليوم؟</h2><p>ست خدمات، وكل خدمة تفتح لك بابًا جديدًا.</p></div><span class="arrow-link">كل احتياجاتك، هنا ${icon('leaf')}</span></div><div class="services-grid">${serviceCards()}</div></section></div><section class="offers-section"><div class="container"><div class="section-head"><div><span class="kicker">فرص قريبة، وفائدة أكبر</span><h2>وفّر أكثر، واستمتع بيومك</h2></div><a class="arrow-link" href="#discounts">كل الخصومات <span>←</span></a></div><div class="offers-grid">${items.filter(x=>x.type==='discounts').slice(0,3).map(card).join('')}</div><p style="color:#8b947f;font-size:10px;margin:14px 0 0">العروض المعروضة أمثلة توضيحية لتجربة الموقع.</p></div></section><div class="container"><section id="about" class="intro"><span class="kicker">لماذا سعي بلس؟</span><h2>لأن الفرص تكبر، عندما نتشاركها.</h2><p>سعي بلس منصة تجمع الطالب ومجتمعه المحلي: من الوصول إلى مرافق الجامعة، إلى تبادل الكتب، ودعم المشاريع الصغيرة والاستفادة من خبرات الآخرين. نؤمن أن المعرفة أقرب عندما تُشارك، وأن لكل فكرة فرصة تستحقها.</p></section><section class="join-banner"><div><h2>عندك شيء يستحق المشاركة؟</h2><p>كتاب، منتج، خبرة أو فكرة مشروع.. خلّ سعيك يوصل لغيرك.</p></div>${isSignedIn()?'<button class="button" onclick="addForm(\'projects\')">أضف مشروعك <span>↖</span></button>':'<a class="button light" href="#projects">استكشف المشاريع <span>↖</span></a>'}</section></div>`}
 function headerPage(name,desc,action=''){return `<div class="page-head"><div class="breadcrumbs"><a href="#home">الرئيسية</a> / ${escapeHtml(name)}</div><div class="page-title-row"><div><span class="kicker">من جامعتك، إلى مجتمعك</span><h1>${escapeHtml(name)}</h1><p>${escapeHtml(desc)}</p></div>${action}</div></div>`}
