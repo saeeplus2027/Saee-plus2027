@@ -43,7 +43,7 @@ function mapCommunityProject(project,type){
   const isOwner=!!project.is_owner||(!!currentUserId&&!!ownerId&&currentUserId===ownerId);
   const projectType=String(project.project_type||'').trim();
   const field=String(project.field||'مشاريع شبابية').trim()||'مشاريع شبابية';
-  return {id:`community_${project.id}_${type}`,communityId:project.id,isCommunityProject:true,isOwner,type,title:String(project.title||'مشروع شبابي'),cat:field,field,projectType,desc:String(project.description||''),badge:project.entity_name||'مشروع شبابي',meta:communityProjectTypeLabel(projectType)||'مشاركة شبابية',extra:project.description||'',image:project.image_url||'',phone:project.phone||'',contact:project.contact||'',instagramUrl:project.instagram_url||'',facebookUrl:project.facebook_url||'',entityName:project.entity_name||'',ownerName:project.owner_name||'',placement:project.placement||'projects',status:'approved',emoji:'✦'};
+  return {id:`community_${project.id}_${type}`,communityId:project.id,isCommunityProject:true,isOwner,type,title:String(project.title||'مشروع شبابي'),cat:field,field,projectType,desc:String(project.description||''),badge:project.entity_name||'مشروع شبابي',meta:communityProjectTypeLabel(projectType)||'مشاركة شبابية',extra:project.description||'',image:project.image_url||'',phone:project.phone||'',contact:project.contact||'',instagramUrl:project.instagram_url||'',facebookUrl:project.facebook_url||'',entityName:project.entity_name||'',ownerName:project.owner_name||'',placement:project.placement||'projects',createdAt:Number(project.created_at||project.createdAt||0),status:'approved',emoji:'✦'};
 }
 function rebuildVisibleItems(){items=[...communityDisplayItems,...base,...additions];}
 async function fetchPublicCommunityProjects(){
@@ -137,8 +137,9 @@ function listingItemsForRoute(){
   // De-duplicate API and cached copies by their stable community project id.
   const merged=new Map();
   for(const item of [...cachedItems,...apiItems])merged.set(String(item.id),item);
-  const community=[...merged.values()];
-  return route==='projects'?[...community,...normal]:[...normal,...community];
+  const community=[...merged.values()].sort((a,b)=>Number(a.createdAt||0)-Number(b.createdAt||0)||String(a.communityId||'').localeCompare(String(b.communityId||'')));
+  // Site-managed projects remain first; user submissions are appended after them, oldest to newest.
+  return [...normal,...community];
 }
 function communityProjectTypeLabel(value){
   const raw=String(value||'').trim();
