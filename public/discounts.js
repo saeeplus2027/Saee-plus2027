@@ -215,7 +215,7 @@
         setText(timer, `يتفعّل بعد ${remaining(until)}`);
       }
     });
-  }, 30000);
+  }, 1000);
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
   else start();
