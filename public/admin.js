@@ -299,7 +299,7 @@ async function adminCommunityProjects(){
     if(!response.ok)throw Error(data.error||'تعذر تحميل مشاريع المستخدمين.');
     const projects=data.projects||[];
     const statusLabel=s=>s==='approved'?'مقبول ومنشور':s==='rejected'?'مرفوض':'بانتظار المراجعة';
-    const placementLabel=p=>({projects:'المشاريع الشبابية فقط',projects_opportunities:'المشاريع + فرص سعي',opportunities:'فرص سعي فقط',opportunities_discounts:'فرص سعي + الخصومات'}[p]||p);
+    const placementLabel=p=>({projects:'المشاريع الشبابية فقط',projects_discounts:'المشاريع الشبابية + خصم سعي',projects_opportunities:'المشاريع الشبابية فقط',opportunities:'المشاريع الشبابية فقط',opportunities_discounts:'المشاريع الشبابية + خصم سعي'}[p]||'المشاريع الشبابية فقط');
     host.innerHTML=`<div class="admin-notice">كل مشروع جديد يصل إلى هنا بحالة «بانتظار المراجعة». عند الموافقة سيظهر المشروع تلقائيًا في الأقسام التي اختارها المستخدم. ويمكن لصاحب المشروع تعديل بيانات مشروعه المنشور من حسابه.</div>
       <div class="admin-panel"><div class="admin-toolbar"><h2>مشاريع المستخدمين (${projects.length})</h2><button class="button small" onclick="adminCommunityProjects()">تحديث</button></div>
       <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>المشروع والتفاصيل</th><th>صاحب المشروع</th><th>النشر</th><th>الحالة</th><th>الإجراءات</th></tr></thead><tbody>
