@@ -2068,6 +2068,7 @@
     // Remember the action that the visitor was trying to perform. After a
     // successful signup/login, the project form will open automatically.
     if (actionName === 'مشروعك') window.SAEE_PENDING_PROJECT_ADD = true;
+    window.SAEE_PENDING_ACTION = window.SAEE_PENDING_ACTION || { el: null, type: actionName };
     const dialog = document.getElementById(AUTH_DIALOG_ID);
     const message = document.getElementById('sai-auth-message');
     const title = document.getElementById('sai-auth-title');
@@ -2090,9 +2091,7 @@
     if (description) description.textContent = text;
 
     if (message) {
-      message.textContent = window.SAEE_PENDING_PROJECT_ADD
-        ? text + '\nبعد إنشاء الحساب أو تسجيل الدخول، سيفتح نموذج إضافة المشروع تلقائيًا.'
-        : text + '\nبعد تسجيل الدخول يمكنك متابعة الإضافة.';
+      message.textContent = text + '\nبعد إنشاء الحساب أو تسجيل الدخول ستكمل الإضافة مباشرة بدون أي خطوة إضافية.';
       message.hidden = false;
     }
 
@@ -2117,6 +2116,8 @@
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
+    // نتذكر الزر الذي ضغطه الزائر لنعيد تنفيذه تلقائيًا بعد الدخول.
+    window.SAEE_PENDING_ACTION = { el: getActionElement(target), type: protectedAction.type };
     requestLogin(protectedAction.type);
   }, true);
 
@@ -2124,13 +2125,20 @@
   // Only content-submission forms require an authenticated account.
 
   window.addEventListener('sai-account-changed', () => {
-    if (!hasAccountSession() || !window.SAEE_PENDING_PROJECT_ADD) return;
+    const pending = window.SAEE_PENDING_ACTION;
+    if (!hasAccountSession() || !(pending || window.SAEE_PENDING_PROJECT_ADD)) return;
+    window.SAEE_PENDING_ACTION = null;
     window.SAEE_PENDING_PROJECT_ADD = false;
+    // ننتظر إغلاق نافذة الحساب ثم ننفذ الإضافة التي كان يريدها الزائر.
     setTimeout(() => {
-      if (window.SAI_CURRENT_USER && typeof window.communityProjectForm === 'function') {
+      const dialog = document.getElementById(AUTH_DIALOG_ID);
+      if (dialog && dialog.open) dialog.close();
+      if (pending && pending.el && document.contains(pending.el)) {
+        pending.el.click();
+      } else if (pending && pending.type === 'مشروعك' && typeof window.communityProjectForm === 'function') {
         window.communityProjectForm();
       }
-    }, 80);
+    }, 200);
   });
 
   /*
