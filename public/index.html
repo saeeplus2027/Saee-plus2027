@@ -2149,6 +2149,8 @@
 
     if (!(form instanceof HTMLFormElement)) return;
     if (hasAccountSession()) return;
+    // نماذج الدخول وإنشاء الحساب نفسها يجب ألا تُحجب أبدًا.
+    if (form.closest('#' + AUTH_DIALOG_ID)) return;
     if (!isProtectedForm(form)) return;
 
     event.preventDefault();
