@@ -122,7 +122,7 @@ async function loadCommunityProjectsIntoItems(){
       if(!/^cp_[a-f0-9]{1,24}$/.test(safeId))return '';
       return `<tr>
         <td><div class="admin-item-title">${p.image_url?`<img src="${escapeHtml(p.image_url)}" alt="صورة ${escapeHtml(p.title)}">`:'<span class="admin-community-no-image">✦</span>'}<strong>${escapeHtml(p.title)}</strong></div>
-          <p>${escapeHtml(p.description||'')}</p>${p.phone?`<p>الهاتف: ${escapeHtml(p.phone)}</p>`:''}${p.contact?`<p>التواصل: ${escapeHtml(p.contact)}</p>`:''}
+          <p>${escapeHtml(splitCommunityExtras(p.description).text)}</p>${p.phone?`<p>الهاتف: ${escapeHtml(p.phone)}</p>`:''}${p.contact?`<p>التواصل: ${escapeHtml(p.contact)}</p>`:''}
           ${p.image_url?`<a href="${escapeHtml(p.image_url)}" target="_blank" rel="noopener noreferrer">عرض الصورة</a>`:''}
           <small>تاريخ الإرسال: ${new Date(Number(p.created_at)||Date.now()).toLocaleString('ar-JO')}</small>${p.admin_note?`<p>ملاحظة الإدارة: ${escapeHtml(p.admin_note)}</p>`:''}
         </td>
@@ -157,16 +157,19 @@ async function editAdminCommunityProject(id){
   }
   if(!p){toast('لم يتم العثور على المشروع. حدّث القائمة وحاول مرة أخرى.');return;}
   const selectedPlacement=(p.placement==='projects_discounts'||p.placement==='opportunities_discounts')?'projects_discounts':'projects';
+  const adminX=splitCommunityExtras(p.description).extra||{};const adminSecs=(Array.isArray(adminX.sections)&&adminX.sections.length)?adminX.sections:(selectedPlacement==='projects_discounts'?['projects','discounts']:['projects']);
   modal(`<span class="kicker">إدارة مشاريع المستخدمين</span><h2>تعديل مشروع: ${escapeHtml(p.title)}</h2>
     <p class="admin-help">تعديل البيانات لا يغيّر حالة المشروع. استخدم أزرار القبول أو الرفض بشكل مستقل.</p>
     <form class="admin-form" onsubmit="saveAdminCommunityProject(event,'${escapeHtml(p.id)}')">
       <label>اسم المشروع<input name="title" required maxlength="120" value="${escapeHtml(p.title||'')}"></label>
       <label>التصنيف / المجال<input name="field" required maxlength="100" value="${escapeHtml(p.field||'')}"></label>
       <label>نوع المشروع<select name="projectType" required>${['منتج','خدمة','فكرة إبداعية','مبادرة'].map(v=>`<option value="${v}" ${p.project_type===v?'selected':''}>${v}</option>`).join('')}</select></label>
-      <label>وصف المشروع<textarea name="description" required rows="4" maxlength="2000">${escapeHtml(p.description||'')}</textarea></label>
+      <label>وصف المشروع<textarea name="description" required rows="4" maxlength="2000">${escapeHtml(splitCommunityExtras(p.description).text)}</textarea></label>
       <label>صورة المشروع (رابط)<input name="imageUrl" type="url" maxlength="1000" value="${escapeHtml(p.image_url||'')}" placeholder="https://..." oninput="previewCommunityProjectImage(this)"><img id="community-project-image-preview" class="admin-image-preview" src="${escapeHtml(p.image_url||'')}" alt="معاينة صورة المشروع" ${p.image_url?'':'hidden'}></label>
       <label>أو رفع صورة من الجهاز<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onchange="uploadCommunityProjectImage(this)"><small>الصيغ المدعومة PNG وJPG وWebP وGIF، حتى 15 ميغابايت.</small></label>
-      <label>طريقة الظهور<select name="placement"><option value="projects" ${selectedPlacement==='projects'?'selected':''}>المشاريع الشبابية فقط</option><option value="projects_discounts" ${selectedPlacement==='projects_discounts'?'selected':''}>المشاريع الشبابية + خصم سعي</option></select></label>
+      <fieldset style="border:1px solid #e4ebe1;border-radius:12px;padding:10px 14px"><legend>الأقسام التي يظهر فيها المشروع</legend>
+        ${[['opportunities','فرص سعي'],['projects','المشاريع الشبابية'],['discounts','خصومات سعي']].map(([v,l])=>`<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="sections" value="${v}" ${adminSecs.includes(v)?'checked':''}> ${l}</label>`).join('')}
+      </fieldset>
       <label>اسم الجهة (اختياري)<input name="entityName" maxlength="120" value="${escapeHtml(p.entity_name||'')}"></label>
       <label>رقم الهاتف<input name="phone" type="tel" maxlength="40" value="${escapeHtml(p.phone||'')}"></label>
       <label>بيانات التواصل<input name="contact" maxlength="160" value="${escapeHtml(p.contact||'')}"></label>
@@ -182,10 +185,15 @@ async function saveAdminCommunityProject(event,id){
   const button=form.querySelector('[type="submit"]');
   button.disabled=true;
   const f=new FormData(form);
+  const sections=f.getAll('sections').map(String).filter(v=>['opportunities','projects','discounts'].includes(v));
+  if(!sections.length){toast('اختر قسمًا واحدًا على الأقل.');button.disabled=false;return;}
+  const orig=(adminCommunityContentProjects||[]).find(x=>x.id===id)||{};
+  const fullDescription=joinCommunityExtras(String(f.get('description')||'').trim(),{...(splitCommunityExtras(orig.description).extra||{}),sections});
+  if(fullDescription.length>2000){toast('الوصف مع البيانات الإضافية أطول من المسموح (2000 حرف).');button.disabled=false;return;}
   const payload={action:'admin_update',id,
     title:String(f.get('title')||'').trim(),field:String(f.get('field')||'').trim(),
-    projectType:String(f.get('projectType')||''),description:String(f.get('description')||'').trim(),
-    imageUrl:String(f.get('imageUrl')||'').trim(),placement:String(f.get('placement')||'projects'),
+    projectType:String(f.get('projectType')||''),description:fullDescription,
+    imageUrl:String(f.get('imageUrl')||'').trim(),placement:sections.includes('discounts')?'projects_discounts':'projects',
     entityName:String(f.get('entityName')||'').trim(),phone:String(f.get('phone')||'').trim(),
     contact:String(f.get('contact')||'').trim(),instagramUrl:String(f.get('instagramUrl')||'').trim(),
     facebookUrl:String(f.get('facebookUrl')||'').trim()};
@@ -365,7 +373,7 @@ async function adminVocational(){
   if(!r.ok)throw Error(d.error||'تعذر تحميل الطلبات');
   const projects=d.projects||[];
   const badge=s=>s==='approved'?'مقبول':s==='rejected'?'مرفوض':'بانتظار المراجعة';
-  host.innerHTML=`<div class="admin-notice">راجع طلبات المهن والمهارات والمشاريع. تبقى المشاركات مخفية حتى اختيار «موافقة ونشر».</div><div class="admin-panel"><div class="admin-toolbar"><h2>طلبات الطلبة (${projects.filter(p=>p.status==='pending').length} بانتظار المراجعة)</h2><button class="button small" onclick="adminVocational()">تحديث</button></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>المشروع</th><th>الطالب</th><th>المجال والنوع</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>${projects.map(p=>`<tr><td><strong>${escapeHtml(p.title)}</strong><p>${escapeHtml(p.description)}</p>${p.image_url?`<a href="${escapeHtml(p.image_url)}" target="_blank" rel="noopener">عرض الصورة</a>`:''}${p.phone?`<p>الهاتف: ${escapeHtml(p.phone)}</p>`:''}${p.instagram_url?`<p><a href="${escapeHtml(p.instagram_url)}" target="_blank" rel="noopener">إنستغرام</a></p>`:''}${p.facebook_url?`<p><a href="${escapeHtml(p.facebook_url)}" target="_blank" rel="noopener">فيسبوك</a></p>`:''}${p.contact?`<p>تواصل: ${escapeHtml(p.contact)}</p>`:''}<small>${new Date(Number(p.created_at)).toLocaleString('ar-JO')}</small>${p.admin_note?`<p>ملاحظة الإدارة: ${escapeHtml(p.admin_note)}</p>`:''}</td><td>${escapeHtml(p.student_name)}<br><small>${escapeHtml(p.email)}</small></td><td>${escapeHtml(p.field)}<br>${escapeHtml(p.project_type)}</td><td>${badge(p.status)}</td><td><div class="admin-actions"><button onclick="editVocationalProject('${p.id}')">تعديل</button><button class="danger" onclick="deleteVocationalProject('${p.id}')">حذف</button>${p.status!=='approved'?`<button onclick="reviewVocationalProject('${p.id}','approved')">موافقة ونشر</button>`:''}${p.status!=='rejected'?`<button type="button" class="danger" title="رفض المشروع" aria-label="رفض المشروع" style="background:#c62828;color:#fff;border-color:#c62828" onclick="reviewVocationalProject('${p.id}','rejected')">✕ رفض</button>`:''}${p.status!=='pending'?`<button onclick="reviewVocationalProject('${p.id}','pending')">إعادة للانتظار</button>`:''}</div></td></tr>`).join('')||'<tr><td colspan="5">لا توجد مشاريع مرسلة حتى الآن.</td></tr>'}</tbody></table></div></div>`
+  host.innerHTML=`<div class="admin-notice">راجع طلبات المهن والمهارات والمشاريع. تبقى المشاركات مخفية حتى اختيار «موافقة ونشر».</div><div class="admin-panel"><div class="admin-toolbar"><h2>طلبات الطلبة (${projects.filter(p=>p.status==='pending').length} بانتظار المراجعة)</h2><button class="button small" onclick="adminVocational()">تحديث</button></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>المشروع</th><th>الطالب</th><th>المجال والنوع</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>${projects.map(p=>`<tr><td><strong>${escapeHtml(p.title)}</strong><p>${escapeHtml(splitCommunityExtras(p.description).text)}</p>${p.image_url?`<a href="${escapeHtml(p.image_url)}" target="_blank" rel="noopener">عرض الصورة</a>`:''}${p.phone?`<p>الهاتف: ${escapeHtml(p.phone)}</p>`:''}${p.instagram_url?`<p><a href="${escapeHtml(p.instagram_url)}" target="_blank" rel="noopener">إنستغرام</a></p>`:''}${p.facebook_url?`<p><a href="${escapeHtml(p.facebook_url)}" target="_blank" rel="noopener">فيسبوك</a></p>`:''}${p.contact?`<p>تواصل: ${escapeHtml(p.contact)}</p>`:''}<small>${new Date(Number(p.created_at)).toLocaleString('ar-JO')}</small>${p.admin_note?`<p>ملاحظة الإدارة: ${escapeHtml(p.admin_note)}</p>`:''}</td><td>${escapeHtml(p.student_name)}<br><small>${escapeHtml(p.email)}</small></td><td>${escapeHtml(p.field)}<br>${escapeHtml(p.project_type)}</td><td>${badge(p.status)}</td><td><div class="admin-actions"><button onclick="editVocationalProject('${p.id}')">تعديل</button><button class="danger" onclick="deleteVocationalProject('${p.id}')">حذف</button>${p.status!=='approved'?`<button onclick="reviewVocationalProject('${p.id}','approved')">موافقة ونشر</button>`:''}${p.status!=='rejected'?`<button type="button" class="danger" title="رفض المشروع" aria-label="رفض المشروع" style="background:#c62828;color:#fff;border-color:#c62828" onclick="reviewVocationalProject('${p.id}','rejected')">✕ رفض</button>`:''}${p.status!=='pending'?`<button onclick="reviewVocationalProject('${p.id}','pending')">إعادة للانتظار</button>`:''}</div></td></tr>`).join('')||'<tr><td colspan="5">لا توجد مشاريع مرسلة حتى الآن.</td></tr>'}</tbody></table></div></div>`
  }catch(e){host.innerHTML=`<div class="admin-panel"><h2>تعذر تحميل مشاريع المبادرة</h2><p>${escapeHtml(e.message)}</p><p>تأكد من نشر تحديث الخادم وتسجيل الدخول بحساب الإدارة.</p><button class="button" onclick="adminVocational()">إعادة المحاولة</button></div>`;}
 }
 async function editVocationalProject(id){
@@ -430,7 +438,7 @@ async function adminCommunityProjects(){
     host.innerHTML=`<div class="admin-notice">كل مشروع جديد يصل إلى هنا بحالة «بانتظار المراجعة». عند الموافقة سيظهر المشروع تلقائيًا في الأقسام التي اختارها المستخدم. ويمكن لصاحب المشروع تعديل بيانات مشروعه المنشور من حسابه.</div>
       <div class="admin-panel"><div class="admin-toolbar"><h2>مشاريع المستخدمين (${projects.length})</h2><button class="button small" onclick="adminCommunityProjects()">تحديث</button></div>
       <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>المشروع والتفاصيل</th><th>صاحب المشروع</th><th>النشر</th><th>الحالة</th><th>الإجراءات</th></tr></thead><tbody>
-      ${projects.map(p=>`<tr><td><strong>${escapeHtml(p.title)}</strong><p>${escapeHtml(p.description)}</p>${p.image_url?`<a href="${escapeHtml(p.image_url)}" target="_blank" rel="noopener noreferrer">عرض الصورة</a>`:''}${p.entity_name?`<p>الجهة: ${escapeHtml(p.entity_name)}</p>`:''}${p.phone?`<p>الهاتف: ${escapeHtml(p.phone)}</p>`:''}${p.contact?`<p>التواصل: ${escapeHtml(p.contact)}</p>`:''}${p.instagram_url?`<p><a href="${escapeHtml(p.instagram_url)}" target="_blank" rel="noopener noreferrer">إنستغرام</a></p>`:''}${p.facebook_url?`<p><a href="${escapeHtml(p.facebook_url)}" target="_blank" rel="noopener noreferrer">فيسبوك</a></p>`:''}<small>تاريخ الإرسال: ${new Date(Number(p.created_at)).toLocaleString('ar-JO')}</small>${p.admin_note?`<p>ملاحظة الإدارة: ${escapeHtml(p.admin_note)}</p>`:''}</td>
+      ${projects.map(p=>`<tr><td><strong>${escapeHtml(p.title)}</strong><p>${escapeHtml(splitCommunityExtras(p.description).text)}</p>${p.image_url?`<a href="${escapeHtml(p.image_url)}" target="_blank" rel="noopener noreferrer">عرض الصورة</a>`:''}${p.entity_name?`<p>الجهة: ${escapeHtml(p.entity_name)}</p>`:''}${p.phone?`<p>الهاتف: ${escapeHtml(p.phone)}</p>`:''}${p.contact?`<p>التواصل: ${escapeHtml(p.contact)}</p>`:''}${p.instagram_url?`<p><a href="${escapeHtml(p.instagram_url)}" target="_blank" rel="noopener noreferrer">إنستغرام</a></p>`:''}${p.facebook_url?`<p><a href="${escapeHtml(p.facebook_url)}" target="_blank" rel="noopener noreferrer">فيسبوك</a></p>`:''}<small>تاريخ الإرسال: ${new Date(Number(p.created_at)).toLocaleString('ar-JO')}</small>${p.admin_note?`<p>ملاحظة الإدارة: ${escapeHtml(p.admin_note)}</p>`:''}</td>
       <td>${escapeHtml(p.owner_name||'')}<br><small>${escapeHtml(p.owner_email||'')}</small></td>
       <td>${escapeHtml(placementLabel(p.placement))}<br><small>${escapeHtml(p.field)} · ${escapeHtml(p.project_type)}</small></td>
       <td>${statusLabel(p.status)}</td>
