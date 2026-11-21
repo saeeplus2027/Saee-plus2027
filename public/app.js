@@ -37,13 +37,39 @@ function placementSections(placement){
   }
   return ['projects'];
 }
+
+const COMMUNITY_SECTION_KEYS=['opportunities','projects','discounts'];
+function splitCommunityExtras(raw){
+  const text=String(raw||'');
+  const m=text.match(/\n*\[\[SAEE_X:([\s\S]*?)\]\]\s*$/);
+  if(!m)return {text:text.trim(),extra:{}};
+  let extra={};
+  try{const o=JSON.parse(m[1]);if(o&&typeof o==='object')extra=o;}catch(_){}
+  return {text:text.slice(0,m.index).trim(),extra};
+}
+function joinCommunityExtras(text,extra){
+  const e=extra||{},clean={};
+  const sec=(Array.isArray(e.sections)?e.sections:[]).filter(v=>COMMUNITY_SECTION_KEYS.includes(v));
+  if(sec.length)clean.sections=sec;
+  for(const k of ['shopLocation','socialLink','badge','price','subCat']){const v=String(e[k]||'').trim();if(v)clean[k]=v;}
+  if(Array.isArray(e.shopImages)&&e.shopImages.length)clean.shopImages=e.shopImages.filter(Boolean).slice(0,3);
+  const json=JSON.stringify(clean);
+  return json==='{}'?String(text||'').trim():String(text||'').trim()+'\n\n[[SAEE_X:'+json+']]';
+}
+function projectSections(project){
+  const e=splitCommunityExtras(project&&project.description).extra||{};
+  const s=(Array.isArray(e.sections)?e.sections:[]).filter(v=>COMMUNITY_SECTION_KEYS.includes(v));
+  return s.length?s:placementSections(project&&project.placement);
+}
+window.splitCommunityExtras=splitCommunityExtras;window.joinCommunityExtras=joinCommunityExtras;window.projectSections=projectSections;
 function mapCommunityProject(project,type){
   const currentUserId=String(window.SAI_CURRENT_USER?.id||'');
   const ownerId=String(project.user_id||project.userId||'');
   const isOwner=!!project.is_owner||(!!currentUserId&&!!ownerId&&currentUserId===ownerId);
   const projectType=String(project.project_type||'').trim();
+  const parsedX=splitCommunityExtras(project.description);const descText=parsedX.text,cx=parsedX.extra||{};
   const field=String(project.field||'مشاريع شبابية').trim()||'مشاريع شبابية';
-  return {id:`community_${project.id}_${type}`,communityId:project.id,isCommunityProject:true,isOwner,type,title:String(project.title||'مشروع شبابي'),cat:field,field,projectType,desc:String(project.description||''),badge:project.entity_name||'مشروع شبابي',meta:communityProjectTypeLabel(projectType)||'مشاركة شبابية',extra:project.description||'',image:project.image_url||'',phone:project.phone||'',contact:project.contact||'',instagramUrl:project.instagram_url||'',facebookUrl:project.facebook_url||'',entityName:project.entity_name||'',ownerName:project.owner_name||'',placement:project.placement||'projects',createdAt:Number(project.created_at||project.createdAt||0),status:'approved',emoji:'✦'};
+  return {id:`community_${project.id}_${type}`,communityId:project.id,isCommunityProject:true,isOwner,type,title:String(project.title||'مشروع شبابي'),cat:field,field,projectType,desc:descText,badge:project.entity_name||'مشروع شبابي',meta:communityProjectTypeLabel(projectType)||'مشاركة شبابية',extra:descText,image:project.image_url||'',phone:project.phone||'',contact:project.contact||'',instagramUrl:project.instagram_url||'',facebookUrl:project.facebook_url||'',entityName:project.entity_name||'',ownerName:project.owner_name||'',placement:project.placement||'projects',createdAt:Number(project.created_at||project.createdAt||0),status:'approved',emoji:'✦',customBadge:String(cx.badge||''),shopLocation:String(cx.shopLocation||''),shopImages:Array.isArray(cx.shopImages)?cx.shopImages.slice(0,3):[],socialLink:String(cx.socialLink||''),price:String(cx.price||''),subCat:String(cx.subCat||'')};
 }
 function rebuildVisibleItems(){items=[...communityDisplayItems,...base,...additions];}
 async function fetchPublicCommunityProjects(){
@@ -72,7 +98,7 @@ async function refreshCommunityProjects(){
     const projects=await fetchPublicCommunityProjects();
     communityProjects=projects.filter(communityProjectIsApproved);
     communityDisplayItems=communityProjects
-      .flatMap(project=>placementSections(project.placement).map(type=>mapCommunityProject(project,type)));
+      .flatMap(project=>projectSections(project).map(type=>mapCommunityProject(project,type)));
     rebuildVisibleItems();
     if(route==='projects'||route==='discounts')listing();
     else if(route==='home')home();
@@ -106,11 +132,11 @@ function card(x){
   if(community){
     const categoryLabel=String(x.field||x.cat||'عام').trim()||'عام';
     return `<article class="offer-card community-offer-card">
-      <div class="photo-wrap">${imageHtml}<span class="offer-tag">إضافة مجتمعية</span>${heartHtml}</div>
+      <div class="photo-wrap">${imageHtml}<span class="offer-tag">${escapeHtml(x.customBadge||'إضافة مجتمعية')}</span>${heartHtml}</div>
       <div class="card-body">
         <h3>${escapeHtml(x.title||'مشروع شبابي')}</h3>
         <p>${escapeHtml(x.desc||'مشروع مجتمعي أُضيف بواسطة أحد المستخدمين.')}</p>
-        <div class="card-foot"><span class="tag">${escapeHtml(categoryLabel)}</span><button type="button" class="details-btn" onclick="details('${escapeHtml(x.id)}')">التفاصيل ↖</button></div>
+        <div class="card-foot"><span class="tag">${escapeHtml(x.subCat||categoryLabel)}</span>${x.price?`<span class="price">${escapeHtml(x.price)}</span>`:''}<button type="button" class="details-btn" onclick="details('${escapeHtml(x.id)}')">التفاصيل ↖</button></div>
       </div>
     </article>`;
   }
@@ -129,7 +155,7 @@ function listingItemsForRoute(){
   if(route!=='projects'&&route!=='discounts')return normal;
 
   const apiItems=(Array.isArray(communityProjects)?communityProjects:[])
-    .filter(project=>project&&communityProjectIsApproved(project)&&placementSections(project.placement).includes(route))
+    .filter(project=>project&&communityProjectIsApproved(project)&&projectSections(project).includes(route))
     .map(project=>mapCommunityProject(project,route));
   const cachedItems=(Array.isArray(communityDisplayItems)?communityDisplayItems:[])
     .filter(item=>item&&item.type===route);
@@ -233,7 +259,7 @@ function syncSiteStoreAndRender(){
     // Re-map approved community projects after the central content refreshes,
     // so the optional Discounts placement is evaluated against the latest discounts.
     communityDisplayItems = (communityProjects || []).flatMap(project =>
-      placementSections(project.placement).map(type => mapCommunityProject(project, type))
+      projectSections(project).map(type => mapCommunityProject(project, type))
     );
     rebuildVisibleItems();
   } catch (error) {
@@ -333,14 +359,14 @@ window.addEventListener('focus',()=>syncDiscountUsage(true));
 function details(id){
   let x=items.find(item=>String(item.id)===String(id));
   if(!x){
-    const match=String(id).match(/^community_(.+)_(projects|discounts)$/);
+    const match=String(id).match(/^community_(.+)_(projects|discounts|opportunities)$/);
     if(match){
       const record=(communityProjects||[]).find(project=>String(project.id)===match[1]);
       if(record){x=mapCommunityProject(record,match[2]);items.unshift(x);}
     }
   }
   if(!x){toast('تعذر فتح تفاصيل المشروع. حدّث الصفحة وحاول مرة أخرى.');return;}
-  const isDiscount=x.type==='discounts';const isCommunity=!!x.isCommunityProject;const displayTitle=titles[x.type]||(x.type==='opportunities'?'فرص سعي':'المحتوى');const locationUrl=String(x.shopLocation||'').trim();const safeLocation=/^https?:\/\//i.test(locationUrl)?locationUrl:'';const socialUrl=String(x.socialLink||'').trim();const safeSocial=/^https?:\/\//i.test(socialUrl)&&!/[<>\"']/.test(socialUrl)?socialUrl:'';const shopPhotos=(Array.isArray(x.shopImages)&&x.shopImages.length?x.shopImages:[x.shopImage1,x.shopImage2]).filter(Boolean);modal(`<span class="kicker">${displayTitle} · التفاصيل</span><h2>${escapeHtml(x.title)}</h2>${x.image?`<img src="${escapeHtml(SiteStore.imageSrc(x.image))}" alt="${escapeHtml(x.title)}" style="width:100%;height:180px;object-fit:cover;border-radius:12px;margin-bottom:12px">`:''}<p>${escapeHtml(x.extra||x.desc)}</p>${isCommunity?`<div style="display:grid;gap:7px;margin:12px 0;padding:12px;border:1px solid #e4ebe1;border-radius:12px">${x.field?`<p><strong>المجال:</strong> ${escapeHtml(x.field)}</p>`:''}${x.projectType?`<p><strong>نوع المشروع:</strong> ${escapeHtml(communityProjectTypeLabel(x.projectType))}</p>`:''}${x.entityName?`<p><strong>الجهة:</strong> ${escapeHtml(x.entityName)}</p>`:''}${x.ownerName?`<p><strong>صاحب المشروع:</strong> ${escapeHtml(x.ownerName)}</p>`:''}</div>`:''}${isDiscount&&shopPhotos.length?`<div class="discount-shop-photos" style="display:grid;grid-template-columns:repeat(${shopPhotos.length===1?1:2},minmax(0,1fr));gap:10px;margin:14px 0">${shopPhotos.map((src,i)=>`<img src="${escapeHtml(SiteStore.imageSrc(src))}" alt="صورة ${i+1} من ${escapeHtml(x.title)}" style="width:100%;height:160px;object-fit:cover;border-radius:12px;border:1px solid #e1e8df">`).join('')}</div>`:''}${isDiscount?`<p><button type="button" class="button light shop-location-btn" onclick="openShopLocation('${escapeHtml(String(id))}')" ${safeLocation?'':'title="لم يضف المضيف رابط الموقع بعد"'}>📍 ${safeLocation?'عرض موقع المحل':'موقع المحل غير مضاف'}</button></p>`:''}${safeSocial?`<p><a class="button light" href="${escapeHtml(safeSocial)}" target="_blank" rel="noopener noreferrer">↗ زيارة صفحة المتجر / التواصل</a></p>`:''}${/^https?:\/\//i.test(String(x.instagramUrl||'').trim())?`<p><a class="button light" href="${escapeHtml(String(x.instagramUrl).trim())}" target="_blank" rel="noopener noreferrer">↗ زيارة صفحة إنستغرام</a></p>`:''}${/^https?:\/\//i.test(String(x.facebookUrl||'').trim())?`<p><a class="button light" href="${escapeHtml(String(x.facebookUrl).trim())}" target="_blank" rel="noopener noreferrer">↗ زيارة صفحة فيسبوك</a></p>`:''}${x.phone?`<p>رقم التواصل: <a href="tel:${escapeHtml(x.phone.replace(/[^+0-9٠-٩۰-۹]/g,''))}" dir="ltr">${escapeHtml(x.phone)}</a></p>`:''}${x.entityName?`<p><strong>الجهة:</strong> ${escapeHtml(x.entityName)}</p>`:''}${x.ownerName?`<p><strong>صاحب المشروع:</strong> ${escapeHtml(x.ownerName)}</p>`:''}${x.price?`<p class="price">السعر التوضيحي: ${escapeHtml(x.price)}</p>`:''}${x.contact?`<p><strong>وسيلة تواصل إضافية:</strong> ${escapeHtml(x.contact)}</p>`:(!x.phone?`<p>لم تُضف بيانات تواصل لهذا الإعلان بعد.</p>`:'')}${x.isCommunityProject&&x.isOwner?`<button type="button" class="button light" onclick="editCommunityProject('${escapeHtml(x.communityId)}')">تعديل مشروعي</button>`:''}<button class="button" onclick="saveFavorite('${id}');this.textContent=favorites.includes('${id}')?'محفوظ في المفضلة ✓':'حفظ في المفضلة'">${favorites.includes(id)?'محفوظ في المفضلة ✓':'حفظ في المفضلة ♡'}</button>`);if(isDiscount)updateDiscountButton(String(id))}
+  const isDiscount=x.type==='discounts';const isCommunity=!!x.isCommunityProject;const displayTitle=titles[x.type]||(x.type==='opportunities'?'فرص سعي':'المحتوى');const locationUrl=String(x.shopLocation||'').trim();const safeLocation=/^https?:\/\//i.test(locationUrl)?locationUrl:'';const socialUrl=String(x.socialLink||'').trim();const safeSocial=/^https?:\/\//i.test(socialUrl)&&!/[<>\"']/.test(socialUrl)?socialUrl:'';const shopPhotos=(Array.isArray(x.shopImages)&&x.shopImages.length?x.shopImages:[x.shopImage1,x.shopImage2]).filter(Boolean);modal(`<span class="kicker">${displayTitle} · التفاصيل</span><h2>${escapeHtml(x.title)}</h2>${x.image?`<img src="${escapeHtml(SiteStore.imageSrc(x.image))}" alt="${escapeHtml(x.title)}" style="width:100%;height:180px;object-fit:cover;border-radius:12px;margin-bottom:12px">`:''}<p>${escapeHtml(x.extra||x.desc)}</p>${isCommunity?`<div style="display:grid;gap:7px;margin:12px 0;padding:12px;border:1px solid #e4ebe1;border-radius:12px">${x.field?`<p><strong>المجال:</strong> ${escapeHtml(x.field)}</p>`:''}${x.projectType?`<p><strong>نوع المشروع:</strong> ${escapeHtml(communityProjectTypeLabel(x.projectType))}</p>`:''}${x.entityName?`<p><strong>الجهة:</strong> ${escapeHtml(x.entityName)}</p>`:''}${x.ownerName?`<p><strong>صاحب المشروع:</strong> ${escapeHtml(x.ownerName)}</p>`:''}</div>`:''}${(isDiscount||isCommunity)&&shopPhotos.length?`<div class="discount-shop-photos" style="display:grid;grid-template-columns:repeat(${shopPhotos.length===1?1:2},minmax(0,1fr));gap:10px;margin:14px 0">${shopPhotos.map((src,i)=>`<img src="${escapeHtml(SiteStore.imageSrc(src))}" alt="صورة ${i+1} من ${escapeHtml(x.title)}" style="width:100%;height:160px;object-fit:cover;border-radius:12px;border:1px solid #e1e8df">`).join('')}</div>`:''}${(isDiscount||(isCommunity&&safeLocation))?`<p><button type="button" class="button light shop-location-btn" onclick="openShopLocation('${escapeHtml(String(id))}')" ${safeLocation?'':'title="لم يضف المضيف رابط الموقع بعد"'}>📍 ${safeLocation?'عرض موقع المحل':'موقع المحل غير مضاف'}</button></p>`:''}${safeSocial?`<p><a class="button light" href="${escapeHtml(safeSocial)}" target="_blank" rel="noopener noreferrer">↗ زيارة صفحة المتجر / التواصل</a></p>`:''}${/^https?:\/\//i.test(String(x.instagramUrl||'').trim())?`<p><a class="button light" href="${escapeHtml(String(x.instagramUrl).trim())}" target="_blank" rel="noopener noreferrer">↗ زيارة صفحة إنستغرام</a></p>`:''}${/^https?:\/\//i.test(String(x.facebookUrl||'').trim())?`<p><a class="button light" href="${escapeHtml(String(x.facebookUrl).trim())}" target="_blank" rel="noopener noreferrer">↗ زيارة صفحة فيسبوك</a></p>`:''}${x.phone?`<p>رقم التواصل: <a href="tel:${escapeHtml(x.phone.replace(/[^+0-9٠-٩۰-۹]/g,''))}" dir="ltr">${escapeHtml(x.phone)}</a></p>`:''}${x.entityName?`<p><strong>الجهة:</strong> ${escapeHtml(x.entityName)}</p>`:''}${x.ownerName?`<p><strong>صاحب المشروع:</strong> ${escapeHtml(x.ownerName)}</p>`:''}${x.price?`<p class="price">السعر التوضيحي: ${escapeHtml(x.price)}</p>`:''}${x.contact?`<p><strong>وسيلة تواصل إضافية:</strong> ${escapeHtml(x.contact)}</p>`:(!x.phone?`<p>لم تُضف بيانات تواصل لهذا الإعلان بعد.</p>`:'')}${x.isCommunityProject&&x.isOwner?`<button type="button" class="button light" onclick="editCommunityProject('${escapeHtml(x.communityId)}')">تعديل مشروعي</button>`:''}<button class="button" onclick="saveFavorite('${id}');this.textContent=favorites.includes('${id}')?'محفوظ في المفضلة ✓':'حفظ في المفضلة'">${favorites.includes(id)?'محفوظ في المفضلة ✓':'حفظ في المفضلة ♡'}</button>`);if(isDiscount)updateDiscountButton(String(id))}
 function openShopLocation(id){const x=items.find(item=>String(item.id)===String(id));const url=String(x?.shopLocation||'').trim();if(!/^https?:\/\//i.test(url)){toast('لم يضف المضيف موقع هذا المحل بعد.');return;}window.open(url,'_blank','noopener,noreferrer')}
 function showFavorites(){favorites=favorites.filter(id=>items.some(x=>x.id===id));modal(`<span class="kicker">اختياراتك، في مكان واحد</span><h2>المفضلة</h2>${favorites.length?favorites.map(id=>items.find(x=>x.id===id)).filter(Boolean).map(x=>`<button class="place-card" onclick="details('${x.id}')"><h3>${escapeHtml(x.title)}</h3><p>${titles[x.type]} ←</p></button>`).join(''):'<p>مفضلتك فارغة حتى الآن. اضغط على القلب بجانب أي عرض أو كتاب أو منتج لحفظه هنا.</p>'}`)}
 function addForm(type){
@@ -358,20 +384,27 @@ function addForm(type){
 function communityProjectForm(project=null){
   const p=project||{};
   const id=p.id||'';
-  const title=p.title||'',field=p.field||'',projectType=p.project_type||'منتج',description=p.description||'';
+  const px=splitCommunityExtras(p.description),cx=px.extra||{};const title=p.title||'',field=p.field||'',projectType=p.project_type||'منتج',description=px.text||'';
   const hasDiscount=hasSaeeDiscount();
-  const placement=hasDiscount&&(p.placement==='projects_discounts'||p.placement==='opportunities_discounts')?'projects_discounts':'projects';
+  const legacySecs=(p.placement==='projects_discounts'||p.placement==='opportunities_discounts')?['projects','discounts']:['projects'];const secs=(Array.isArray(cx.sections)&&cx.sections.length)?cx.sections:legacySecs;
   modal(`<span class="kicker">مشاركة مجتمعية</span><h2>${id?'تعديل مشروعي':'إضافة مشروع جديد'}</h2><p>${id?'عدّل بيانات مشروعك. إذا كان منشورًا فستظهر التغييرات مباشرة.':'أرسل مشروعك للمراجعة؛ سيظهر بعد موافقة الإدارة في الأقسام التي تحددها.'}</p><form class="form-grid" onsubmit="submitCommunityProject(event,'${escapeHtml(id)}')">
     <label>اسم المشروع *<input name="title" required maxlength="120" value="${escapeHtml(title)}" placeholder="اسم واضح للمشروع"></label>
     <label>المجال / التصنيف *<input name="field" required maxlength="100" value="${escapeHtml(field)}" placeholder="مثال: تصميم، منتجات يدوية، تقنية"></label>
     <label>نوع المشروع *<select name="projectType" required>${['منتج','خدمة','فكرة إبداعية','مبادرة'].map(v=>`<option value="${v}" ${projectType===v?'selected':''}>${v}</option>`).join('')}</select></label>
-    <label>مكان النشر *<select name="placement" required>
-      <option value="projects" ${placement==='projects'?'selected':''}>المشاريع الشبابية فقط</option>
-      ${hasDiscount?`<option value="projects_discounts" ${placement==='projects_discounts'?'selected':''}>المشاريع الشبابية + خصم سعي</option>`:''}
-    </select></label>
-    <label class="full">تفاصيل المشروع *<textarea name="description" required minlength="10" maxlength="2000" rows="5" placeholder="اكتب تفاصيل المشروع وما يقدمه...">${escapeHtml(description)}</textarea></label>
+    <fieldset class="full community-sections" style="border:1px solid #e4ebe1;border-radius:12px;padding:10px 14px"><legend>الأقسام التي تريد نشر مشروعك فيها * (اختر قسمًا أو أكثر)</legend>
+      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="sections" value="opportunities" ${secs.includes('opportunities')?'checked':''}> فرص سعي</label>
+      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="sections" value="projects" ${secs.includes('projects')?'checked':''}> المشاريع الشبابية</label>
+      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="sections" value="discounts" ${secs.includes('discounts')?'checked':''}> خصومات سعي</label>
+    </fieldset>
+    <label class="full">تفاصيل المشروع *<textarea name="description" required minlength="10" maxlength="700" rows="5" placeholder="اكتب تفاصيل المشروع وما يقدمه...">${escapeHtml(description)}</textarea></label>
     <label class="full">صورة المشروع — رابط الصورة (اختياري)<input name="imageUrl" type="url" maxlength="1000" value="${escapeHtml(p.image_url||'')}" placeholder="https://..." oninput="previewCommunityProjectImage(this)"></label>
     <label class="full">أو ارفع صورة من جهازك<input name="projectImageFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onchange="uploadCommunityProjectImage(this)"><small>الصورة تُضغط تلقائيًا قبل رفعها إلى تخزين الموقع. الحد الأقصى للملف قبل المعالجة 15 ميغابايت.</small><img id="community-project-image-preview" ${p.image_url?'src="'+escapeHtml(p.image_url)+'"':'hidden'} alt="معاينة صورة المشروع" style="display:${p.image_url?'block':'none'};max-width:100%;max-height:220px;object-fit:contain;border-radius:12px;margin-top:8px"></label>
+    <label class="full">رابط موقع المحل / المشروع (Google Maps أو أي رابط موقع)<input name="shopLocation" type="url" maxlength="250" dir="ltr" value="${escapeHtml(cx.shopLocation||'')}" placeholder="https://maps.google.com/..."></label>
+    <label>شارة العرض أو الحالة<input name="badge" maxlength="30" value="${escapeHtml(cx.badge||'')}" placeholder="مثال: جديد، خصم 10%"></label>
+    <label>السعر أو النص أسفل البطاقة<input name="price" maxlength="50" value="${escapeHtml(cx.price||'')}" placeholder="مثال: 15 د.أ"></label>
+    <label>التصنيف أسفل البطاقة<input name="subCat" maxlength="30" value="${escapeHtml(cx.subCat||'')}" placeholder="مثال: مطاعم، عطور"></label>
+    <label class="full">رابط صفحة المتجر / التواصل (فيسبوك أو إنستغرام أو موقع)<input name="socialLink" type="url" maxlength="250" dir="ltr" value="${escapeHtml(cx.socialLink||'')}" placeholder="https://..."></label>
+    <label class="full">صور المحل (اختياري — حتى 3 صور)<input type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif" onchange="uploadCommunityShopImages(this)"><input type="hidden" name="shopImages" value="${escapeHtml(JSON.stringify(Array.isArray(cx.shopImages)?cx.shopImages.slice(0,3):[]))}"><small>الصورة الرئيسية فوق، وهذه صور إضافية تظهر في التفاصيل. ليس مطلوبًا رفع عدد محدد.</small><div id="community-shop-images-preview" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div></label>
     <label>اسم الجهة / المؤسسة (اختياري)<input name="entityName" maxlength="120" value="${escapeHtml(p.entity_name||'')}" placeholder="اسم الجهة المرتبطة بالمشروع"></label>
     <label>رقم التواصل<input name="phone" type="tel" maxlength="40" dir="ltr" value="${escapeHtml(p.phone||'')}" placeholder="07XXXXXXXX"></label>
     <label>وسيلة تواصل إضافية<input name="contact" maxlength="160" value="${escapeHtml(p.contact||'')}" placeholder="البريد الإلكتروني أو وسيلة أخرى"></label>
@@ -379,6 +412,7 @@ function communityProjectForm(project=null){
     <label>رابط فيسبوك<input name="facebookUrl" type="url" maxlength="1000" value="${escapeHtml(p.facebook_url||'')}" placeholder="https://facebook.com/..."></label>
     <button class="button" type="submit">${id?'حفظ التعديلات':'إرسال المشروع للمراجعة'} <span>↖</span></button>
   </form>`);
+  renderCommunityShopImages(document.querySelector('#dialog-content form'));
 }
 function previewCommunityProjectImage(input){
   const preview=document.getElementById('community-project-image-preview');
@@ -421,12 +455,58 @@ async function uploadCommunityProjectImage(input){
   }catch(error){toast(error.message||'تعذر رفع الصورة.');}
   finally{input.disabled=false;input.value='';if(submitButton)submitButton.disabled=false;}
 }
+
+async function communityImageFileToUrl(file){
+  if(!/^image\/(png|jpeg|webp|gif)$/.test(file.type)||file.size>15*1024*1024)throw Error('اختر صورة PNG أو JPG أو WebP أو GIF بحجم أقل من 15 ميغابايت.');
+  const image=new Image(),objectUrl=URL.createObjectURL(file);
+  let imageData='';
+  try{
+    await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=()=>reject(Error('تعذرت قراءة الصورة.'));image.src=objectUrl;});
+    const canvas=document.createElement('canvas'),scale=Math.min(1,1600/image.width,1600/image.height);
+    canvas.width=Math.max(1,Math.round(image.width*scale));canvas.height=Math.max(1,Math.round(image.height*scale));
+    const context=canvas.getContext('2d');if(!context)throw Error('تعذر تجهيز الصورة على هذا الجهاز.');
+    context.drawImage(image,0,0,canvas.width,canvas.height);imageData=canvas.toDataURL('image/webp',.82);
+  }finally{URL.revokeObjectURL(objectUrl);}
+  const result=await communityRequest('/api/media',{method:'POST',body:JSON.stringify({imageData})});
+  if(!result.url)throw Error('لم يُرجع الخادم رابط الصورة.');
+  return result.url;
+}
+function communityShopImagesList(form){try{const v=JSON.parse(form?.elements?.shopImages?.value||'[]');return Array.isArray(v)?v.filter(Boolean).slice(0,3):[];}catch(_){return [];}}
+function renderCommunityShopImages(form){
+  const host=document.getElementById('community-shop-images-preview');if(!host||!form)return;
+  host.innerHTML=communityShopImagesList(form).map((u,i)=>`<span style="position:relative;display:inline-block"><img src="${escapeHtml(u)}" alt="صورة ${i+1}" style="width:84px;height:84px;object-fit:cover;border-radius:10px"><button type="button" aria-label="حذف الصورة" onclick="removeCommunityShopImage(${i})" style="position:absolute;top:-6px;left:-6px;border:0;border-radius:50%;width:22px;height:22px;background:#c62828;color:#fff;cursor:pointer">×</button></span>`).join('');
+}
+function removeCommunityShopImage(i){
+  const form=document.querySelector('#dialog-content form');if(!form)return;
+  const list=communityShopImagesList(form);list.splice(i,1);form.elements.shopImages.value=JSON.stringify(list);renderCommunityShopImages(form);
+}
+async function uploadCommunityShopImages(input){
+  const form=input.closest('form'),files=[...(input.files||[])];if(!files.length||!form)return;
+  const submit=form.querySelector('[type="submit"]');
+  try{
+    input.disabled=true;if(submit)submit.disabled=true;
+    const list=communityShopImagesList(form);
+    for(const file of files){
+      if(list.length>=3){toast('الحد الأقصى 3 صور إضافية.');break;}
+      toast('جاري رفع الصورة…');
+      list.push(await communityImageFileToUrl(file));
+      form.elements.shopImages.value=JSON.stringify(list);renderCommunityShopImages(form);
+    }
+    toast('تم رفع الصور.');
+  }catch(error){toast(error.message||'تعذر رفع الصورة.');}
+  finally{input.disabled=false;input.value='';if(submit)submit.disabled=false;}
+}
+window.uploadCommunityShopImages=uploadCommunityShopImages;window.removeCommunityShopImage=removeCommunityShopImage;
 async function submitCommunityProject(event,id=''){
   event.preventDefault();
   if(!window.SAI_CURRENT_USER){toast('انتهت جلسة الدخول. سجّل الدخول ثم حاول مجددًا.');return;}
   const form=event.currentTarget,button=form.querySelector('[type="submit"]');button.disabled=true;
   const f=new FormData(form);
-  const payload={title:String(f.get('title')||'').trim(),field:String(f.get('field')||'').trim(),projectType:String(f.get('projectType')||''),description:String(f.get('description')||'').trim(),imageUrl:String(f.get('imageUrl')||'').trim(),entityName:String(f.get('entityName')||'').trim(),placement:String(f.get('placement')||'projects'),phone:String(f.get('phone')||'').trim(),contact:String(f.get('contact')||'').trim(),instagramUrl:String(f.get('instagramUrl')||'').trim(),facebookUrl:String(f.get('facebookUrl')||'').trim()};
+  const sections=f.getAll('sections').map(String).filter(v=>COMMUNITY_SECTION_KEYS.includes(v));
+  if(!sections.length){toast('اختر قسمًا واحدًا على الأقل لنشر مشروعك.');button.disabled=false;return;}
+  const fullDescription=joinCommunityExtras(String(f.get('description')||'').trim(),{sections,shopLocation:f.get('shopLocation'),badge:f.get('badge'),price:f.get('price'),subCat:f.get('subCat'),socialLink:f.get('socialLink'),shopImages:communityShopImagesList(form)});
+  if(fullDescription.length>1990){toast('البيانات طويلة جدًا. اختصر الوصف أو الروابط أو قلّل عدد الصور.');button.disabled=false;return;}
+  const payload={title:String(f.get('title')||'').trim(),field:String(f.get('field')||'').trim(),projectType:String(f.get('projectType')||''),description:fullDescription,imageUrl:String(f.get('imageUrl')||'').trim(),entityName:String(f.get('entityName')||'').trim(),placement:sections.includes('discounts')?'projects_discounts':'projects',phone:String(f.get('phone')||'').trim(),contact:String(f.get('contact')||'').trim(),instagramUrl:String(f.get('instagramUrl')||'').trim(),facebookUrl:String(f.get('facebookUrl')||'').trim()};
   if(id){payload.action='update';payload.id=id;}
   try{
     const data=await communityRequest('/api/community-projects',{method:'POST',body:JSON.stringify(payload)});
