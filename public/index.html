@@ -1930,6 +1930,9 @@
   const AUTH_DIALOG_ID = 'sai-auth';
 
   function hasAccountSession() {
+    // Trust the user object created from the successful signup/login response,
+    // and the same bearer token used by all authenticated API requests.
+    if (window.SAI_CURRENT_USER && window.SAI_CURRENT_USER.id) return true;
     try {
       return Boolean(localStorage.getItem('saee-auth-token-v1'));
     } catch (_) {
@@ -2062,6 +2065,9 @@
   }
 
   function requestLogin(actionName) {
+    // Remember the action that the visitor was trying to perform. After a
+    // successful signup/login, the project form will open automatically.
+    if (actionName === 'مشروعك') window.SAEE_PENDING_PROJECT_ADD = true;
     const dialog = document.getElementById(AUTH_DIALOG_ID);
     const message = document.getElementById('sai-auth-message');
     const title = document.getElementById('sai-auth-title');
@@ -2084,9 +2090,9 @@
     if (description) description.textContent = text;
 
     if (message) {
-      message.textContent =
-        text +
-        '\nبعد تسجيل الدخول، ارجع إلى القسم المطلوب واضغط زر الإضافة مرة أخرى.';
+      message.textContent = window.SAEE_PENDING_PROJECT_ADD
+        ? text + '\nبعد إنشاء الحساب أو تسجيل الدخول، سيفتح نموذج إضافة المشروع تلقائيًا.'
+        : text + '\nبعد تسجيل الدخول يمكنك متابعة الإضافة.';
       message.hidden = false;
     }
 
@@ -2098,41 +2104,34 @@
     if (email) setTimeout(() => email.focus(), 50);
   }
 
-  /*
-   * بوابة تسجيل الدخول العامة:
-   * أي نقرة داخل الموقع تتطلب تسجيل الدخول، سواء كانت على رابط
-   * أو زر أو بطاقة أو صورة أو مساحة أخرى. الاستثناء الوحيد هو
-   * نافذة الحساب نفسها حتى يستطيع الزائر تسجيل الدخول أو إنشاء حساب.
-   */
+  // Browse the website normally without an account. Only guard actions
+  // that actually submit user content (projects, books, products, etc.).
   document.addEventListener('click', event => {
     if (hasAccountSession()) return;
-
     const target = event.target instanceof Element ? event.target : null;
+    if (!target || target.closest('#' + AUTH_DIALOG_ID) || target.closest('#sai-open-auth')) return;
 
-    // السماح بالتفاعل مع نموذج تسجيل الدخول وإنشاء الحساب والاستعادة فقط.
-    if (target && target.closest('#' + AUTH_DIALOG_ID)) return;
-    if (target && target.closest('#sai-open-auth')) return;
-
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-
-    const protectedAction = isProtectedAction(event.target);
-    requestLogin(protectedAction?.type || 'استخدام الموقع');
-  }, true);
-
-  // منع إرسال أي نموذج في الموقع قبل تسجيل الدخول، باستثناء نماذج الحساب.
-  document.addEventListener('submit', event => {
-    if (hasAccountSession()) return;
-    const form = event.target;
-    if (!(form instanceof HTMLFormElement)) return;
-    if (form.closest('#' + AUTH_DIALOG_ID)) return;
+    const protectedAction = isProtectedAction(target);
+    if (!protectedAction) return;
 
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
-    requestLogin('استخدام الموقع');
+    requestLogin(protectedAction.type);
   }, true);
+
+  // Let ordinary site forms (such as inquiries and ratings) work as designed.
+  // Only content-submission forms require an authenticated account.
+
+  window.addEventListener('sai-account-changed', () => {
+    if (!hasAccountSession() || !window.SAEE_PENDING_PROJECT_ADD) return;
+    window.SAEE_PENDING_PROJECT_ADD = false;
+    setTimeout(() => {
+      if (window.SAI_CURRENT_USER && typeof window.communityProjectForm === 'function') {
+        window.communityProjectForm();
+      }
+    }, 80);
+  });
 
   /*
    * حماية إرسال نموذج الإضافة أيضًا، وليس الضغط على الزر فقط.
