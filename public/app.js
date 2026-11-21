@@ -392,9 +392,8 @@ function communityProjectForm(project=null){
     <label>المجال / التصنيف *<input name="field" required maxlength="100" value="${escapeHtml(field)}" placeholder="مثال: تصميم، منتجات يدوية، تقنية"></label>
     <label>نوع المشروع *<select name="projectType" required>${['منتج','خدمة','فكرة إبداعية','مبادرة'].map(v=>`<option value="${v}" ${projectType===v?'selected':''}>${v}</option>`).join('')}</select></label>
     <fieldset class="full community-sections" style="border:1px solid #e4ebe1;border-radius:12px;padding:10px 14px"><legend>الأقسام التي تريد نشر مشروعك فيها * (اختر قسمًا أو أكثر)</legend>
-      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="sections" value="opportunities" ${secs.includes('opportunities')?'checked':''}> فرص سعي</label>
-      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="sections" value="projects" ${secs.includes('projects')?'checked':''}> المشاريع الشبابية</label>
-      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="sections" value="discounts" ${secs.includes('discounts')?'checked':''}> خصومات سعي</label>
+      <label style="display:flex;gap:8px;align-items:center;white-space:nowrap"><input type="checkbox" style="width:auto;flex:none;margin:0" name="sections" value="projects" ${secs.includes('projects')?'checked':''}> المشاريع الشبابية</label>
+      <label style="display:flex;gap:8px;align-items:center;white-space:nowrap"><input type="checkbox" style="width:auto;flex:none;margin:0" name="sections" value="discounts" ${secs.includes('discounts')?'checked':''}> خصومات سعي</label>
     </fieldset>
     <label class="full">تفاصيل المشروع *<textarea name="description" required minlength="10" maxlength="700" rows="5" placeholder="اكتب تفاصيل المشروع وما يقدمه...">${escapeHtml(description)}</textarea></label>
     <label class="full">صورة المشروع — رابط الصورة (اختياري)<input name="imageUrl" type="url" maxlength="1000" value="${escapeHtml(p.image_url||'')}" placeholder="https://..." oninput="previewCommunityProjectImage(this)"></label>
