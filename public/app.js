@@ -61,18 +61,34 @@ async function fetchPublicCommunityProjects(){
   if(!Array.isArray(data.projects))throw Error('استجابة خادم المشاريع غير مكتملة.');
   return data.projects;
 }
+function communityProjectIsApproved(project){
+  // The public API normally returns approved records only (without a status
+  // field). Keep compatibility with API variants that include Arabic labels.
+  const status=normalizeProjectFilterText(project?.status||'');
+  return !status||['approved','مقبول','مقبول ومنشور','published'].includes(status);
+}
 async function refreshCommunityProjects(){
   try{
     const projects=await fetchPublicCommunityProjects();
-    communityProjects=projects;
+    communityProjects=projects.filter(communityProjectIsApproved);
     communityDisplayItems=communityProjects
-      .filter(project=>!project.status||project.status==='approved')
       .flatMap(project=>placementSections(project.placement).map(type=>mapCommunityProject(project,type)));
     rebuildVisibleItems();
     if(route==='projects'||route==='discounts')listing();
     else if(route==='home')home();
-  }catch(error){console.warn('تعذر تحميل مشاريع المجتمع:',error);}
+    return communityProjects.length;
+  }catch(error){
+    console.error('تعذر تحميل مشاريع المجتمع:',error);
+    // Make a failed public API request visible to the visitor instead of
+    // silently presenting an empty projects list.
+    if(route==='projects'){
+      const host=document.getElementById('results');
+      if(host&&!communityProjects.length)host.innerHTML='<div class="empty">تعذر تحميل المشاريع حاليًا. تحقق من الاتصال ثم أعد المحاولة. <button type="button" class="button small" onclick="refreshCommunityProjects()">إعادة المحاولة</button></div>';
+    }
+    return 0;
+  }
 }
+window.refreshCommunityProjects=refreshCommunityProjects;
 window.addEventListener('sai-account-changed',()=>{refreshCommunityProjects();});
 window.addEventListener('focus',()=>{refreshCommunityProjects();});
 setInterval(()=>{if(document.visibilityState==='visible')refreshCommunityProjects();},30000);
@@ -112,12 +128,8 @@ function listingItemsForRoute(){
   const normal=[...base,...additions].filter(item=>item&&item.type===route);
   if(route!=='projects'&&route!=='discounts')return normal;
 
-  const isPublicProject=project=>{
-    const status=normalizeProjectFilterText(project?.status||'');
-    return !status||['approved','مقبول','مقبول ومنشور'].includes(status);
-  };
   const apiItems=(Array.isArray(communityProjects)?communityProjects:[])
-    .filter(project=>project&&isPublicProject(project)&&placementSections(project.placement).includes(route))
+    .filter(project=>project&&communityProjectIsApproved(project)&&placementSections(project.placement).includes(route))
     .map(project=>mapCommunityProject(project,route));
   const cachedItems=(Array.isArray(communityDisplayItems)?communityDisplayItems:[])
     .filter(item=>item&&item.type===route);
@@ -179,7 +191,7 @@ function renderItems(){
   const wantedCategory=canonicalProjectCategory(category);
   const wantedQuery=normalizeProjectFilterText(query);
   const filtered=listingItemsForRoute().filter(item=>{
-    if(route==='projects'&&item.isCommunityProject&&item.status&&!['approved','مقبول','مقبول ومنشور'].includes(normalizeProjectFilterText(item.status)))return false;
+    if(route==='projects'&&item.isCommunityProject&&!communityProjectIsApproved(item))return false;
     const itemCategories=listingCategoriesForItem(item).map(canonicalProjectCategory);
     if(wantedCategory&&wantedCategory!==canonicalProjectCategory('الكل')&&!itemCategories.includes(wantedCategory))return false;
     const searchable=normalizeProjectFilterText([
@@ -191,7 +203,7 @@ function renderItems(){
   host.innerHTML=filtered.length?filtered.map(card).join(''):'<div class="empty">لا توجد نتائج مطابقة. جرّب كلمة أخرى أو اختر «الكل».</div>';
 }
 function filterCategoryByIndex(i){const cats=listingCategoryValues();filterCategory(cats[i]||'الكل')}
-function filterCategory(c){category=c;listing()}
+function filterCategory(c){category=c;listing();if(route==='projects')refreshCommunityProjects()}
 let places=SiteStore.state.places;let place=0,mapCat='الكل';
 function mapPage(){if(place>=places.length)place=0;let shown=places.map((p,i)=>({...p,i})).filter(p=>mapCat==='الكل'||p.cat===mapCat);main.innerHTML=`<div class="container">${headerPage(titles.map,descriptions.map)}${SiteStore.state.mapNotice?`<div class="demo-note">${escapeHtml(SiteStore.state.mapNotice)}</div>`:""}<div class="toolbar"><div class="chips">${['الكل',...new Set(places.map(p=>p.cat))].map((c,ci)=>`<button class="chip ${c===mapCat?'selected':''}" onclick="mapCategory(${ci})">${escapeHtml(c)}</button>`).join('')}</div></div><div class="map-layout"><div class="map"><svg class="layout" viewBox="0 0 750 500" preserveAspectRatio="none"><rect width="750" height="500" fill="#e7ecdc"/><g fill="#d0d8bf" stroke="#c4cfb6" stroke-width="2"><rect x="40" y="30" width="150" height="110" rx="7"/><rect x="280" y="25" width="190" height="100" rx="7"/><rect x="560" y="50" width="145" height="90" rx="7"/><rect x="60" y="250" width="130" height="130" rx="7"/><rect x="285" y="205" width="175" height="110" rx="7"/><rect x="560" y="240" width="145" height="115" rx="7"/><rect x="290" y="390" width="170" height="90" rx="7"/></g><g stroke="#fffdf4" stroke-width="30" fill="none"><path d="M225 0v500M515 0v500M0 170h750M0 360h750"/></g><g fill="#b8ccb0"><circle cx="75" cy="443" r="21"/><circle cx="128" cy="450" r="16"/><circle cx="640" cy="440" r="30"/><circle cx="700" cy="420" r="18"/></g></svg>${shown.map(p=>`<button class="map-pin" style="left:${p.x}%;top:${p.y}%" onclick="place=${p.i};mapPage()" aria-label="${escapeHtml(p.name)}">${icon(p.icon)}</button>`).join('')}<span class="map-label">مخطط الحرم الجامعي · نموذج توضيحي</span></div><aside class="map-places">${shown.map(p=>`<button class="place-card ${p.i===place?'selected':''}" onclick="place=${p.i};mapPage()"><h3>${escapeHtml(p.name)}</h3><p>${escapeHtml(p.cat)} · اعرض التفاصيل ←</p></button>`).join('')}<div class="map-detail"><span class="kicker">وجهتك المختارة</span><h3>${escapeHtml(places[place]?.name||'لا توجد أماكن بعد')}</h3><p>${escapeHtml(places[place]?.desc||'أضف أماكن من لوحة الإدارة.')}</p></div></aside></div></div>`}
 function mapCategory(i){mapCat=['الكل',...new Set(places.map(p=>p.cat))][i];mapPage()}
