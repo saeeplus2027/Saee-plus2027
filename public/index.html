@@ -2140,6 +2140,7 @@
     const form = event.target;
 
     if (!(form instanceof HTMLFormElement)) return;
+    if (form.closest('#' + AUTH_DIALOG_ID)) return;
     if (hasAccountSession()) return;
     if (!isProtectedForm(form)) return;
 
