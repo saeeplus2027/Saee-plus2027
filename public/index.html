@@ -285,10 +285,23 @@
       font-family: inherit;
     }
 
-    #sai-auth input:focus-visible {
+    #sai-auth input:focus-visible,
+    #sai-auth select:focus-visible {
       outline: 3px solid #b8ddd0;
       outline-offset: 2px;
       border-color: #075550;
+    }
+
+    #sai-auth select {
+      width: 100%;
+      min-height: 48px;
+      margin: 0 0 6px;
+      padding: 12px 14px;
+      border: 1px solid #cddbd3;
+      border-radius: 12px;
+      background: #fff;
+      color: #173c39;
+      font: inherit;
     }
 
     #sai-auth .auth-submit {
@@ -1135,6 +1148,13 @@
       <label for="sai-register-name">الاسم</label>
       <input id="sai-register-name" name="name" type="text" autocomplete="name" maxlength="100" required>
 
+      <label for="sai-register-account-type">نوع الحساب</label>
+      <select id="sai-register-account-type" name="accountType" required>
+        <option value="user">مستخدم عادي — تصفح الموقع والاستفادة من الخدمات والخصومات</option>
+        <option value="project_owner">صاحب مشروع — إضافة مشروع وإدارته بعد النشر</option>
+      </select>
+      <p class="auth-note" style="margin:0 0 12px">الحساب العادي يتيح لك استخدام الموقع والخصومات والاستفسارات. حساب صاحب المشروع يضيف هذه المزايا وإمكانية إرسال المشاريع بعد مراجعة الإدارة.</p>
+
       <label for="sai-register-email">البريد الإلكتروني</label>
       <input id="sai-register-email" name="email" type="email" dir="ltr" placeholder="example@email.com" autocomplete="email" maxlength="254" required>
 
@@ -1186,7 +1206,9 @@
   </section>
 
   <section data-auth-panel="account" hidden>
+    <p id="sai-account-type-label" class="auth-note" style="margin:0 0 12px"></p>
     <div class="auth-links" style="display:grid;gap:10px">
+      <button type="button" class="auth-submit" id="sai-account-projects" hidden>📁 مشاريعي وإدارة المشاريع</button>
       <button type="button" class="auth-submit" id="sai-account-rename-open">تغيير اسم الحساب</button>
       <button type="button" class="auth-submit" id="sai-account-password-open">تغيير كلمة المرور</button>
       <button type="button" class="auth-submit" id="sai-account-delete-open" style="background:#8d2929">حذف الحساب نهائيًا</button>
@@ -1229,11 +1251,11 @@
 
 <div id="toast" role="status"></div>
 
-<script src="remote-config.js?v=20261112-api-origin-fix"></script>
+<script src="remote-config.js?v=20261121-account-type-worker-route"></script>
 <script src="content-data.js?v=20261029-loading-fix-v2"></script>
-<script src="store.js?v=20261121-opportunities-ratings-v1"></script>
-<script src="app.js?v=20261121-opportunities-ratings-v1"></script>
-<script src="admin.js?v=20261121-opportunities-ratings-v1"></script>
+<script src="store.js?v=20261121-account-types-community-projects-v1"></script>
+<script src="app.js?v=20261121-account-types-community-projects-v1"></script>
+<script src="admin.js?v=20261121-account-types-community-projects-v1"></script>
 
 <script>
 (() => {
@@ -1283,9 +1305,14 @@
     let user=null, checked=false, authError=null;
     try { const d=await api('/api/me'); user=d.user||null; checked=true; }
     catch(e) { authError=e; }
+    window.SAI_CURRENT_USER = user;
+    const accountTypeLabel = $('sai-account-type-label');
+    const myProjectsButton = $('sai-account-projects');
     if(user){
       try{localStorage.setItem(SESSION_KEY,user.email);}catch(_){}
       const displayName=String(user.name||'').trim()||user.email;
+      if(accountTypeLabel) accountTypeLabel.textContent = user.accountType === 'project_owner' ? 'نوع الحساب: صاحب مشروع' : 'نوع الحساب: مستخدم عادي';
+      if(myProjectsButton) myProjectsButton.hidden = user.accountType !== 'project_owner';
       accountLabel.textContent='مرحبًا، '+displayName;
       accountButton.setAttribute('aria-label','حساب '+displayName);
       accountButton.title='حساب سعي بلس: '+displayName;
@@ -1294,6 +1321,8 @@
       // Clear a session only when the API explicitly confirms it is invalid.
       // Temporary network/CORS/5xx failures must not erase a successful login.
       try{localStorage.removeItem(SESSION_KEY);localStorage.removeItem(TOKEN_KEY);}catch(_){}
+      if(accountTypeLabel) accountTypeLabel.textContent = '';
+      if(myProjectsButton) myProjectsButton.hidden = true;
       accountLabel.textContent='تسجيل الدخول';
       accountButton.setAttribute('aria-label','تسجيل الدخول');
       accountButton.title='تسجيل الدخول';
@@ -1316,7 +1345,7 @@
   authDialog.addEventListener('cancel',e=>{if(busy||!getToken()){e.preventDefault();showMessage('سجّل الدخول أو أنشئ حسابًا للمتابعة.');}});
   authDialog.addEventListener('close',()=>{resetForms();clearMessage();});
   function passwordIsStrong(p){return p.length>=8&&p.length<=168&&/[A-Z]/.test(p)&&/[a-z]/.test(p)&&/[0-9]/.test(p)&&/[^A-Za-z0-9]/.test(p);}
-  $('sai-register-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;validateRegister();if(!f.reportValidity())return;const name=$('sai-register-name').value.trim(),email=normalizeEmail($('sai-register-email').value),password=$('sai-register-password').value;if(!name){showMessage('أدخل اسمك.');return;}if(!passwordIsStrong(password)){showMessage('كلمة المرور يجب أن تكون بين 8 و168 حرفًا وتتضمن حرفًا كبيرًا وصغيرًا ورقمًا ورمزًا.');return;}run(f,async()=>{const d=await api('/api/signup',{method:'POST',body:JSON.stringify({name,email,password})});if(!d.token)throw new Error(d.message||'تعذّر إنشاء الحساب.');localStorage.setItem(TOKEN_KEY,d.token);localStorage.setItem(SESSION_KEY,email);f.reset();await updateHeader();authDialog.close();});});
+  $('sai-register-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;validateRegister();if(!f.reportValidity())return;const name=$('sai-register-name').value.trim(),email=normalizeEmail($('sai-register-email').value),password=$('sai-register-password').value;if(!name){showMessage('أدخل اسمك.');return;}if(!passwordIsStrong(password)){showMessage('كلمة المرور يجب أن تكون بين 8 و168 حرفًا وتتضمن حرفًا كبيرًا وصغيرًا ورقمًا ورمزًا.');return;}run(f,async()=>{const d=await api('/api/signup',{method:'POST',body:JSON.stringify({name,email,password,accountType:$('sai-register-account-type').value})});if(!d.token)throw new Error(d.message||'تعذّر إنشاء الحساب.');localStorage.setItem(TOKEN_KEY,d.token);localStorage.setItem(SESSION_KEY,email);f.reset();await updateHeader();authDialog.close();});});
   $('sai-login-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;if(!f.reportValidity())return;const email=normalizeEmail($('sai-login-email').value),password=$('sai-login-password').value;run(f,async()=>{await login(email,password);authDialog.close();});});
   $('sai-forgot-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;if(!f.reportValidity())return;const email=normalizeEmail($('sai-forgot-email').value),recoveryCode=$('sai-recovery-code').value.trim(),newPassword=$('sai-forgot-new-password').value;if(!/^\d{8}$/.test(recoveryCode)){showMessage('أدخل رمز الاستعادة المكوّن من 8 أرقام.');return;}if(!passwordIsStrong(newPassword)){showMessage('كلمة المرور يجب أن تكون بين 8 و168 حرفًا وتتضمن حرفًا كبيرًا وصغيرًا ورقمًا ورمزًا.');return;}run(f,async()=>{const d=await api('/api/reset-with-code',{method:'POST',body:JSON.stringify({email,recoveryCode,newPassword})});f.reset();showPage('login',false,true);$('sai-login-email').value=email;showMessage(d.message||'تم تغيير كلمة المرور بنجاح. سجّل الدخول بكلمة المرور الجديدة.');});});
   $('sai-recovery-code-issue-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;run(f,async()=>{const d=await api('/api/recovery-code',{method:'POST',body:JSON.stringify({})});showPage('recovery-code',false,true);$('sai-recovery-code-display').textContent=d.recoveryCode;$('sai-recovery-code-form').hidden=false;$('sai-recovery-return-account').hidden=false;showMessage(d.message||'احفظ رمز الاستعادة في مكان آمن.');});});
@@ -1326,6 +1355,7 @@
   $('sai-change-password-form').addEventListener('submit',e=>{e.preventDefault();const f=e.currentTarget;if(!f.reportValidity())return;const currentPassword=$('sai-current-password').value,newPassword=$('sai-change-password').value;if(!passwordIsStrong(newPassword)){showMessage('كلمة المرور يجب أن تكون بين 8 و168 حرفًا وتتضمن حرفًا كبيرًا وصغيرًا ورقمًا ورمزًا.');return;}if(currentPassword===newPassword){showMessage('اختر كلمة مرور جديدة مختلفة عن الحالية.');return;}run(f,async()=>{await api('/api/change-password',{method:'POST',body:JSON.stringify({currentPassword,newPassword})});try{localStorage.removeItem(TOKEN_KEY);localStorage.removeItem(SESSION_KEY);}catch(_){}await updateHeader();showPage('login',false,true);if(!authDialog.open)authDialog.showModal();showMessage('تم تغيير كلمة المرور بنجاح. سجّل الدخول بكلمة المرور الجديدة.');});});
   $('sai-account-rename-open').addEventListener('click',()=>{$('sai-account-rename-form').hidden=false;$('sai-account-delete-confirm').hidden=true;$('sai-account-new-name').focus();});
   $('sai-account-password-open').addEventListener('click',()=>showPage('change'));
+  $('sai-account-projects').addEventListener('click',()=>{authDialog.close();if(typeof window.showMyProjects==='function')window.showMyProjects();});
   $('sai-account-delete-open').addEventListener('click',()=>{$('sai-account-delete-confirm').hidden=false;$('sai-account-rename-form').hidden=true;});
   $('sai-account-delete-no').addEventListener('click',()=>{$('sai-account-delete-confirm').hidden=true;});
   authDialog.querySelectorAll('[data-account-back]').forEach(b=>b.addEventListener('click',()=>{$('sai-account-rename-form').hidden=true;$('sai-account-delete-confirm').hidden=true;}));
