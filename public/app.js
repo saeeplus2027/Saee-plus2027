@@ -20,10 +20,15 @@ async function communityRequest(path,options={}){
   if(!response.ok)throw Error(data.error||`تعذر تنفيذ الطلب (HTTP ${response.status}).`);
   return data;
 }
+function hasSaeeDiscount(){
+  return Array.isArray(base)&&base.some(item=>item&&item.type==='discounts');
+}
 function placementSections(placement){
-  if(placement==='projects_opportunities')return ['projects','opportunities'];
-  if(placement==='opportunities')return ['opportunities'];
-  if(placement==='opportunities_discounts')return ['opportunities','discounts'];
+  // All community projects appear in Youth Projects. The second option also
+  // places the project in Discounts, but only while a real discount exists.
+  if((placement==='projects_discounts'||placement==='opportunities_discounts')&&hasSaeeDiscount()){
+    return ['projects','discounts'];
+  }
   return ['projects'];
 }
 function mapCommunityProject(project,type){
@@ -37,7 +42,6 @@ async function refreshCommunityProjects(){
     communityDisplayItems=communityProjects.flatMap(project=>placementSections(project.placement).map(type=>mapCommunityProject(project,type)));
     rebuildVisibleItems();
     if(route==='projects'||route==='discounts')listing();
-    else if(route==='opportunities')opportunitiesPage();
     else if(route==='home')home();
   }catch(error){console.warn('تعذر تحميل مشاريع المجتمع:',error);}
 }
@@ -171,16 +175,15 @@ function communityProjectForm(project=null){
   const p=project||{};
   const id=p.id||'';
   const title=p.title||'',field=p.field||'',projectType=p.project_type||'منتج',description=p.description||'';
-  const placement=p.placement||'projects';
+  const hasDiscount=hasSaeeDiscount();
+  const placement=hasDiscount&&(p.placement==='projects_discounts'||p.placement==='opportunities_discounts')?'projects_discounts':'projects';
   modal(`<span class="kicker">مشاركة مجتمعية</span><h2>${id?'تعديل مشروعي':'إضافة مشروع جديد'}</h2><p>${id?'عدّل بيانات مشروعك. إذا كان منشورًا فستظهر التغييرات مباشرة.':'أرسل مشروعك للمراجعة؛ سيظهر بعد موافقة الإدارة في الأقسام التي تحددها.'}</p><form class="form-grid" onsubmit="submitCommunityProject(event,'${escapeHtml(id)}')">
     <label>اسم المشروع *<input name="title" required maxlength="120" value="${escapeHtml(title)}" placeholder="اسم واضح للمشروع"></label>
     <label>المجال / التصنيف *<input name="field" required maxlength="100" value="${escapeHtml(field)}" placeholder="مثال: تصميم، منتجات يدوية، تقنية"></label>
     <label>نوع المشروع *<select name="projectType" required>${['منتج','خدمة','فكرة إبداعية','مبادرة'].map(v=>`<option value="${v}" ${projectType===v?'selected':''}>${v}</option>`).join('')}</select></label>
     <label>مكان النشر *<select name="placement" required>
       <option value="projects" ${placement==='projects'?'selected':''}>المشاريع الشبابية فقط</option>
-      <option value="projects_opportunities" ${placement==='projects_opportunities'?'selected':''}>المشاريع الشبابية + فرص سعي</option>
-      <option value="opportunities" ${placement==='opportunities'?'selected':''}>فرص سعي فقط</option>
-      <option value="opportunities_discounts" ${placement==='opportunities_discounts'?'selected':''}>فرص سعي + الخصومات</option>
+      ${hasDiscount?`<option value="projects_discounts" ${placement==='projects_discounts'?'selected':''}>المشاريع الشبابية + خصم سعي</option>`:''}
     </select></label>
     <label class="full">تفاصيل المشروع *<textarea name="description" required minlength="10" maxlength="2000" rows="5" placeholder="اكتب تفاصيل المشروع وما يقدمه...">${escapeHtml(description)}</textarea></label>
     <label class="full">صورة المشروع — رابط الصورة (اختياري)<input name="imageUrl" type="url" maxlength="1000" value="${escapeHtml(p.image_url||'')}" placeholder="https://..." oninput="previewCommunityProjectImage(this)"></label>
