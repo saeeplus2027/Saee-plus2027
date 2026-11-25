@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS vocational_projects (
   phone TEXT NOT NULL DEFAULT '',
   instagram_url TEXT NOT NULL DEFAULT '',
   facebook_url TEXT NOT NULL DEFAULT '',
+  images_json TEXT NOT NULL DEFAULT '[]',
   status TEXT NOT NULL DEFAULT 'pending',
   admin_note TEXT NOT NULL DEFAULT '',
   created_at INTEGER NOT NULL,
