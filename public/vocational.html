@@ -7,7 +7,7 @@
   <meta name="description" content="مهنتي إبداعي مساحة لعرض مهارات طلبة التعليم المهني ومشاريعهم بعد مراجعة الإدارة.">
   <title>مهنتي إبداعي | سعي بلس</title>
   <link rel="icon" type="image/jpeg" href="https://cdn.phototourl.com/member/2026-10-25-a5e80966-a389-47e6-95e0-7d994efae181.jpg">
-  <link rel="stylesheet" href="style.css?v=20261125-vocational-owner-edit-v2">
+  <link rel="stylesheet" href="style.css?v=20261125-vocational-my-toggle-v1">
   <style>
     :root{--green:#075550;--mint:#e8f5f1;--ink:#18312f;--muted:#5f7471;--line:#dce9e5}
     *{box-sizing:border-box}body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f6faf8;color:var(--ink);line-height:1.9}
@@ -22,8 +22,8 @@
   <meta property="og:type" content="website"><meta property="og:locale" content="ar_JO"><meta property="og:site_name" content="سعي بلس">
   <meta property="og:title" content="مهنتي إبداعي | سعي بلس"><meta property="og:description" content="اعرض مهنتك أو مشروعك بعد مراجعة الإدارة.">
   <meta property="og:url" content="https://saeeplus2027.github.io/Saee-plus2027/vocational.html">
-  <script src="remote-config.js?v=20261125-vocational-owner-edit-v2"></script>
-  <script src="store.js?v=20261125-vocational-owner-edit-v2"></script>
+  <script src="remote-config.js?v=20261125-vocational-my-toggle-v1"></script>
+  <script src="store.js?v=20261125-vocational-my-toggle-v1"></script>
 </head>
 <body>
   <header class="top">
@@ -52,13 +52,13 @@
     <section class="section" id="vocational-list">
       <div class="toolbar">
         <div><h2 style="margin:0">مشاركات مهنتي إبداعي</h2><p class="note" style="margin:2px 0 0">تظهر هنا المشاركات التي وافقت عليها الإدارة فقط.</p></div>
-        <button class="cta" id="open-vocational-form" type="button">+ أضف مهنتك أو مشروعك</button>
+        <div class="form-actions"><button class="cta secondary" id="toggle-my-vocational" type="button" aria-expanded="false" aria-controls="my-vocational-section">تعديل على مشاركاتي</button><button class="cta" id="open-vocational-form" type="button">+ أضف مهنتك أو مشروعك</button></div>
       </div>
       <div id="vocational-projects-list" class="project-grid" aria-live="polite">
         <div class="empty-projects">جاري تحميل المشاركات...</div>
       </div>
 
-      <section class="section" id="my-vocational-section"><div class="toolbar"><div><h2 style="margin:0">مشاركاتي</h2><p class="note">تظهر هنا مشاركاتك وحالتها، ويمكنك تعديلها من حسابك.</p></div><button class="cta secondary" id="refresh-my-vocational" type="button">تحديث مشاركاتي</button></div><div id="my-vocational-list" class="project-grid"><div class="empty-projects">سجّل الدخول لعرض مشاركاتك.</div></div></section>
+      <section class="section" id="my-vocational-section" hidden><div class="toolbar"><div><h2 style="margin:0">مشاركاتي</h2><p class="note">تظهر هنا مشاركاتك وحالتها، ويمكنك تعديلها من حسابك.</p></div><button class="cta secondary" id="refresh-my-vocational" type="button">تحديث مشاركاتي</button></div><div id="my-vocational-list" class="project-grid"><div class="empty-projects">سجّل الدخول لعرض مشاركاتك.</div></div></section>
       <div class="form-panel" id="vocational-form-panel">
         <h2 id="vocational-form-heading">إضافة مهنة أو مشروع</h2>
         <p class="note">أدخل معلوماتك، ثم أرسل المشاركة للمراجعة. لن تظهر للزوار إلا بعد موافقة الإدارة.</p>
@@ -108,9 +108,11 @@
     async function deleteMine(id){if(!confirm('هل تريد حذف مشاركتك نهائيًا؟'))return;try{const r=await api('/api/vocational-projects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id})});const d=await r.json();if(!r.ok)throw Error(d.error||'تعذر الحذف');await Promise.all([loadMine(),loadPublic()]);alert(d.message||'تم الحذف');}catch(e){alert(e.message||'تعذر الحذف');}}
     document.getElementById('open-vocational-form').addEventListener('click',()=>{form.reset();form.elements.id.value='';showForm(false);});
     document.getElementById('cancel-vocational-form').addEventListener('click',()=>panel.classList.remove('open'));
+    const mySection=document.getElementById('my-vocational-section'), myToggle=document.getElementById('toggle-my-vocational');
+    myToggle.addEventListener('click',async()=>{const opening=mySection.hidden;mySection.hidden=!opening;myToggle.setAttribute('aria-expanded',String(opening));myToggle.textContent=opening?'إخفاء مشاركاتي':'تعديل على مشاركاتي';if(opening){await loadMine();mySection.scrollIntoView({behavior:'smooth',block:'start'});}});
     document.getElementById('refresh-my-vocational').addEventListener('click',loadMine);
     form.addEventListener('submit',async e=>{e.preventDefault();const btn=form.querySelector('[type=submit]'), fd=new FormData(form), data=Object.fromEntries(fd);data.action=data.id?'update':'create';data.images=String(data.imagesText||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);delete data.imagesText;for(const url of [data.imageUrl,...data.images,data.instagramUrl,data.facebookUrl].filter(Boolean)){if(!safeUrl(url)){status.className='form-status show error';status.textContent='كل الروابط يجب أن تبدأ بـ https://';return;}}btn.disabled=true;status.className='form-status show';status.textContent='جارٍ حفظ المشاركة...';try{const r=await api('/api/vocational-projects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const d=await r.json();if(!r.ok)throw Error(d.error||'تعذر الحفظ');status.className='form-status show success';status.textContent=d.message||'تم الحفظ بنجاح';form.reset();form.elements.id.value='';panel.classList.remove('open');await Promise.all([loadPublic(),loadMine()]);}catch(err){status.className='form-status show error';status.textContent=err.message||'حدث خطأ أثناء الحفظ';}finally{btn.disabled=false;}});
-    loadPublic();loadMine();window.addEventListener('focus',()=>{loadPublic();loadMine()});window.addEventListener('pageshow',()=>{loadPublic();loadMine()});setInterval(()=>{if(document.visibilityState==='visible'){loadPublic();loadMine()}},30000);
+    loadPublic();window.addEventListener('focus',()=>{loadPublic();if(!mySection.hidden)loadMine()});window.addEventListener('pageshow',()=>{loadPublic();if(!mySection.hidden)loadMine()});setInterval(()=>{if(document.visibilityState==='visible'){loadPublic();if(!mySection.hidden)loadMine()}},30000);
   })();
   </script>
 </body>
