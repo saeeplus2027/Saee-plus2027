@@ -96,16 +96,33 @@
         status.className='form-status show';status.textContent='جارٍ إرسال المشاركة...';
         const data=Object.fromEntries(new FormData(form));
         try{
-          // The main Saee Plus login stores its API token in localStorage.
-          // This page must forward that token as a Bearer credential; cookies
-          // alone do not authenticate the user's existing session.
+          // Match the authentication mechanism used by public/index.html.
+          // The API stores the session token in localStorage; cross-origin
+          // requests must explicitly send it as a Bearer credential.
           let token='';
-          try{token=localStorage.getItem('saee-auth-token-v1')||'';}catch(_){}
+          try{token=localStorage.getItem('saee-auth-token-v1')||'';}catch(_){/* storage may be blocked */}
           const headers={'Content-Type':'application/json'};
-          if(token)headers.Authorization=`Bearer ${token}`;
-          const r=await fetch(`${API}/api/vocational-projects`,{method:'POST',credentials:'include',headers,body:JSON.stringify(data)});
-          const d=await r.json();
-          if(!r.ok){if(r.status===401){status.className='form-status show error';status.innerHTML=(token?'انتهت جلسة الدخول أو لم تعد صالحة. اذهب للصفحة الرئيسية، سجّل الخروج ثم سجّل الدخول من جديد، وبعدها ارجع وأرسل مشاركتك.':'سجّل الدخول من الصفحة الرئيسية (اضغط أي زر فيها وبتظهر نافذة الدخول)، ثم ارجع وأرسل مشاركتك.')+' <a href="index.html" target="_top" rel="noopener">الذهاب للصفحة الرئيسية</a>';return;}throw Error(d.error||'تعذر إرسال المشاركة.');}
+          if(token) headers.Authorization=`Bearer ${token}`;
+          const r=await fetch(`${API}/api/vocational-projects`,{
+            method:'POST',
+            mode:'cors',
+            credentials:'include',
+            cache:'no-store',
+            headers,
+            body:JSON.stringify(data)
+          });
+          const d=await r.json().catch(()=>({}));
+          if(!r.ok){
+            if(r.status===401){
+              status.className='form-status show error';
+              status.textContent=token
+                ?'تعذّر التحقق من جلسة الدخول. افتح الصفحة الرئيسية، سجّل الخروج ثم ادخل مجددًا، وبعدها أعد إرسال المشاركة.'
+                :'لم نعثر على جلسة دخول. افتح الصفحة الرئيسية وسجّل الدخول، ثم ارجع لإرسال المشاركة.';
+              const link=document.createElement('a');link.href='index.html';link.textContent=' الذهاب إلى سعي بلس';link.style.marginInlineStart='6px';status.appendChild(link);
+              return;
+            }
+            throw Error(d.error||'تعذر إرسال المشاركة.');
+          }
           status.className='form-status show success';status.textContent=d.message||'تم إرسال مشاركتك للمراجعة.';form.reset();
         }catch(err){status.className='form-status show error';status.textContent=err.message||'حدث خطأ، حاول مرة أخرى.';}
         finally{btn.disabled=false;}
