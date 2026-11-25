@@ -105,7 +105,7 @@
           if(token)headers.Authorization=`Bearer ${token}`;
           const r=await fetch(`${API}/api/vocational-projects`,{method:'POST',credentials:'include',headers,body:JSON.stringify(data)});
           const d=await r.json();
-          if(!r.ok){if(r.status===401){status.className='form-status show error';status.innerHTML='سجّل الدخول إلى سعي بلس أولًا، ثم ارجع وأرسل مشاركتك. <a href="/signin-with-chatgpt?return_to=%2Fvocational.html%23submit-project" target="_top" rel="noopener">تسجيل الدخول</a>';return;}throw Error(d.error||'تعذر إرسال المشاركة.');}
+          if(!r.ok){if(r.status===401){status.className='form-status show error';status.innerHTML='سجّل الدخول إلى سعي بلس أولًا، ثم ارجع وأرسل مشاركتك. <a href="index.html?login=1&return_to=vocational.html" target="_top" rel="noopener">تسجيل الدخول</a>';return;}throw Error(d.error||'تعذر إرسال المشاركة.');}
           status.className='form-status show success';status.textContent=d.message||'تم إرسال مشاركتك للمراجعة.';form.reset();
         }catch(err){status.className='form-status show error';status.textContent=err.message||'حدث خطأ، حاول مرة أخرى.';}
         finally{btn.disabled=false;}
