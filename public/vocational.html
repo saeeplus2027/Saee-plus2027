@@ -96,7 +96,14 @@
         status.className='form-status show';status.textContent='جارٍ إرسال المشاركة...';
         const data=Object.fromEntries(new FormData(form));
         try{
-          const r=await fetch(`${API}/api/vocational-projects`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+          // The main Saee Plus login stores its API token in localStorage.
+          // This page must forward that token as a Bearer credential; cookies
+          // alone do not authenticate the user's existing session.
+          let token='';
+          try{token=localStorage.getItem('saee-auth-token-v1')||'';}catch(_){}
+          const headers={'Content-Type':'application/json'};
+          if(token)headers.Authorization=`Bearer ${token}`;
+          const r=await fetch(`${API}/api/vocational-projects`,{method:'POST',credentials:'include',headers,body:JSON.stringify(data)});
           const d=await r.json();
           if(!r.ok){if(r.status===401){status.className='form-status show error';status.innerHTML='سجّل الدخول إلى سعي بلس أولًا، ثم ارجع وأرسل مشاركتك. <a href="/signin-with-chatgpt?return_to=%2Fvocational.html%23submit-project" target="_top" rel="noopener">تسجيل الدخول</a>';return;}throw Error(d.error||'تعذر إرسال المشاركة.');}
           status.className='form-status show success';status.textContent=d.message||'تم إرسال مشاركتك للمراجعة.';form.reset();
